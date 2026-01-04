@@ -86,31 +86,62 @@ function ComplaintHistory() {
     return null;
   }
 
-  useEffect(() => {
-    const fetchComplaints = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get(
-          `http://localhost:5000/complaints/user/${userId}`
-        );
-        console.log("Complaints data received:", res.data);
-        res.data.complaints?.forEach((complaint, index) => {
-          console.log(`Complaint ${index}:`, complaint);
-          console.log(`  - assignedAdmins:`, complaint.assignedAdmins);
-          console.log(
-            `  - assignedAdmins length:`,
-            complaint.assignedAdmins?.length
-          );
-        });
-        setComplaints(res.data.complaints || []);
-      } catch (error) {
-        console.error("Failed to fetch complaints:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchComplaints();
-  }, [userId]);
+useEffect(() => {
+  if (!userId) return;
+
+  const fetchComplaints = async () => {
+    try {
+      setLoading(true);
+
+      const res = await axios.get(
+        `http://localhost:5000/complaints/user/${userId}`
+      );
+
+      const complaintsData = res.data.complaints || [];
+      console.log(`📄 Fetched ${complaintsData.length} complaints for user ${userId}:`);
+
+      complaintsData.forEach((complaint, index) => {
+        console.log(`\nComplaint #${index + 1} (ID: ${complaint.complaintId}):`);
+        console.log(`  - Description: ${complaint.description}`);
+        console.log(`  - Role: ${complaint.role}`);
+        console.log(`  - Screenshot: ${complaint.screenshot || "None"}`);
+
+        if (complaint.assignedAdmins && complaint.assignedAdmins.length > 0) {
+          console.log(`  - Assigned Admins (${complaint.assignedAdmins.length}):`);
+          complaint.assignedAdmins.forEach((admin, i) => {
+            if (typeof admin === "object" && admin._id) {
+              console.log(`      ${i + 1}. ${admin.name || "(no name)"} [ID: ${admin._id}]`);
+            } else {
+              console.log(`      ${i + 1}. Admin ID: ${admin}`);
+            }
+          });
+        } else {
+          console.log("  - Assigned Admins: None");
+        }
+
+        console.log(`  - Status: ${complaint.status || "Pending"}`);
+        console.log(`  - Created At: ${complaint.createdAt}`);
+      });
+
+      setComplaints(complaintsData);
+    } catch (error) {
+      console.error("❌ Failed to fetch complaints:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  fetchComplaints();
+
+  // Poll every 5 seconds
+  const interval = setInterval(fetchComplaints, 5000);
+
+  // Cleanup on unmount
+  return () => clearInterval(interval);
+}, [userId]);
+
+
 
   const isLight = theme === "light";
 

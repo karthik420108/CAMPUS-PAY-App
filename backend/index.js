@@ -1995,46 +1995,54 @@ app.put("/subadmin/:id/profile", async (req, res) => {
 app.post("/complaints", async (req, res) => {
   try {
     const { userId, description, screenshot, admins, role } = req.body;
-    // admins = array of Admin ObjectIds
 
-    // 🔐 Generate unique complaint ID
+    // 1️⃣ Generate unique complaint ID
     const randomPart = uuidv4().replace(/-/g, "").substring(0, 5).toUpperCase();
     const complaintId = `cpl${randomPart}`;
 
-    // 📝 Create complaint
+    // 2️⃣ Create complaint
     const complaint = await Complaint.create({
       userId,
       complaintId,
       description,
       screenshot,
-      assignedAdmins: role === "vendor" ? admins : [], // Start empty for students, will add SubAdmins next
+      assignedAdmins: [], // Initially empty, will populate below
       role,
     });
 
-    // 🎯 Handle assignment based on role
+    // 3️⃣ Assignment logic
     if (role === "vendor") {
-      // Vendor complaints go directly to admin (no SubAdmin involvement)
-      // Mark as forwarded to admin so it appears in admin view
-      await Complaint.findByIdAndUpdate(complaint._id, {
-        isForwarded: true,
-      });
-      
-      // 👥 Assign complaint to each admin
-      await Admin.updateMany(
-        { _id: { $in: admins } },
-        { $push: { complaints: complaint._id } }
-      );
+      // Vendor complaints go directly to all admins sent from frontend
+      await Complaint.findByIdAndUpdate(complaint._id, { isForwarded: true });
+
+      // Assign complaint to selected admins
+      if (admins.length > 0) {
+
+        // Also push complaint reference into each Admin's complaints array
+        await Admin.updateMany(
+          { _id: { $in: admins } },
+          { $push: { complaints: complaint._id } }
+        );
+      }
     } else {
-      // Student complaints go to SubAdmins first
-      const subAdmins = await SubAdmin.find({});
-      if (subAdmins.length > 0) {
-        // Add SubAdmin IDs to assignedAdmins field
+      // Student complaints: assign to **selected admins from frontend**
+      if (admins && admins.length > 0) {
+        await Complaint.findByIdAndUpdate(complaint._id, {
+          $push: { assignedAdmins: { $each: admins } },
+        });
+
+        await Admin.updateMany(
+          { _id: { $in: admins } },
+          { $push: { complaints: complaint._id } }
+        );
+      } else {
+        // Optional fallback: if no admin selected, assign to all SubAdmins
+        const subAdmins = await SubAdmin.find({});
         const subAdminIds = subAdmins.map(sa => sa._id);
         await Complaint.findByIdAndUpdate(complaint._id, {
-          $push: { assignedAdmins: { $each: subAdminIds } }
+          $push: { assignedAdmins: { $each: subAdminIds } },
         });
-        
-        // Also add to SubAdmins' complaints array for reference
+
         await SubAdmin.updateMany(
           {},
           { $push: { complaints: complaint._id } }
@@ -2042,6 +2050,7 @@ app.post("/complaints", async (req, res) => {
       }
     }
 
+    // 4️⃣ Response
     res.status(201).json({
       success: true,
       complaintId: complaint.complaintId,
@@ -2051,6 +2060,7 @@ app.post("/complaints", async (req, res) => {
     res.status(500).json({ message: "Failed to submit complaint" });
   }
 });
+
 
 app.get("/complaints/user/:userId", async (req, res) => {
   try {
@@ -2634,18 +2644,23 @@ app.post("/google-login", async (req, res) => {
 app.get("/user/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select(
-      "firstName lastName ImageUrl isFrozen  WalletBalance"
+      "firstName lastName ImageUrl isFrozen isSuspended walletBalance"
     );
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(user);
+    // Optional: add a derived status field
+  
+
+    res.json({ ...user.toObject()}); // Spread Mongoose doc to plain object and add status
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
+
 
 // Get all users (for admin freeze functionality)
 app.get("/users", async (req, res) => {
