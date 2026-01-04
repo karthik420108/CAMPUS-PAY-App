@@ -1,0 +1,52 @@
+.mpin-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 50px;
+}
+
+.mpin-form {
+  display: flex;
+  flex-direction: column; /* stack inputs and button vertically */
+  align-items: center;
+  gap: 20px; /* space between sections */
+  margin-top: 20px;
+}
+
+.mpin-inputs {
+  display: flex;
+  gap: 10px;
+}
+
+.mpin-input {
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  text-align: center;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+}
+
+.mpin-input:focus {
+  border-color: blue;
+  outline: none;
+}
+
+.mpin-form button {
+  padding: 10px 20px;
+  background-color: blue;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 5px;
+}
+
+.mpin-form button:hover {
+  background-color: darkblue;
+}
+
+.mpin-form label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}

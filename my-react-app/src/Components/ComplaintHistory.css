@@ -1,0 +1,79 @@
+/* Page wrapper */
+.history-page {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 20px;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+/* Page title */
+.history-page h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #222;
+}
+
+/* Complaint card */
+.complaint-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.complaint-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+/* Text inside card */
+.complaint-card p {
+  margin: 6px 0;
+  color: #444;
+  font-size: 14.5px;
+}
+
+.complaint-card b {
+  color: #000;
+}
+
+/* Status badge */
+.complaint-card .status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.status.active {
+  background-color: #ffe1e1;
+  color: #b00020;
+}
+
+.status.resolved {
+  background-color: #e1f5e8;
+  color: #1b7f3c;
+}
+
+/* Screenshot link */
+.complaint-card a {
+  display: inline-block;
+  margin-top: 10px;
+  text-decoration: none;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.complaint-card a:hover {
+  text-decoration: underline;
+}
+
+/* Empty state */
+.history-page p {
+  text-align: center;
+  color: #777;
+}

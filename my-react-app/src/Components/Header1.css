@@ -1,0 +1,70 @@
+/* Sidebar styling */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -220px; /* hidden by default */
+  width: 220px;
+  height: 100%;
+  background-color: #1e1e2f;
+  color: #fff;
+  transition: left 0.3s;
+  padding-top: 60px;
+  z-index: 1000;
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar ul li {
+  padding: 15px 20px;
+  cursor: pointer;
+}
+
+.sidebar ul li:hover {
+  background-color: #343454;
+}
+
+/* Hamburger button styling */
+.hamburger {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 35px;
+  height: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  z-index: 1100;
+}
+
+.hamburger span {
+  display: block;
+  height: 4px;
+  width: 100%;
+  background-color: #ff4757; /* bright color for visibility */
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+/* Optional: animate hamburger to X when open */
+.sidebar.open + .hamburger span:nth-child(1) {
+  transform: rotate(45deg) translate(7px, 7px);
+}
+.sidebar.open + .hamburger span:nth-child(2) {
+  opacity: 0;
+}
+.sidebar.open + .hamburger span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
+}
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}

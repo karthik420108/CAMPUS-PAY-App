@@ -1,0 +1,56 @@
+.history-container {
+  padding: 20px;
+  max-width: 600px;
+  margin: auto;
+}
+
+.history-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.no-data {
+  text-align: center;
+  color: #888;
+  margin-top: 40px;
+}
+
+.txn-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.txn-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.txn-category {
+  font-size: 16px;
+  font-weight: 500;
+  color: #222;
+}
+
+.txn-date {
+  font-size: 13px;
+  color: #777;
+  margin-top: 4px;
+}
+
+.txn-right {
+  display: flex;
+  align-items: center;
+}
+
+.txn-amount {
+  font-size: 17px;
+  font-weight: 600;
+  color: #0b8f00;
+}

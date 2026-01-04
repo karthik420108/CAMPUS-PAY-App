@@ -1,0 +1,67 @@
+.scan-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #fff;
+  padding: 18px;
+  border-radius: 14px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.scan-icon {
+  font-size: 32px;
+}
+
+.scan-card h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.scan-card p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Modal */
+.scanner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.scanner-box {
+  background: #fff;
+  padding: 20px;
+  border-radius: 14px;
+  width: 320px;
+}
+
+.close-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.scan-result {
+  margin-top: 15px;
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 10px;
+}
+.scan-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

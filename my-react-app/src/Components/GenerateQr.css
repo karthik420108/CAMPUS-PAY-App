@@ -1,0 +1,102 @@
+.qr-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f4f6fb, #e9ecf5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.qr-card {
+  background: #ffffff;
+  width: 360px;
+  padding: 28px;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.qr-card h2 {
+  margin-bottom: 16px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #222;
+}
+
+.qr-card input {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #dcdcdc;
+  outline: none;
+  margin-bottom: 16px;
+}
+
+.qr-card input:disabled {
+  background: #f2f2f2;
+  cursor: not-allowed;
+}
+
+.qr-card button {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.qr-card button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Primary Button */
+.qr-card button.primary,
+.qr-card > button {
+  background: #4f46e5;
+  color: white;
+}
+
+.qr-card button.primary:hover {
+  background: #4338ca;
+}
+
+/* Secondary Button */
+.qr-card button.secondary {
+  background: #f3f4f6;
+  color: #333;
+  margin-top: 10px;
+}
+
+.qr-card button.secondary:hover {
+  background: #e5e7eb;
+}
+
+/* QR Box */
+.qr-box {
+  margin: 20px auto;
+  padding: 18px;
+  background: #fafafa;
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Amount Text */
+.qr-card p {
+  font-size: 15px;
+  margin-bottom: 14px;
+  color: #444;
+}
+
+/* QR Action Buttons */
+.qr-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.qr-actions button {
+  flex: 1;
+}

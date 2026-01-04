@@ -1,0 +1,69 @@
+.role-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fb;
+  padding: 20px;
+}
+
+.role-container h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 30px;
+  color: #222;
+  text-align: center;
+}
+
+.role-container button {
+  width: 260px;
+  padding: 16px 20px;
+  margin: 12px 0;
+  font-size: 18px;
+  font-weight: 500;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* 🎓 Student Button */
+.role-container button:first-of-type {
+  background: #2563eb;
+  color: #fff;
+}
+
+.role-container button:first-of-type:hover {
+  background: #1e4fd8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+}
+
+/* 🏪 Vendor Button */
+.role-container button:last-of-type {
+  background: #16a34a;
+  color: #fff;
+}
+
+.role-container button:last-of-type:hover {
+  background: #12803a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.25);
+}
+
+/* Mobile Friendly */
+@media (max-width: 480px) {
+  .role-container h2 {
+    font-size: 22px;
+  }
+
+  .role-container button {
+    width: 100%;
+    font-size: 16px;
+  }
+}
