@@ -101,15 +101,27 @@ function Login() {
 
   useEffect(() => {
     if (!userId) return;
-    axios
-      .get(`http://localhost:5000/notifications/${userId}`, {
-        params: { role: "student" },
-      })
-      .then((res) => {
-        const unread = res.data.some((n) => !n.read);
-        setHasUnread(unread);
-      })
-      .catch(console.error);
+    
+    const fetchNotifications = () => {
+      axios
+        .get(`http://localhost:5000/notifications/${userId}`, {
+          params: { role: "student" },
+        })
+        .then((res) => {
+          const notifications = res.data;
+          const unread = notifications.some((n) => !n.read);
+          setHasUnread(unread);
+        })
+        .catch(console.error);
+    };
+
+    // Initial fetch
+    fetchNotifications();
+
+    // Set up polling for real-time updates
+    const interval = setInterval(fetchNotifications, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
   }, [userId]);
 
   useEffect(() => {

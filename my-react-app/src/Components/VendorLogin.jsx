@@ -14,6 +14,7 @@ function VendorLogin() {
   const [imageUrl, setImageUrl] = useState("");
   const [showProfileOption, setShowProfileOption] = useState(false);
   const [theme, setTheme] = useState("light"); // "light" | "dark"
+  const [hasUnread, setHasUnread] = useState(false);
 
   const easingSoft = [0.16, 1, 0.3, 1];
   const isLight = theme === "light";
@@ -35,6 +36,32 @@ function VendorLogin() {
         console.error("Error fetching vendor details:", err);
       });
   }, [vendorId, navigate]);
+
+  // Notification fetching with real-time polling
+  useEffect(() => {
+    if (!vendorId) return;
+    
+    const fetchNotifications = () => {
+      axios
+        .get(`http://localhost:5000/notifications/${vendorId}`, {
+          params: { role: "vendor" },
+        })
+        .then((res) => {
+          const notifications = res.data;
+          const unread = notifications.some((n) => !n.read);
+          setHasUnread(unread);
+        })
+        .catch(console.error);
+    };
+
+    // Initial fetch
+    fetchNotifications();
+
+    // Set up polling for real-time updates
+    const interval = setInterval(fetchNotifications, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [vendorId]);
 
   // ---------- THEME-DEPENDENT STYLES ----------
   const pageStyle = isLight
@@ -176,6 +203,67 @@ function VendorLogin() {
             animate={{ x: [0, -28, 12, 0], y: [0, -12, 20, 0] }}
             transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
           />
+
+          {/* NOTIFICATION BUTTON */}
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.4, ease: easingSoft }}
+            style={{
+              position: "absolute",
+              top: 32,
+              right: 420,
+              zIndex: 20,
+            }}
+          >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() =>
+                navigate("/notifications", {
+                  state: { Id: vendorId, role: "vendor" },
+                })
+              }
+              style={{
+                position: "relative",
+                cursor: "pointer",
+                padding: "12px 16px",
+                borderRadius: "16px",
+                background: isLight
+                  ? "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))"
+                  : "linear-gradient(145deg, rgba(15,23,42,0.9), rgba(30,41,59,0.9))",
+                backdropFilter: "blur(16px)",
+                border: `1px solid ${
+                  isLight ? "rgba(148,163,184,0.4)" : "rgba(75,85,99,0.6)"
+                }`,
+                boxShadow: `0 8px 24px ${
+                  isLight ? "rgba(15,23,42,0.12)" : "rgba(15,23,42,0.6)"
+                }`,
+              }}
+            >
+              <span style={{ fontSize: "24px", color: isLight ? "#1f2937" : "#e5e7eb" }}>🔔</span>
+              <AnimatePresence>
+                {hasUnread && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    style={{
+                      position: "absolute",
+                      top: "6px",
+                      right: "6px",
+                      width: "12px",
+                      height: "12px",
+                      background: "#ef4444",
+                      borderRadius: "50%",
+                      border: `2px solid ${isLight ? "#f8fafc" : "#0f172a"}`,
+                      boxShadow: "0 0 0 3px rgba(239,68,68,0.3)",
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </motion.div>
 
           {/* PROFILE PILL + DROPDOWN */}
           <motion.div

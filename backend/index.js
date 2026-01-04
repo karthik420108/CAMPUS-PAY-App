@@ -374,7 +374,7 @@ const StudentSchema = new mongoose.Schema(
   }
 );
 
-const User = mongoose.model("User", StudentSchema);
+const User = mongoose.model("User", StudentSchema, "users");
 const College = mongoose.model("College", CollegeSchema);
 const Vendor = mongoose.model("Vendor", Vendorschema);
 
