@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
+import SuspensionBanner from "./SuspensionBanner";
+import { useVendorStatus } from "../hooks/useVendorStatus";
 
 function VendorLogin() {
   const { state } = useLocation();
@@ -15,6 +17,9 @@ function VendorLogin() {
   const [showProfileOption, setShowProfileOption] = useState(false);
   const [theme, setTheme] = useState("light"); // "light" | "dark"
   const [hasUnread, setHasUnread] = useState(false);
+  
+  // Use vendor status hook for real-time monitoring
+  const { isSuspended, isFrozen, showSuspensionBanner, setShowSuspensionBanner } = useVendorStatus(vendorId);
 
   const easingSoft = [0.16, 1, 0.3, 1];
   const isLight = theme === "light";
@@ -31,11 +36,16 @@ function VendorLogin() {
         setVendorName(res.data.vendorName);
         setBalance(res.data.Wallet);
         setImageUrl(res.data.ImageUrl);
+        
+        // Close profile options if suspended
+        if (res.data.isSuspended) {
+          setShowProfileOption(false);
+        }
       })
       .catch((err) => {
         console.error("Error fetching vendor details:", err);
       });
-  }, [vendorId, navigate]);
+  }, [vendorId]);
 
   // Notification fetching with real-time polling
   useEffect(() => {
@@ -147,6 +157,7 @@ function VendorLogin() {
   return (
     <>
       <Header1 userId = {vendorId} role = "vendor" />
+      <SuspensionBanner show={showSuspensionBanner} />
 
       {/* click-outside wrapper */}
       <div

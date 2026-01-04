@@ -3,6 +3,8 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
+import SuspensionBanner from "./SuspensionBanner";
+import { useVendorStatus } from "../hooks/useVendorStatus";
 
 function RaiseComplaint() {
   const navigate = useNavigate();
@@ -16,6 +18,9 @@ function RaiseComplaint() {
   const [isFrozen, setIsFrozen] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
   const [blockingMessage, setBlockingMessage] = useState("");
+
+  // Use vendor status hook for real-time monitoring (only for vendors)
+  const { showSuspensionBanner } = role === "vendor" ? useVendorStatus(userId) : { showSuspensionBanner: false };
 
 
   const [admins, setAdmins] = useState([]);
@@ -249,6 +254,7 @@ function RaiseComplaint() {
   return (
     <>
       <Header1 userId={userId} role = {role} isFrozen={isFrozen}/>
+      <SuspensionBanner show={showSuspensionBanner} />
 
       <motion.div
         style={{

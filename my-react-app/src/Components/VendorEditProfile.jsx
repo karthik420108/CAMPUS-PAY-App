@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
+import Header1 from "./Header1";
+import SuspensionBanner from "./SuspensionBanner";
+import { useVendorStatus } from "../hooks/useVendorStatus";
 
 function VendorEditProfile() {
   const { state } = useLocation();
@@ -14,6 +17,9 @@ function VendorEditProfile() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState("light");
+  
+  // Use vendor status hook for real-time monitoring
+  const { showSuspensionBanner } = useVendorStatus(vendorId);
 
   if (!vendorId) {
     navigate("/");
@@ -127,6 +133,7 @@ function VendorEditProfile() {
 
   return (
     <>
+      <SuspensionBanner show={showSuspensionBanner} />
       <motion.div
         style={{
           minHeight: "100vh",

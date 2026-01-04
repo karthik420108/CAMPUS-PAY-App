@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "motion/react";
 import Header3 from "./Header3";
 import Header1 from "./Header1"
 import { useLocation, useNavigate } from "react-router-dom";
+import SuspensionBanner from "./SuspensionBanner";
+import { useVendorStatus } from "../hooks/useVendorStatus";
 
 function VendorTransactions() {
   const [transactions, setTransactions] = useState([]);
@@ -12,6 +14,9 @@ function VendorTransactions() {
 
   const { state } = useLocation();
   const { userId } = state || {};
+  
+  // Use vendor status hook for real-time monitoring
+  const { showSuspensionBanner } = useVendorStatus(userId);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -92,6 +97,7 @@ function VendorTransactions() {
   return (
     <>
       <Header1 role="vendor" userId={userId}/>
+      <SuspensionBanner show={showSuspensionBanner} />
       <motion.div
         style={{
           minHeight: "100vh",

@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
+import SuspensionBanner from "./SuspensionBanner";
+import { useVendorStatus } from "../hooks/useVendorStatus";
 
 export default function RedeemForm() {
   const navigate = useNavigate();
@@ -16,6 +18,9 @@ export default function RedeemForm() {
   const [message, setMessage] = useState("");
   const [totalAmount, setTotalAmount] = useState(0);
   const [darkMode, setDarkMode] = useState(false);
+  
+  // Use vendor status hook for real-time monitoring
+  const { showSuspensionBanner } = useVendorStatus(userId);
 
   /* ---------------- FETCH BALANCE ---------------- */
   useEffect(() => {
@@ -147,6 +152,7 @@ export default function RedeemForm() {
   return (
     <>
       <Header1 role="vendor" userId={userId} />
+      <SuspensionBanner show={showSuspensionBanner} />
 
       <motion.div
         style={{
