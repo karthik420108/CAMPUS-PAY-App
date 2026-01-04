@@ -1020,12 +1020,12 @@ app.post("/forgot-otp", async (req, res) => {
       const parentOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
       otpStore[studentEmail] = {
-        otp: studentOtp,
+        otp: parseInt(studentOtp),
         expiresAt: Date.now() + 5 * 60 * 1000,
       };
 
       otpStore[parentEmail] = {
-        otp: parentOtp,
+        otp: parseInt(parentOtp),
         expiresAt: Date.now() + 5 * 60 * 1000,
       };
 
@@ -1072,7 +1072,7 @@ app.post("/forgot-otp", async (req, res) => {
         const vendorOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
         otpStore[email] = {
-          otp: vendorOtp,
+          otp: parseInt(vendorOtp),
           expiresAt: Date.now() + 5 * 60 * 1000,
         };
 

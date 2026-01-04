@@ -92,7 +92,7 @@ function Forgot() {
       setError("");
       navigate("/forgot2", {
         state: {
-          Email: email,
+          Email: res.data.studentEmail, // Use the actual student email from backend
           PEmail: res.data.parentEmail,
           role: res.data.role,
         },
