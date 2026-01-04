@@ -13,6 +13,11 @@ function Signup1({ setEmail, setPEmail, setPass, Email, PEmail, Pass, role }) {
   const [theme, setTheme] = useState("light");
   const isLight = theme === "light";
   const easingSoft = [0.16, 1, 0.3, 1];
+  // 🔐 Strong password regex (ADDED)
+const strongPasswordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+
 
   useEffect(() => {
     if (role === "") {
@@ -20,41 +25,64 @@ function Signup1({ setEmail, setPEmail, setPass, Email, PEmail, Pass, role }) {
     }
   }, [role, navigate]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    
-    const form = e.target;
-    const password = form.password.value;
-    const confirmPassword = form.confirm.value;
-    const email = form.instituteEmail.value;
-    const pmail = role === "student" ? form.parentEmail.value : "";
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    if (role === "student" && email === pmail) {
-      setError("Institute Email and Parent Email cannot be the same.");
-      setLoading(false);
-      return;
-    }
+  const form = e.target;
+  const password = form.password.value;
+  const confirmPassword = form.confirm.value;
+  const email = form.instituteEmail.value.trim();
+  const pmail = role === "student" ? form.parentEmail.value.trim() : "";
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
+  // ✅ Institute email domain validation (ADDED)
+  if (role == "student" && !email.endsWith("@iiitdm.ac.in")) {
+    setError("Institute Email must end with @iiitdm.ac.in");
+    setLoading(false);
+    return;
+  }
 
-    setEmail(email);
-    setPEmail(pmail);
-    setPass(password);
+  // ❌ Same email check (EXISTING – untouched)
+  if (role === "student" && email === pmail) {
+    setError("Institute Email and Parent Email cannot be the same.");
+    setLoading(false);
+    return;
+  }
 
-    try {
-      await axios.post("http://localhost:5000/send-otp", { Email: email, PEmail: pmail, role });
-      navigate("/signup2");
-    } catch {
-      setError("Institute Email already Registered");
-      setLoading(false);
-    }
-  };
+  // 🔐 Strong password validation (ADDED)
+  if (!strongPasswordRegex.test(password)) {
+    setError(
+      "Password must be at least 8 characters and include uppercase, lowercase, number & special character."
+    );
+    setLoading(false);
+    return;
+  }
+
+  // ❌ Password mismatch (EXISTING – untouched)
+  if (password !== confirmPassword) {
+    setError("Passwords do not match");
+    setLoading(false);
+    return;
+  }
+
+  setEmail(email);
+  setPEmail(pmail);
+  setPass(password);
+
+  try {
+    await axios.post("http://localhost:5000/send-otp", {
+      Email: email,
+      PEmail: pmail,
+      role,
+    });
+    navigate("/signup2");
+  } catch {
+    setError("Institute Email already Registered");
+    setLoading(false);
+  }
+};
+
 
   const cardStyle = isLight
     ? {
