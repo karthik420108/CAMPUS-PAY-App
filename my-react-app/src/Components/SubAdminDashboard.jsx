@@ -17,6 +17,7 @@ function SubAdminDashboard() {
     email: "",
     imageUrl: ""
   });
+  const [hasUnread, setHasUnread] = useState(false);
 
   /* ----------------------------------
      AUTH + PERSISTENCE
@@ -53,6 +54,34 @@ function SubAdminDashboard() {
     };
 
     fetchProfile();
+  }, [subAdminId]);
+
+  /* ----------------------------------
+     NOTIFICATION FETCHING WITH REAL-TIME POLLING
+  -----------------------------------*/
+  useEffect(() => {
+    if (!subAdminId) return;
+    
+    const fetchNotifications = () => {
+      axios
+        .get(`http://localhost:5000/notifications/${subAdminId}`, {
+          params: { role: "SUBADMIN" },
+        })
+        .then((res) => {
+          const notifications = res.data;
+          const unread = notifications.some((n) => !n.read);
+          setHasUnread(unread);
+        })
+        .catch(console.error);
+    };
+
+    // Initial fetch
+    fetchNotifications();
+
+    // Set up polling for real-time updates
+    const interval = setInterval(fetchNotifications, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
   }, [subAdminId]);
 
   if (loading) {
@@ -186,13 +215,28 @@ function SubAdminDashboard() {
         </button>
 
         <button
-          style={card}
+          style={{ ...card, position: "relative" }}
           onClick={() =>
             navigate("/subadmin-notification-system", {
               state: { role: "SubAdmin", subAdminId }
             })
           }
         >
+          {hasUnread && (
+            <div
+              style={{
+                position: "absolute",
+                top: "12px",
+                right: "12px",
+                width: "12px",
+                height: "12px",
+                borderRadius: "50%",
+                background: "#ef4444",
+                boxShadow: "0 0 8px rgba(239, 68, 68, 0.6)",
+                zIndex: 10,
+              }}
+            />
+          )}
           🔔
           <h3>Notifications</h3>
           <p>View system notifications</p>

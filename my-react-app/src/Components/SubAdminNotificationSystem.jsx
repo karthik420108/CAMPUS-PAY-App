@@ -24,17 +24,43 @@ function SubAdminNotificationSystem() {
 
   useEffect(() => {
     fetchSubAdminNotifications();
+    
+    // Set up polling for real-time updates
+    const interval = setInterval(fetchSubAdminNotifications, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchSubAdminNotifications = async () => {
     try {
-      // Fetch notifications using existing endpoint
-      const res = await axios.get("http://localhost:5000/notifications", {
+      // Fetch notifications using user-specific endpoint to get proper read status
+      const res = await axios.get(`http://localhost:5000/notifications/${subAdminId}`, {
         params: { 
           role: "SUBADMIN"
         },
       });
-      setNotifications(res.data);
+      
+      const notifications = res.data;
+      setNotifications(notifications);
+
+      // Mark all unread notifications as read when subadmin views the notification page
+      const unreadNotifications = notifications.filter(n => !n.read);
+      if (unreadNotifications.length > 0 && subAdminId) {
+        const markPromises = unreadNotifications.map(notification => 
+          axios.post(`http://localhost:5000/notifications/${notification._id}/read`, {
+            userId: subAdminId,
+            role: "SUBADMIN",
+          }).catch(err => console.error("Error marking notification as read:", err))
+        );
+        
+        // Execute all mark as read requests in parallel
+        await Promise.all(markPromises);
+        
+        // Update local state to reflect read status
+        setNotifications(prev => 
+          prev.map(n => ({ ...n, read: true }))
+        );
+      }
     } catch (err) {
       console.error("Failed to fetch subadmin notifications:", err);
       setError("Failed to load notifications");
@@ -187,23 +213,44 @@ function SubAdminNotificationSystem() {
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.02 }}
                 style={{
-                  background: "rgba(255,255,255,0.95)",
+                  background: notification.read ? "rgba(245,245,245,0.95)" : "rgba(255,255,255,0.95)",
                   padding: "24px",
                   borderRadius: "16px",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-                  borderLeft: "4px solid #8b5cf6",
+                  boxShadow: notification.read 
+                    ? "0 4px 12px rgba(0,0,0,0.05)" 
+                    : "0 10px 30px rgba(0,0,0,0.1)",
+                  borderLeft: notification.read 
+                    ? "4px solid #d1d5db" 
+                    : "4px solid #8b5cf6",
                   backdropFilter: "blur(10px)",
                   position: "relative",
-                  overflow: "hidden"
+                  overflow: "hidden",
+                  opacity: notification.read ? 0.8 : 1
                 }}
               >
+                {/* Red dot indicator for unread notifications */}
+                {!notification.read && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "16px",
+                      right: "16px",
+                      width: "12px",
+                      height: "12px",
+                      borderRadius: "50%",
+                      background: "#ef4444",
+                      boxShadow: "0 0 12px rgba(239, 68, 68, 0.6)",
+                    }}
+                  />
+                )}
+
                 {/* Notification Icon */}
                 <div style={{
                   position: "absolute",
                   top: "20px",
-                  right: "20px",
+                  right: notification.read ? "20px" : "40px",
                   fontSize: "24px",
-                  opacity: 0.7
+                  opacity: notification.read ? 0.4 : 0.7
                 }}>
                   {notification.type === "success" && "✅"}
                   {notification.type === "warning" && "⚠️"}
@@ -218,16 +265,16 @@ function SubAdminNotificationSystem() {
                 {/* Notification Content */}
                 <h3 style={{ 
                   margin: "0 0 12px 0", 
-                  color: "#1f2937", 
+                  color: notification.read ? "#6b7280" : "#1f2937", 
                   fontSize: "18px",
-                  fontWeight: "600",
-                  paddingRight: "40px"
+                  fontWeight: notification.read ? "500" : "600",
+                  paddingRight: notification.read ? "40px" : "60px"
                 }}>
                   {notification.title}
                 </h3>
                 
                 <p style={{ 
-                  color: "#4b5563", 
+                  color: notification.read ? "#9ca3af" : "#4b5563", 
                   lineHeight: "1.6", 
                   margin: "0 0 16px 0",
                   fontSize: "15px"
@@ -256,16 +303,30 @@ function SubAdminNotificationSystem() {
                     })}
                   </span>
                   
-                  <span style={{
-                    padding: "4px 12px",
-                    backgroundColor: "rgba(139, 92, 246, 0.1)",
-                    color: "#8b5cf6",
-                    borderRadius: "20px",
-                    fontSize: "12px",
-                    fontWeight: "600"
-                  }}>
-                    {notification.category || "General"}
-                  </span>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    {!notification.read && (
+                      <span style={{
+                        padding: "4px 12px",
+                        backgroundColor: "rgba(239, 68, 68, 0.1)",
+                        color: "#ef4444",
+                        borderRadius: "20px",
+                        fontSize: "11px",
+                        fontWeight: "700"
+                      }}>
+                        NEW
+                      </span>
+                    )}
+                    <span style={{
+                      padding: "4px 12px",
+                      backgroundColor: notification.read ? "rgba(107, 114, 128, 0.1)" : "rgba(139, 92, 246, 0.1)",
+                      color: notification.read ? "#6b7280" : "#8b5cf6",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: "600"
+                    }}>
+                      {notification.category || "General"}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             ))}

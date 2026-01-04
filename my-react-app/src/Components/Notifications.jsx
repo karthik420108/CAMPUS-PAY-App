@@ -55,7 +55,27 @@ function Notifications() {
           }
         );
 
-        setNotifications(res.data || []);
+        const notifications = res.data || [];
+        setNotifications(notifications);
+
+        // Mark all unread notifications as read when user views the notification page
+        const unreadNotifications = notifications.filter(n => !n.read);
+        if (unreadNotifications.length > 0) {
+          const markPromises = unreadNotifications.map(notification => 
+            axios.post(`http://localhost:5000/notifications/${notification._id}/read`, {
+              userId: Id,
+              role: state.role,
+            }).catch(err => console.error("Error marking notification as read:", err))
+          );
+          
+          // Execute all mark as read requests in parallel
+          await Promise.all(markPromises);
+          
+          // Update local state to reflect read status
+          setNotifications(prev => 
+            prev.map(n => ({ ...n, read: true }))
+          );
+        }
       } catch (err) {
         console.error("Error fetching notifications:", err);
         setNotifications([]);
@@ -66,21 +86,6 @@ function Notifications() {
 
     fetchNotifications();
   }, [Id, navigate, state]);
-
-  const markAsRead = async (id) => {
-    try {
-      await axios.post(`http://localhost:5000/notifications/${id}/read`, {
-        userId: Id, // pass the current user's Id
-        role: state.role, // pass the role (student/vendor/subadmin)
-      });
-
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
-      );
-    } catch (err) {
-      console.error("Error marking as read:", err);
-    }
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString("en-IN", {
@@ -402,7 +407,6 @@ function Notifications() {
                     ? "0 20px 40px rgba(15,23,42,0.15)"
                     : "0 25px 50px rgba(15,23,42,0.9)",
                 }}
-                onClick={() => markAsRead(note._id)}
               >
                 {!note.read && (
                   <motion.div
