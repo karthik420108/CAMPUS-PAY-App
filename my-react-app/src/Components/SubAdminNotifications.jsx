@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header.jsx";
+import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 
 function SubAdminNotifications({ state }) {
   const [notifications, setNotifications] = useState([]);
@@ -52,10 +53,17 @@ function SubAdminNotifications({ state }) {
     }
   };
 
-  if (loading) return <p>Loading notifications...</p>;
+  if (loading) return (
+    <SubAdminStatusChecker subAdminId={state?.subAdminId || localStorage.getItem('subAdminId')}>
+      <p>Loading notifications...</p>
+    </SubAdminStatusChecker>
+  );
+
+  const subAdminId = state?.subAdminId || localStorage.getItem('subAdminId');
 
   return (
-    <>
+    <SubAdminStatusChecker subAdminId={subAdminId}>
+      <>
       <Header 
         title="SubAdmin Notifications" 
         userRole="SubAdmin" 
@@ -155,6 +163,7 @@ function SubAdminNotifications({ state }) {
       )}
       </div>
     </>
+    </SubAdminStatusChecker>
   );
 }
 

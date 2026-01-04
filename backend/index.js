@@ -1583,6 +1583,13 @@ app.post("/subadmin/complaint/:id/forward", async (req, res) => {
     const { id } = req.params;
     const { subAdminId } = req.body; // Get the SubAdmin ID from request body
     
+    console.log("Forward request received:", { complaintId: id, subAdminId });
+    
+    if (!subAdminId) {
+      console.error("Missing subAdminId in request body");
+      return res.status(400).json({ message: "SubAdmin ID is required" });
+    }
+    
     // Get all admins
     const admins = await Admin.find({});
     if (admins.length === 0) {
@@ -1592,8 +1599,11 @@ app.post("/subadmin/complaint/:id/forward", async (req, res) => {
     // Get SubAdmin info for tracking
     const subAdmin = await SubAdmin.findById(subAdminId);
     if (!subAdmin) {
+      console.error("SubAdmin not found with ID:", subAdminId);
       return res.status(404).json({ message: "SubAdmin not found" });
     }
+
+    console.log("Found SubAdmin:", subAdmin.name);
 
     // Add complaint to first admin (or you can choose which admin)
     const adminId = admins[0]._id;
@@ -1615,10 +1625,32 @@ app.post("/subadmin/complaint/:id/forward", async (req, res) => {
       { $pull: { complaints: id } }
     );
 
+    console.log("Complaint forwarded successfully");
     res.json({ success: true, message: "Complaint forwarded to admin" });
   } catch (err) {
-    console.error(err);
+    console.error("Error in forward endpoint:", err);
     res.status(500).json({ message: "Failed to forward complaint" });
+  }
+});
+
+// Check if SubAdmin exists
+app.get("/subadmin/check/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("Checking SubAdmin existence for ID:", id);
+    
+    const subAdmin = await SubAdmin.findById(id).select("_id");
+    
+    if (subAdmin) {
+      console.log("SubAdmin exists:", id);
+      res.json({ exists: true });
+    } else {
+      console.log("SubAdmin does not exist:", id);
+      res.json({ exists: false });
+    }
+  } catch (err) {
+    console.error("Error checking SubAdmin existence:", err);
+    res.status(500).json({ message: "Error checking SubAdmin existence" });
   }
 });
 

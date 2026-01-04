@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 
 function SubAdminDashboard() {
   const navigate = useNavigate();
@@ -8,10 +9,9 @@ function SubAdminDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [subAdminId, setSubAdminId] = useState(
+  const [subAdminId] = useState(
     state?.subAdminId || localStorage.getItem("subAdminId")
   );
-
   const [profile, setProfile] = useState({
     name: "",
     email: "",
@@ -19,9 +19,6 @@ function SubAdminDashboard() {
   });
   const [hasUnread, setHasUnread] = useState(false);
 
-  /* ----------------------------------
-     AUTH + PERSISTENCE
-  -----------------------------------*/
   useEffect(() => {
     if (!state || state.role !== "SubAdmin") {
       navigate("/");
@@ -30,10 +27,10 @@ function SubAdminDashboard() {
 
     if (state.subAdminId) {
       localStorage.setItem("subAdminId", state.subAdminId);
-      setSubAdminId(state.subAdminId);
     }
 
-    setLoading(false);
+    const timer = setTimeout(() => setLoading(false), 100);
+    return () => clearTimeout(timer);
   }, [state, navigate]);
 
   /* ----------------------------------
@@ -86,14 +83,17 @@ function SubAdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-xl">
-        Loading SubAdmin Dashboard...
-      </div>
+      <SubAdminStatusChecker subAdminId={subAdminId}>
+        <div className="min-h-screen flex items-center justify-center text-xl">
+          Loading SubAdmin Dashboard...
+        </div>
+      </SubAdminStatusChecker>
     );
   }
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px" }}>
+    <SubAdminStatusChecker subAdminId={subAdminId}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px" }}>
       {/* ============================= HEADER ============================= */}
       <div
         style={{
@@ -242,7 +242,8 @@ function SubAdminDashboard() {
           <p>View system notifications</p>
         </button>
       </div>
-    </div>
+      </div>
+    </SubAdminStatusChecker>
   );
 }
 

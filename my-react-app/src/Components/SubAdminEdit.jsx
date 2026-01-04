@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
+import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 
 function SubAdminEdit() {
   const { state } = useLocation();
@@ -148,7 +149,8 @@ function SubAdminEdit() {
       };
 
   return (
-    <div style={pageStyle}>
+    <SubAdminStatusChecker subAdminId={subAdminId || localStorage.getItem('subAdminId')}>
+      <div style={pageStyle}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -487,7 +489,8 @@ function SubAdminEdit() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </SubAdminStatusChecker>
   );
 }
 
