@@ -10,6 +10,9 @@ function History() {
   const { userId, role } = location.state || {};
   const [transactions, setTransactions] = useState([]);
   const [theme, setTheme] = useState("light");
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
+  const [blockingMessage, setBlockingMessage] = useState("");
 
   const easingSoft = [0.16, 1, 0.3, 1];
   const isLight = theme === "light";
@@ -26,6 +29,46 @@ function History() {
       .get(`http://localhost:5000/transactions/${userId}`)
       .then((res) => setTransactions(res.data))
       .catch(console.error);
+  }, [userId, navigate]);
+
+  useEffect(() => {
+    if (!userId) {
+      navigate("/");
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
+        const { isFrozen, isSuspended } = userRes.data;
+
+        setIsFrozen(isFrozen);
+        setIsSuspended(isSuspended);
+
+        // Handle redirects
+        if (isSuspended) {
+          setBlockingMessage(
+            "Your account is suspended. Redirecting to homepage..."
+          );
+          setTimeout(() => navigate("/", 2500));
+          return;
+        }
+
+        // Fetch transactions only if not blocked
+        const txnRes = await axios.get(
+          `http://localhost:5000/transactions/${userId}`
+        );
+        setTransactions(txnRes.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchUserData();
+
+    // Optional: real-time polling every 5s
+    const interval = setInterval(fetchUserData, 5000);
+    return () => clearInterval(interval);
   }, [userId, navigate]);
 
   const sortedTransactions = useMemo(() => {
@@ -78,6 +121,23 @@ function History() {
         boxShadow:
           "0 18px 55px rgba(15,23,42,0.85), 0 0 0 1px rgba(30,64,175,0.65)",
       };
+  if (blockingMessage) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontSize: 18,
+          fontWeight: 600,
+          color: "#ef4444",
+        }}
+      >
+        {blockingMessage}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -181,7 +241,9 @@ function History() {
               type="button"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+              onClick={() =>
+                setTheme((prev) => (prev === "light" ? "dark" : "light"))
+              }
               style={{
                 border: "none",
                 borderRadius: 999,
@@ -211,7 +273,8 @@ function History() {
               top: 12,
               height: 2,
               borderRadius: 999,
-              background: "linear-gradient(90deg,#0ea5e9,#38bdf8,#22c55e,#0f766e)",
+              background:
+                "linear-gradient(90deg,#0ea5e9,#38bdf8,#22c55e,#0f766e)",
               opacity: 0.9,
             }}
             animate={{ x: [-8, 8, -8] }}
@@ -290,9 +353,15 @@ function History() {
                     boxShadow: "0 12px 32px rgba(59,130,246,0.2)",
                   }}
                 >
-                  <span style={{ fontSize: 24, fontWeight: 700, color: "#3b82f6" }}>💳</span>
+                  <span
+                    style={{ fontSize: 24, fontWeight: 700, color: "#3b82f6" }}
+                  >
+                    💳
+                  </span>
                 </div>
-                <p style={{ fontSize: 15, fontWeight: 500, color: textMain }}>No transactions found</p>
+                <p style={{ fontSize: 15, fontWeight: 500, color: textMain }}>
+                  No transactions found
+                </p>
               </motion.div>
             ) : (
               sortedTransactions.map((t, index) => {
@@ -304,13 +373,19 @@ function History() {
                     layout
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03, duration: 0.4, ease: easingSoft }}
+                    transition={{
+                      delay: index * 0.03,
+                      duration: 0.4,
+                      ease: easingSoft,
+                    }}
                     whileHover={{
                       y: -4,
                       boxShadow:
                         "0 24px 60px rgba(15,23,42,0.25), 0 0 0 1px rgba(148,163,184,0.4)",
                     }}
-                    onClick={() => navigate(`/transaction/${t.txid}`, { state: { txn: t } })}
+                    onClick={() =>
+                      navigate(`/transaction/${t.txid}`, { state: { txn: t } })
+                    }
                     style={{
                       padding: "20px",
                       borderRadius: 20,
@@ -328,12 +403,25 @@ function History() {
                     }}
                   >
                     {/* Left Section */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
                       <motion.span
                         animate={{
-                          boxShadow: [`0 0 0 0 ${statusColor}44`, `0 0 0 12px ${statusColor}00`],
+                          boxShadow: [
+                            `0 0 0 0 ${statusColor}44`,
+                            `0 0 0 12px ${statusColor}00`,
+                          ],
                         }}
-                        transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+                        transition={{
+                          duration: 2.4,
+                          repeat: Infinity,
+                          ease: "easeOut",
+                        }}
                         style={{
                           padding: "6px 14px",
                           borderRadius: 999,
@@ -349,12 +437,23 @@ function History() {
                         {t.status}
                       </motion.span>
 
-                      <div style={{ fontSize: 14, fontWeight: 600, color: textMain }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: textMain,
+                        }}
+                      >
                         {new Date(t.createdAt).toLocaleDateString()} ·{" "}
-                        {new Date(t.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(t.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </div>
 
-                      <small style={{ color: textSub, fontSize: 12 }}>TXID: {t.txid?.slice(0, 8)}...</small>
+                      <small style={{ color: textSub, fontSize: 12 }}>
+                        TXID: {t.txid?.slice(0, 8)}...
+                      </small>
                       <small style={{ color: textSub, fontSize: 12 }}>
                         User: {t.userId?.firstName} {t.userId?.lastName}
                       </small>

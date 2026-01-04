@@ -403,6 +403,7 @@ function Upin({
                       fontWeight: 700,
                       outline: "none",
                       transition: "all 0.2s",
+                      WebkitTextSecurity: "disc", // hides value consistently, removes eye icon
                       ...inputStyle,
                     }}
                     onFocus={(e) =>
@@ -420,48 +421,47 @@ function Upin({
               </div>
             </div>
 
-            {/* Confirm PIN */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <label style={{ fontSize: 13, color: textMain, fontWeight: 500 }}>
-                Confirm PIN
-              </label>
-              <div
-                style={{ display: "flex", justifyContent: "space-between", gap: 6 }}
-              >
-                {[...Array(6)].map((_, idx) => (
-                  <input
-                    key={idx}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength="1"
-                    ref={(el) => (confirmPinRef.current[idx] = el)}
-                    onChange={(e) => handleInput(e, idx, confirmPinRef)}
-                    required
-                    style={{
-                      width: "100%",
-                      height: 48,
-                      borderRadius: 12,
-                      textAlign: "center",
-                      fontSize: 20,
-                      fontWeight: 700,
-                      outline: "none",
-                      transition: "all 0.2s",
-                      ...inputStyle,
-                    }}
-                    onFocus={(e) =>
-                      (e.target.style.borderColor = isLight
-                        ? "#3b82f6"
-                        : "#60a5fa")
-                    }
-                    onBlur={(e) =>
-                      (e.target.style.borderColor = isLight
-                        ? "#cbd5e1"
-                        : "#475569")
-                    }
-                  />
-                ))}
-              </div>
-            </div>
+           {/* Confirm PIN */}
+<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+  <label style={{ fontSize: 13, color: textMain, fontWeight: 500 }}>
+    Confirm PIN
+  </label>
+  <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+    {[...Array(6)].map((_, idx) => (
+      <input
+        key={idx}
+        type="password"
+        inputMode="numeric"
+        pattern="\d*"         // ensures numeric only
+        maxLength={1}
+        ref={(el) => (confirmPinRef.current[idx] = el)}
+        onChange={(e) => handleInput(e, idx, confirmPinRef)}
+        required
+        style={{
+          width: "100%",
+          height: 48,
+          borderRadius: 12,
+          textAlign: "center",
+          fontSize: 20,
+          fontWeight: 700,
+          outline: "none",
+          transition: "all 0.2s",
+          WebkitTextSecurity: "disc", // hides value consistently, removes eye icon
+          MozTextSecurity: "disc",
+          textSecurity: "disc",
+          ...inputStyle,
+        }}
+        onFocus={(e) =>
+          (e.target.style.borderColor = isLight ? "#3b82f6" : "#60a5fa")
+        }
+        onBlur={(e) =>
+          (e.target.style.borderColor = isLight ? "#cbd5e1" : "#475569")
+        }
+      />
+    ))}
+  </div>
+</div>
+
           </motion.div>
 
           {/* Error Message */}

@@ -7,12 +7,16 @@ import Header1 from "./Header1";
 function RaiseComplaint() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userId , role , isFrozen} = location.state || {};
+  const { userId , role } = location.state || {};
 
   const [description, setDescription] = useState("");
   const [screenshot, setScreenshot] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
+  const [blockingMessage, setBlockingMessage] = useState("");
+
 
   const [admins, setAdmins] = useState([]);
   const [selectedAdmins, setSelectedAdmins] = useState([]);
@@ -105,6 +109,49 @@ function RaiseComplaint() {
     }
   };
 
+
+  if(role != "vendor"){
+    useEffect(() => {
+  if (!userId) {
+    navigate("/");
+    return;
+  }
+
+  const fetchUserData = async () => {
+    try {
+      const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
+      const { isFrozen, isSuspended } = userRes.data;
+
+      setIsFrozen(isFrozen);
+      setIsSuspended(isSuspended);
+
+      if (isSuspended) {
+        setBlockingMessage("Your account is suspended. Redirecting to homepage...");
+        setTimeout(() => navigate("/", { state: { userId } }), 2500);
+        return;
+      }
+
+      // Fetch transactions only if not blocked
+      const txnRes = await axios.get(`http://localhost:5000/transactions/${userId}`);
+      setTransactions(txnRes.data);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchUserData();
+
+  // Optional: real-time polling every 5s
+  const interval = setInterval(fetchUserData, 5000);
+  return () => clearInterval(interval);
+
+}, [userId, navigate]);
+
+
+
+  }
+
   const easingSoft = [0.16, 1, 0.3, 1];
   const isLight = theme === "light";
 
@@ -181,6 +228,23 @@ function RaiseComplaint() {
       };
 
   const errorColor = isLight ? "#b91c1c" : "#fecaca";
+
+  if (blockingMessage) {
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      fontSize: 18,
+      fontWeight: 600,
+      color: "#ef4444",
+    }}>
+      {blockingMessage}
+    </div>
+  );
+}
+
 
   return (
     <>

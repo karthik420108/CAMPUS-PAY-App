@@ -3,15 +3,21 @@ import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import Header1 from "./Header1";
 import { motion } from "motion/react";
+import { useNavigate } from "react-router-dom";
 
 function GenerateBill() {
   const { state } = useLocation();
-  const { userId , isFrozen} = state || {};
+  const { userId} = state || {};
+  const navigate = useNavigate();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState("light");
   const isLight = theme === "light";
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
+  const [blockingMessage, setBlockingMessage] = useState("");
+
 
   useEffect(() => {
     if (!userId) return;
@@ -27,6 +33,64 @@ function GenerateBill() {
         setLoading(false);
       });
   }, [userId]);
+
+
+  useEffect(() => {
+  if (!userId) {
+    navigate("/");
+    return;
+  }
+
+  const fetchUserData = async () => {
+    try {
+      const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
+      const { isFrozen, isSuspended } = userRes.data;
+
+      setIsFrozen(isFrozen);
+      setIsSuspended(isSuspended);
+
+      // Handle redirects
+     
+      if (isSuspended) {
+        setBlockingMessage("Your account is suspended. Redirecting to homepage...");
+        setTimeout(() => navigate("/", { state: { userId } }), 2500);
+        return;
+      }
+
+      // Fetch transactions only if not blocked
+      const txnRes = await axios.get(`http://localhost:5000/transactions/${userId}`);
+      setTransactions(txnRes.data);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchUserData();
+
+  // Optional: real-time polling every 5s
+  const interval = setInterval(fetchUserData, 5000);
+  return () => clearInterval(interval);
+
+}, [userId, navigate]);
+
+if (blockingMessage) {
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      fontSize: 18,
+      fontWeight: 600,
+      color: "#ef4444",
+    }}>
+      {blockingMessage}
+    </div>
+  );
+}
+
+
 
   const totalSpent = useMemo(() => {
     if (!data?.transactions) return 0;

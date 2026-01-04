@@ -52,7 +52,6 @@ function Login() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showEditProfile, setShowEditProfile] = useState(false);
-
   const [hasUnread, setHasUnread] = useState(false);
 
   // Theme with persistence
@@ -77,30 +76,49 @@ function Login() {
       .then((res) => setTransactions(res.data))
       .catch(console.error);
   }, [userId, navigate]);
+useEffect(() => {
+  if (!userId) return;
 
-  useEffect(() => {
-    if (userId) {
-      axios
-        .get(`http://localhost:5000/user/${userId}`)
-        .then((res) => {
-          setFrozen(res.data.isFrozen);
-          setImageUrl(res.data.ImageUrl || imageUrl);
-          setUsername(res.data.firstName || username);
-          setWallBalance(res.data.walletBalance || walletBalance);
-        })
-        .catch(console.error);
+  const fetchUserStatus = () => {
+    axios
+      .get(`http://localhost:5000/user/${userId}`)
+      .then((res) => {
+        const userData = res.data;
 
-      axios
-        .get("http://localhost:5000/institute-balance")
-        .then((res) => {
-          setInstaBalance(res.data.balance || instBalance);
-        })
-        .catch(console.err);
-    }
-  }, [userId, imageUrl, username, walletBalance, instBalance]);
+        setFrozen(userData.isFrozen);
+        setSuspended(userData.isSuspended || false);
+        setImageUrl(userData.ImageUrl || imageUrl);
+        setUsername(userData.firstName || username);
+        setWallBalance(userData.walletBalance || walletBalance);
 
-  useEffect(() => {
-    if (!userId) return;
+        if (userData.isSuspended) {
+          setShowEditProfile(false); // close popups
+
+          // Redirect after 5 seconds if suspended
+          setTimeout(() => {
+            navigate("/", { replace: true });
+          }, 5000);
+        }
+      })
+      .catch(console.error);
+  };
+
+  // Call immediately once
+  fetchUserStatus();
+
+  // Then set interval every 5 seconds
+  const intervalId = setInterval(fetchUserStatus, 5000);
+
+  // Cleanup on unmount
+  return () => clearInterval(intervalId);
+}, [userId, imageUrl, username, walletBalance, instBalance, navigate]);
+
+
+
+useEffect(() => {
+  if (!userId) return;
+
+  const fetchNotifications = () => {
     axios
       .get(`http://localhost:5000/notifications/${userId}`, {
         params: { role: "student" },
@@ -110,7 +128,18 @@ function Login() {
         setHasUnread(unread);
       })
       .catch(console.error);
-  }, [userId]);
+  };
+
+  // Call immediately once
+  fetchNotifications();
+
+  // Poll every 5 seconds
+  const intervalId = setInterval(fetchNotifications, 7000);
+
+  // Cleanup on unmount
+  return () => clearInterval(intervalId);
+}, [userId]);
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -646,7 +675,7 @@ function Login() {
                   letterSpacing: "0.03em",
                 }}
               >
-                Wallet Balance
+                Total Spendings
               </p>
               {/* ✅ FIX: Added key={theme} to force re-render */}
               <h3
@@ -664,7 +693,7 @@ function Login() {
                   color: "transparent",
                 }}
               >
-                ₹{wallBalance?.toLocaleString() || "0"}
+                ₹{walletBalance?.toLocaleString() || "0"}
               </h3>
             </motion.div>
 

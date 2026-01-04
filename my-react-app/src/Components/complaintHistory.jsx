@@ -7,13 +7,79 @@ import Header1 from "./Header1";
 function ComplaintHistory() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userId, role , isFrozen } = location.state || {};
+  const { userId, role } = location.state || {};
 
   const [complaints, setComplaints] = useState([]);
   const [openCard, setOpenCard] = useState(null);
   const [activeTab, setActiveTab] = useState("active"); // Defaults to "active"
   const [theme, setTheme] = useState("light");
   const [loading, setLoading] = useState(true);
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
+  const [blockingMessage, setBlockingMessage] = useState("");
+
+  useEffect(() => {
+    if (!userId) {
+      navigate("/");
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
+        const { isFrozen, isSuspended } = userRes.data;
+
+        setIsFrozen(isFrozen);
+        setIsSuspended(isSuspended);
+
+        // Handle redirects
+        if (isFrozen) {
+          setBlockingMessage("Your account is frozen. Redirecting to login...");
+          setTimeout(() => navigate("/login", { state: { userId } }), 2500);
+          return;
+        }
+        if (isSuspended) {
+          setBlockingMessage(
+            "Your account is suspended. Redirecting to homepage..."
+          );
+          setTimeout(() => navigate("/", { state: { userId } }), 2500);
+          return;
+        }
+
+        // Fetch transactions only if not blocked
+        const txnRes = await axios.get(
+          `http://localhost:5000/transactions/${userId}`
+        );
+        setTransactions(txnRes.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchUserData();
+
+    // Optional: real-time polling every 5s
+    const interval = setInterval(fetchUserData, 5000);
+    return () => clearInterval(interval);
+  }, [userId, navigate]);
+
+  if (blockingMessage) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontSize: 18,
+          fontWeight: 600,
+          color: "#ef4444",
+        }}
+      >
+        {blockingMessage}
+      </div>
+    );
+  }
 
   if (!userId) {
     navigate("/");
@@ -31,7 +97,10 @@ function ComplaintHistory() {
         res.data.complaints?.forEach((complaint, index) => {
           console.log(`Complaint ${index}:`, complaint);
           console.log(`  - assignedAdmins:`, complaint.assignedAdmins);
-          console.log(`  - assignedAdmins length:`, complaint.assignedAdmins?.length);
+          console.log(
+            `  - assignedAdmins length:`,
+            complaint.assignedAdmins?.length
+          );
         });
         setComplaints(res.data.complaints || []);
       } catch (error) {
@@ -46,16 +115,15 @@ function ComplaintHistory() {
   const isLight = theme === "light";
 
   // ---------- EXACT ENUM MATCHING ----------
-  const activeComplaints = complaints.filter(c => 
-    (c.status || '').toLowerCase() === "active"
+  const activeComplaints = complaints.filter(
+    (c) => (c.status || "").toLowerCase() === "active"
   );
-  const resolvedComplaints = complaints.filter(c => 
-    (c.status || '').toLowerCase() === "resolved"
+  const resolvedComplaints = complaints.filter(
+    (c) => (c.status || "").toLowerCase() === "resolved"
   );
 
-  const currentComplaints = activeTab === "active" 
-    ? activeComplaints 
-    : resolvedComplaints;
+  const currentComplaints =
+    activeTab === "active" ? activeComplaints : resolvedComplaints;
 
   // ---------- THEME-DEPENDENT STYLES (exact copy from RaiseComplaint) ----------
   const pageStyle = isLight
@@ -129,7 +197,7 @@ function ComplaintHistory() {
 
   return (
     <>
-      <Header1 userId={userId} role={role} isFrozen = {isFrozen} />
+      <Header1 userId={userId} role={role} isFrozen={isFrozen} />
 
       <motion.div
         style={{
@@ -225,7 +293,9 @@ function ComplaintHistory() {
             <span style={{ color: "#6b7280" }}>Mode</span>
             <button
               type="button"
-              onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+              onClick={() =>
+                setTheme((prev) => (prev === "light" ? "dark" : "light"))
+              }
               style={{
                 border: "none",
                 borderRadius: 999,
@@ -316,8 +386,16 @@ function ComplaintHistory() {
             style={{ display: "flex", gap: 10, justifyContent: "center" }}
           >
             {[
-              { key: "active", label: "Active", count: activeComplaints.length },
-              { key: "resolved", label: "Resolved", count: resolvedComplaints.length },
+              {
+                key: "active",
+                label: "Active",
+                count: activeComplaints.length,
+              },
+              {
+                key: "resolved",
+                label: "Resolved",
+                count: resolvedComplaints.length,
+              },
             ].map(({ key, label, count }) => (
               <motion.button
                 key={key}
@@ -328,19 +406,21 @@ function ComplaintHistory() {
                   padding: "10px 22px",
                   borderRadius: 14,
                   border: "1px solid rgba(148,163,184,0.4)",
-                  background: activeTab === key
-                    ? "linear-gradient(120deg,#3b82f6,#0ea5e9)"
-                    : isLight
-                    ? "rgba(255,255,255,0.7)"
-                    : "rgba(15,23,42,0.7)",
+                  background:
+                    activeTab === key
+                      ? "linear-gradient(120deg,#3b82f6,#0ea5e9)"
+                      : isLight
+                      ? "rgba(255,255,255,0.7)"
+                      : "rgba(15,23,42,0.7)",
                   color: activeTab === key ? "#f9fafb" : textMain,
                   fontWeight: 600,
                   fontSize: 13,
                   cursor: "pointer",
                   backdropFilter: "blur(10px)",
-                  boxShadow: activeTab === key
-                    ? "0 8px 24px rgba(59,130,246,0.4)"
-                    : "0 4px 12px rgba(0,0,0,0.08)",
+                  boxShadow:
+                    activeTab === key
+                      ? "0 8px 24px rgba(59,130,246,0.4)"
+                      : "0 4px 12px rgba(0,0,0,0.08)",
                 }}
               >
                 {label}
@@ -373,7 +453,11 @@ function ComplaintHistory() {
             >
               <motion.div
                 animate={{ rotate: [0, 10, -10, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
                 style={{
                   width: 64,
                   height: 64,
@@ -422,9 +506,8 @@ function ComplaintHistory() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {currentComplaints.map((c, index) => {
               const isOpen = openCard === c._id;
-              const statusColor = c.status?.toLowerCase() === "resolved" 
-                ? "#22c55e" 
-                : "#3b82f6";
+              const statusColor =
+                c.status?.toLowerCase() === "resolved" ? "#22c55e" : "#3b82f6";
 
               return (
                 <motion.div
@@ -432,7 +515,11 @@ function ComplaintHistory() {
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.4, ease: easingSoft }}
+                  transition={{
+                    delay: index * 0.03,
+                    duration: 0.4,
+                    ease: easingSoft,
+                  }}
                   whileHover={{
                     y: -3,
                     boxShadow:
@@ -457,7 +544,11 @@ function ComplaintHistory() {
                       opacity: 0.9,
                     }}
                     animate={{ x: [-8, 8, -8] }}
-                    transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                    transition={{
+                      duration: 10,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
                   />
 
                   {/* header */}
@@ -501,7 +592,11 @@ function ComplaintHistory() {
                           `0 0 0 10px ${statusColor}00`,
                         ],
                       }}
-                      transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+                      transition={{
+                        duration: 2.4,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                      }}
                       style={{
                         padding: "6px 16px",
                         borderRadius: 999,
@@ -549,7 +644,13 @@ function ComplaintHistory() {
                       >
                         {/* ✅ DESCRIPTION */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
-                          <span style={{ fontWeight: 600, color: textMain, marginRight: 6 }}>
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              color: textMain,
+                              marginRight: 6,
+                            }}
+                          >
                             Description:
                           </span>
                           {c.description || "—"}
@@ -557,52 +658,77 @@ function ComplaintHistory() {
 
                         {/* ✅ ADMINS */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
-                          <span style={{ fontWeight: 600, color: textMain, marginRight: 6 }}>
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              color: textMain,
+                              marginRight: 6,
+                            }}
+                          >
                             Assigned Admins:
                           </span>
                           {c.assignedAdmins && c.assignedAdmins.length > 0
-                            ? c.assignedAdmins.map(a => {
-                                if (a.type === "Admin") {
-                                  return a.email;
-                                } else if (a.type === "SubAdmin") {
-                                  return a.name || a.email;
-                                }
-                                return a.email || a.name;
-                              }).filter(Boolean).join(", ")
+                            ? c.assignedAdmins
+                                .map((a) => {
+                                  if (a.type === "Admin") {
+                                    return a.email;
+                                  } else if (a.type === "SubAdmin") {
+                                    return a.name || a.email;
+                                  }
+                                  return a.email || a.name;
+                                })
+                                .filter(Boolean)
+                                .join(", ")
                             : "—"}
                         </p>
 
                         {/* ✅ DATE */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
-                          <span style={{ fontWeight: 600, color: textMain, marginRight: 6 }}>
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              color: textMain,
+                              marginRight: 6,
+                            }}
+                          >
                             Date:
                           </span>
-                          {c.createdAt ? new Date(c.createdAt).toLocaleString() : "—"}
+                          {c.createdAt
+                            ? new Date(c.createdAt).toLocaleString()
+                            : "—"}
                         </p>
 
                         {/* ✅ ADMIN RESPONSE */}
                         {c.response && (
-                          <div style={{ 
-                            margin: "8px 0", 
-                            padding: "10px", 
-                            backgroundColor: isLight ? "#f0fdf4" : "#14532d", 
-                            borderRadius: "8px",
-                            border: `1px solid ${isLight ? "#bbf7d0" : "#22c55e"}`
-                          }}>
+                          <div
+                            style={{
+                              margin: "8px 0",
+                              padding: "10px",
+                              backgroundColor: isLight ? "#f0fdf4" : "#14532d",
+                              borderRadius: "8px",
+                              border: `1px solid ${
+                                isLight ? "#bbf7d0" : "#22c55e"
+                              }`,
+                            }}
+                          >
                             <p style={{ margin: 0, lineHeight: 1.5 }}>
-                              <span style={{ 
-                                fontWeight: 600, 
-                                color: isLight ? "#166534" : "#86efac",
-                                marginRight: 6,
-                                display: "block",
-                                marginBottom: 4
-                              }}>
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  color: isLight ? "#166534" : "#86efac",
+                                  marginRight: 6,
+                                  display: "block",
+                                  marginBottom: 4,
+                                }}
+                              >
                                 💬 Admin Response:
                               </span>
-                              <span style={{ 
-                                fontStyle: "italic",
-                                color: isLight ? "#15803d" : "#bbf7d0"
-                              }}>
+                              <span
+                                style={{
+                                  fontStyle: "italic",
+                                  color: isLight ? "#15803d" : "#bbf7d0",
+                                }}
+                              >
                                 {c.response}
                               </span>
                             </p>
@@ -629,7 +755,8 @@ function ComplaintHistory() {
                                 fontSize: 12,
                                 fontWeight: 600,
                                 textDecoration: "none",
-                                background: "linear-gradient(120deg,#86efac,#22c55e)",
+                                background:
+                                  "linear-gradient(120deg,#86efac,#22c55e)",
                                 color: "#020617",
                                 boxShadow: "0 10px 24px rgba(22,163,74,0.35)",
                               }}
