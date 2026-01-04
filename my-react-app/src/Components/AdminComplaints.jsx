@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 
 function AdminComplaints() {
@@ -12,6 +13,10 @@ function AdminComplaints() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
+  // Theme state
+  const [theme, setTheme] = useState("light");
+  const isLight = theme === "light";
+
   useEffect(() => {
     if (!state || state.role !== "admin") {
       navigate(-1);
@@ -21,10 +26,8 @@ function AdminComplaints() {
     const fetchComplaints = async () => {
       try {
         const response = await axios.get("http://localhost:5000/admin/complaints");
-        console.log("Admin complaints response:", response.data);
         // Filter to show only forwarded complaints
         const forwardedComplaints = response.data.filter(complaint => complaint.isForwarded === true);
-        console.log("Filtered forwarded complaints:", forwardedComplaints);
         setComplaints(forwardedComplaints);
         setLoading(false);
       } catch (err) {
@@ -62,15 +65,71 @@ function AdminComplaints() {
   };
 
   const getStatusColor = (status) => {
-    return status === "resolved" ? "green" : "orange";
+    return status === "resolved" ? "#10b981" : "#f59e0b";
   };
 
   const getForwardedColor = (isForwarded) => {
-    return isForwarded ? "red" : "inherit";
+    return isForwarded ? "#ef4444" : "inherit";
   };
 
+  // --- STYLING CONSTANTS ---
+  const easingSoft = [0.16, 1, 0.3, 1];
+  const textMain = isLight ? "#0f172a" : "#e5e7eb";
+  const textSub = isLight ? "#6b7280" : "#94a3b8";
+
+  const pageStyle = isLight
+    ? {
+        background:
+          "radial-gradient(circle at 0% 0%, #e0f2fe 0, transparent 55%)," +
+          "radial-gradient(circle at 100% 0%, #dbeafe 0, transparent 55%)," +
+          "radial-gradient(circle at 0% 100%, #e0f2fe 0, transparent 55%)," +
+          "radial-gradient(circle at 100% 100%, #d1fae5 0, transparent 55%)",
+        backgroundColor: "#f3f4f6",
+      }
+    : {
+        backgroundColor: "#020617",
+        backgroundImage:
+          "radial-gradient(circle at 0% 0%, rgba(37,99,235,0.35), transparent 55%)," +
+          "radial-gradient(circle at 100% 0%, rgba(56,189,248,0.30), transparent 55%)," +
+          "radial-gradient(circle at 0% 100%, rgba(16,185,129,0.18), transparent 55%)," +
+          "radial-gradient(circle at 100% 100%, rgba(37,99,235,0.32), transparent 55%)," +
+          "linear-gradient(to right, rgba(15,23,42,0.9) 1px, transparent 1px)," +
+          "linear-gradient(to bottom, rgba(15,23,42,0.9) 1px, transparent 1px)",
+        backgroundSize: "cover, cover, cover, cover, 80px 80px, 80px 80px",
+        backgroundPosition: "center, center, center, center, 0 0, 0 0",
+      };
+
+  const cardStyle = isLight
+    ? {
+        background: "rgba(255, 255, 255, 0.8)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(255, 255, 255, 0.5)",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+      }
+    : {
+        background: "rgba(30, 41, 59, 0.7)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1)",
+      };
+
+  const inputStyle = isLight 
+    ? { background: "white", border: "1px solid #e2e8f0", color: textMain }
+    : { background: "rgba(15, 23, 42, 0.6)", border: "1px solid #334155", color: "white" };
+
+
   if (loading) {
-    return <div style={{ padding: "20px" }}>Loading complaints...</div>;
+    return (
+      <div style={{ ...pageStyle, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <motion.div 
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            style={{ fontSize: "20px", fontWeight: "600", color: textSub }}
+        >
+            Loading complaints...
+        </motion.div>
+      </div>
+    );
   }
 
   // Separate complaints by status
@@ -79,216 +138,279 @@ function AdminComplaints() {
   const currentComplaints = activeTab === "pending" ? pendingComplaints : resolvedComplaints;
 
   return (
-    <>
-      <Header 
-        title="Admin Complaints" 
-        userRole="admin" 
-        userName="Admin" 
+    <div style={{ ...pageStyle, minHeight: "100vh", position: "relative", overflowX: "hidden" }}>
+      {/* Background Orbs */}
+      <motion.div
+        style={{
+          position: "absolute", width: 300, height: 300, borderRadius: "50%",
+          background: isLight ? "radial-gradient(circle at 30% 0%, #bfdbfe, #60a5fa, #1d4ed8)" : "radial-gradient(circle at 30% 0%, #bfdbfe, #3b82f6, #1d4ed8)",
+          filter: "blur(60px)", opacity: 0.4, top: -50, left: -50, zIndex: 0, pointerEvents: "none"
+        }}
+        animate={{ x: [0, 40, -20, 0], y: [0, 18, -12, 0] }}
+        transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
       />
       
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px" }}>
-        <h2>Forwarded Complaints</h2>
-
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      {/* Theme Switch */}
+      <div
+        style={{
+          position: "fixed", top: 20, right: 20, display: "flex", alignItems: "center", gap: 6,
+          padding: "4px 6px", borderRadius: 999, border: "1px solid rgba(148,163,184,0.6)",
+          background: isLight ? "rgba(255,255,255,0.8)" : "rgba(15,23,42,0.8)", backdropFilter: "blur(8px)", zIndex: 50,
+        }}
+      >
+        <span style={{ color: textSub, paddingLeft: 4, fontSize: 12 }}>Mode</span>
         <button
-          onClick={() => setActiveTab("pending")}
+          type="button"
+          onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
           style={{
-            padding: "8px 16px",
-            backgroundColor: activeTab === "pending" ? "#ff6b35" : "#f8f9fa",
-            color: activeTab === "pending" ? "white" : "#333",
-            border: "1px solid #ddd",
-            borderRadius: "4px",
-            cursor: "pointer"
+            border: "none", borderRadius: 999, padding: "4px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600,
+            background: isLight ? "linear-gradient(120deg,#020617,#0f172a)" : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
+            color: isLight ? "#e5e7eb" : "#0f172a",
           }}
         >
-          ⏳ Pending ({pendingComplaints.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("resolved")}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: activeTab === "resolved" ? "#28a745" : "#f8f9fa",
-            color: activeTab === "resolved" ? "white" : "#333",
-            border: "1px solid #ddd",
-            borderRadius: "4px",
-            cursor: "pointer"
-          }}
-        >
-          ✅ Resolved ({resolvedComplaints.length})
+          {isLight ? "Dark" : "Light"}
         </button>
       </div>
 
-      {currentComplaints.length === 0 ? (
-        <p>
-          {activeTab === "pending" 
-            ? "No pending complaints found." 
-            : "No resolved complaints found."
-          }
-        </p>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-          {currentComplaints.map((complaint) => (
-            <div 
-              key={complaint._id} 
-              style={{ 
-                border: "1px solid #ddd", 
-                borderRadius: "8px", 
-                padding: "15px", 
-                backgroundColor: "#f9f9f9" 
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: "0 0 10px 0", color: getForwardedColor(complaint.isForwarded) }}>
-                    Complaint ID: {complaint.complaintId}
-                    {complaint.isForwarded && " (Forwarded from SubAdmin)"}
-                  </h4>
-                  
-                  <p style={{ margin: "5px 0" }}>
-                    <strong>From:</strong> 
-                    {complaint.role === "vendor" 
-                      ? `${complaint.userId?.vendorName} (${complaint.userId?.Email})`
-                      : `${complaint.userId?.firstName} ${complaint.userId?.lastName} (${complaint.userId?.collegeEmail})`
-                    }
-                  </p>
-                  
-                  {complaint.isForwarded && complaint.forwardedBy && (
-                    <p style={{ margin: "5px 0" }}>
-                      <strong>Forwarded by:</strong> {complaint.forwardedBy.name} 
-                      ({complaint.forwardedBy.email})
-                      {complaint.forwardedAt && (
-                        <span style={{ color: "#666", fontSize: "12px" }}>
-                          {" "}on {new Date(complaint.forwardedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  
-                  <p style={{ margin: "5px 0" }}>
-                    <strong>Description:</strong> {complaint.description}
-                  </p>
-                  
-                  <p style={{ margin: "5px 0" }}>
-                    <strong>Status:</strong> 
-                    <span style={{ color: getStatusColor(complaint.status), fontWeight: "bold" }}>
-                      {complaint.status.toUpperCase()}
-                    </span>
-                  </p>
-                  
-                  <p style={{ margin: "5px 0" }}>
-                    <strong>Date:</strong> {new Date(complaint.createdAt).toLocaleDateString()}
-                  </p>
-                  
-                  {complaint.screenshot && (
-                    <div style={{ marginTop: "10px" }}>
-                      <strong>Screenshot:</strong>
-                      <br />
-                      <img 
-                        src={complaint.screenshot} 
-                        alt="Complaint screenshot" 
-                        style={{ maxWidth: "300px", maxHeight: "200px", border: "1px solid #ccc" }}
-                      />
-                    </div>
-                  )}
-                  
-                  {complaint.response && (
-                    <div style={{ marginTop: "10px", padding: "10px", backgroundColor: "#e8f5e8", borderRadius: "4px" }}>
-                      <strong style={{ color: "#28a745" }}>Admin Response:</strong>
-                      <p style={{ margin: "5px 0", fontStyle: "italic" }}>{complaint.response}</p>
-                    </div>
-                  )}
-                  
-                  {complaint.assignedAdmins && complaint.assignedAdmins.length > 0 && (
-                    <p style={{ margin: "5px 0" }}>
-                      <strong>Assigned to:</strong> {complaint.assignedAdmins.map(admin => admin.name).join(", ")}
-                    </p>
-                  )}
-                </div>
-                
-                <div style={{ marginLeft: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {complaint.status !== "resolved" && (
-                    <>
-                      {respondingTo === complaint._id ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                          <textarea
-                            value={responseText}
-                            onChange={(e) => setResponseText(e.target.value)}
-                            placeholder="Enter your response..."
-                            style={{
-                              padding: "8px",
-                              border: "1px solid #ddd",
-                              borderRadius: "4px",
-                              minWidth: "250px",
-                              minHeight: "80px",
-                              resize: "vertical"
-                            }}
-                          />
-                          <div style={{ display: "flex", gap: "8px" }}>
-                            <button
-                              onClick={() => handleResponse(complaint._id)}
-                              style={{
-                                padding: "6px 12px",
-                                backgroundColor: "#28a745",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "4px",
-                                cursor: "pointer",
-                                fontSize: "12px"
-                              }}
-                            >
-                              Send Response
-                            </button>
-                            <button
-                              onClick={() => {
-                                setRespondingTo(null);
-                                setResponseText("");
-                              }}
-                              style={{
-                                padding: "6px 12px",
-                                backgroundColor: "#6c757d",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "4px",
-                                cursor: "pointer",
-                                fontSize: "12px"
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setRespondingTo(complaint._id)}
-                          style={{
-                            padding: "8px 16px",
-                            backgroundColor: "#007bff",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: "pointer"
-                          }}
-                        >
-                          💬 Respond
-                        </button>
-                      )}
-                    </>
-                  )}
-                  
-                  {complaint.status === "resolved" && (
-                    <span style={{ color: "#28a745", fontWeight: "bold", fontSize: "12px" }}>
-                      ✅ Resolved
-                    </span>
-                  )}
-                </div>
-              </div>
+      <div style={{ position: "relative", zIndex: 100 }}>
+        <Header title="Admin Complaints" userRole="admin" userName="Admin" />
+      </div>
+
+      <main style={{ maxWidth: "1000px", margin: "0 auto", padding: "40px 24px", position: "relative", zIndex: 1 }}>
+        
+        <div style={{ marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+                <h2 style={{ fontSize: "28px", fontWeight: "800", color: textMain, margin: 0 }}>Forwarded Complaints</h2>
+                <p style={{ color: textSub, marginTop: "4px" }}>Manage issues escalated from sub-admins</p>
             </div>
-          ))}
+            
+            {/* Custom Tabs */}
+            <div style={{ 
+                display: "flex", 
+                background: isLight ? "white" : "rgba(30,41,59,0.5)", 
+                padding: "4px", 
+                borderRadius: "12px",
+                border: isLight ? "1px solid #e2e8f0" : "1px solid #334155"
+            }}>
+                <button
+                onClick={() => setActiveTab("pending")}
+                style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "14px", fontWeight: "600",
+                    background: activeTab === "pending" ? (isLight ? "#fef3c7" : "#78350f") : "transparent",
+                    color: activeTab === "pending" ? (isLight ? "#b45309" : "#fbbf24") : textSub,
+                    transition: "all 0.2s"
+                }}
+                >
+                ⏳ Pending ({pendingComplaints.length})
+                </button>
+                <button
+                onClick={() => setActiveTab("resolved")}
+                style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "14px", fontWeight: "600",
+                    background: activeTab === "resolved" ? (isLight ? "#dcfce7" : "#064e3b") : "transparent",
+                    color: activeTab === "resolved" ? (isLight ? "#166534" : "#4ade80") : textSub,
+                    transition: "all 0.2s"
+                }}
+                >
+                ✅ Resolved ({resolvedComplaints.length})
+                </button>
+            </div>
         </div>
-      )}
-      </div>
-    </>
+
+        {currentComplaints.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            style={{ textAlign: "center", padding: "40px", color: textSub, ...cardStyle, borderRadius: "20px" }}
+          >
+            <p style={{ fontSize: "16px" }}>
+              {activeTab === "pending" ? "No pending complaints found." : "No resolved complaints found."}
+            </p>
+          </motion.div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <AnimatePresence>
+                {currentComplaints.map((complaint) => (
+                <motion.div 
+                    layout
+                    key={complaint._id} 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.4, ease: easingSoft }}
+                    style={{ 
+                        ...cardStyle, 
+                        borderRadius: "20px", 
+                        padding: "24px",
+                        position: "relative",
+                        borderLeft: `4px solid ${getStatusColor(complaint.status)}`
+                    }}
+                >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {/* Header Row */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                                    <span style={{ fontSize: "12px", fontWeight: "700", color: textSub, textTransform: "uppercase", letterSpacing: "0.05em" }}>ID: {complaint.complaintId}</span>
+                                    {complaint.isForwarded && (
+                                        <span style={{ 
+                                            fontSize: "10px", fontWeight: "700", color: "#ef4444", 
+                                            background: isLight ? "#fee2e2" : "rgba(127,29,29,0.3)", 
+                                            padding: "2px 6px", borderRadius: "4px" 
+                                        }}>
+                                            FORWARDED
+                                        </span>
+                                    )}
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: textMain }}>
+                                    From: {complaint.role === "vendor" 
+                                        ? `${complaint.userId?.vendorName || "Unknown"} (${complaint.userId?.Email || "N/A"})`
+                                        : `${complaint.userId?.firstName || "Unknown"} ${complaint.userId?.lastName || ""} (${complaint.userId?.collegeEmail || "N/A"})`
+                                    }
+                                </h3>
+                            </div>
+                            <div style={{ fontSize: "13px", color: textSub, fontWeight: "500" }}>
+                                {new Date(complaint.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </div>
+                        </div>
+
+                        {/* Forwarded Info Box */}
+                        {complaint.isForwarded && complaint.forwardedBy && (
+                            <div style={{ 
+                                background: isLight ? "#fff7ed" : "rgba(124, 45, 18, 0.2)", 
+                                border: `1px solid ${isLight ? "#ffedd5" : "#7c2d12"}`,
+                                padding: "10px 14px", borderRadius: "10px", fontSize: "13px", color: isLight ? "#9a3412" : "#fdba74"
+                            }}>
+                                <strong>↪ Forwarded by:</strong> {complaint.forwardedBy.name} ({complaint.forwardedBy.email})
+                                {complaint.forwardedAt && (
+                                    <span style={{ opacity: 0.8 }}> • {new Date(complaint.forwardedAt).toLocaleDateString()}</span>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Content Body */}
+                        <div style={{ color: textMain, lineHeight: "1.6", fontSize: "15px" }}>
+                            {complaint.description}
+                        </div>
+
+                        {/* Screenshot */}
+                        {complaint.screenshot && (
+                            <div>
+                                <div style={{ fontSize: "12px", fontWeight: "600", color: textSub, marginBottom: "6px" }}>ATTACHMENT</div>
+                                <img 
+                                    src={complaint.screenshot} 
+                                    alt="Complaint screenshot" 
+                                    style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "8px", border: isLight ? "1px solid #e5e7eb" : "1px solid #334155" }}
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Admin Response Display */}
+                        {complaint.response && (
+                            <div style={{ 
+                                marginTop: "5px", padding: "16px", 
+                                backgroundColor: isLight ? "#ecfdf5" : "rgba(6, 78, 59, 0.3)", 
+                                border: `1px solid ${isLight ? "#d1fae5" : "#065f46"}`,
+                                borderRadius: "12px" 
+                            }}>
+                                <div style={{ color: "#059669", fontSize: "12px", fontWeight: "700", marginBottom: "4px", textTransform: "uppercase" }}>✅ Admin Response</div>
+                                <p style={{ margin: 0, fontSize: "14px", color: isLight ? "#047857" : "#d1fae5" }}>{complaint.response}</p>
+                            </div>
+                        )}
+
+                        {/* Assigned To */}
+                        {complaint.assignedAdmins && complaint.assignedAdmins.length > 0 && (
+                             <div style={{ fontSize: "13px", color: textSub }}>
+                                <strong>Assigned to:</strong> {complaint.assignedAdmins.map(admin => admin.name).join(", ")}
+                             </div>
+                        )}
+
+                        {/* Action Area */}
+                        <div style={{ marginTop: "10px", paddingTop: "15px", borderTop: isLight ? "1px solid #f1f5f9" : "1px solid #1e293b" }}>
+                            {complaint.status !== "resolved" ? (
+                                <AnimatePresence mode="wait">
+                                    {respondingTo === complaint._id ? (
+                                        <motion.div 
+                                            initial={{ opacity: 0, height: 0 }} 
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+                                        >
+                                            <textarea
+                                                value={responseText}
+                                                onChange={(e) => setResponseText(e.target.value)}
+                                                placeholder="Write your resolution message here..."
+                                                style={{
+                                                    ...inputStyle,
+                                                    width: "100%", padding: "12px", borderRadius: "8px", 
+                                                    minHeight: "100px", resize: "vertical", outline: "none"
+                                                }}
+                                                autoFocus
+                                            />
+                                            <div style={{ display: "flex", gap: "10px" }}>
+                                                <button
+                                                    onClick={() => handleResponse(complaint._id)}
+                                                    style={{
+                                                        padding: "8px 16px", backgroundColor: "#10b981", color: "white",
+                                                        border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "13px"
+                                                    }}
+                                                >
+                                                    Send Response
+                                                </button>
+                                                <button
+                                                    onClick={() => { setRespondingTo(null); setResponseText(""); }}
+                                                    style={{
+                                                        padding: "8px 16px", backgroundColor: isLight ? "#e5e7eb" : "#334155", 
+                                                        color: textMain, border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "13px"
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    ) : (
+                                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                            <button
+                                                onClick={() => setRespondingTo(complaint._id)}
+                                                style={{
+                                                    padding: "8px 20px",
+                                                    backgroundColor: "#3b82f6",
+                                                    color: "white",
+                                                    border: "none",
+                                                    borderRadius: "8px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "600",
+                                                    fontSize: "14px",
+                                                    display: "flex", alignItems: "center", gap: "6px",
+                                                    boxShadow: "0 2px 4px rgba(59,130,246,0.3)"
+                                                }}
+                                            >
+                                                💬 Respond
+                                            </button>
+                                        </div>
+                                    )}
+                                </AnimatePresence>
+                            ) : (
+                                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "6px", color: "#10b981", fontWeight: "600", fontSize: "14px" }}>
+                                    <span>🎉</span> Case Closed
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+                ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 
