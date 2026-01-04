@@ -32,12 +32,7 @@ function ComplaintHistory() {
         setIsFrozen(isFrozen);
         setIsSuspended(isSuspended);
 
-        // Handle redirects
-        if (isFrozen) {
-          setBlockingMessage("Your account is frozen. Redirecting to login...");
-          setTimeout(() => navigate("/login", { state: { userId } }), 2500);
-          return;
-        }
+        
         if (isSuspended) {
           setBlockingMessage(
             "Your account is suspended. Redirecting to homepage..."
