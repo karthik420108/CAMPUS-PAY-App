@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 
 function SubAdminStudents({ state }) {
   const [students, setStudents] = useState([]);
@@ -94,10 +95,17 @@ function SubAdminStudents({ state }) {
     return matchesSearch;
   });
 
-  if (loading) return <p>Loading students...</p>;
+  if (loading) return (
+    <SubAdminStatusChecker subAdminId={state?.subAdminId || localStorage.getItem('subAdminId')}>
+      <p>Loading students...</p>
+    </SubAdminStatusChecker>
+  );
+
+  const subAdminId = state?.subAdminId || localStorage.getItem('subAdminId');
 
   return (
-    <>
+    <SubAdminStatusChecker subAdminId={subAdminId}>
+      <>
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px" }}>
         <div
           style={{
@@ -434,6 +442,7 @@ function SubAdminStudents({ state }) {
         </div>
       )}
     </>
+    </SubAdminStatusChecker>
   );
 }
 

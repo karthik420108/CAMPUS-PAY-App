@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
+import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 
 function SubAdminNotificationSystem() {
   const { state } = useLocation();
@@ -72,30 +73,43 @@ function SubAdminNotificationSystem() {
 
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-      }}>
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          style={{
-            width: "50px",
-            height: "50px",
-            border: "4px solid rgba(255,255,255,0.3)",
-            borderTop: "4px solid white",
-            borderRadius: "50%"
-          }}
-        />
-      </div>
+      <SubAdminStatusChecker subAdminId={subAdminId || localStorage.getItem('subAdminId')}>
+        <div style={{ 
+          minHeight: "100vh", 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "center",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+        }}>
+          <div style={{
+            background: "rgba(255, 255, 255, 0.95)",
+            padding: "40px",
+            borderRadius: "16px",
+            textAlign: "center",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.1)"
+          }}>
+            <div style={{
+              fontSize: "48px",
+              marginBottom: "16px"
+            }}>⏳</div>
+            <h2 style={{
+              margin: "0 0 8px 0",
+              color: "#1f2937",
+              fontSize: "24px"
+            }}>Loading Notifications</h2>
+            <p style={{
+              margin: 0,
+              color: "#6b7280"
+            }}>Please wait while we fetch your notifications...</p>
+          </div>
+        </div>
+      </SubAdminStatusChecker>
     );
   }
 
   return (
-    <div style={{
+    <SubAdminStatusChecker subAdminId={subAdminId || localStorage.getItem('subAdminId')}>
+      <div style={{
       minHeight: "100vh",
       background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       padding: "32px 16px"
@@ -393,7 +407,8 @@ function SubAdminNotificationSystem() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </SubAdminStatusChecker>
   );
 }
 

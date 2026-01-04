@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 
 function SubAdminComplaints({ state }) {
   const [complaints, setComplaints] = useState([]);
@@ -10,11 +11,7 @@ function SubAdminComplaints({ state }) {
   const [responseModal, setResponseModal] = useState({ isOpen: false, complaintId: null, response: "" });
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchComplaints();
-  }, []);
-
-  const fetchComplaints = async () => {
+  const fetchComplaints = useCallback(async () => {
     try {
       // Get subAdminId from state or localStorage
       const subAdminId = state?.subAdminId || localStorage.getItem('subAdminId');
@@ -37,7 +34,11 @@ function SubAdminComplaints({ state }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [state?.subAdminId]);
+
+  useEffect(() => {
+    fetchComplaints();
+  }, [fetchComplaints]);
 
   const handleResponse = (complaintId) => {
     setResponseModal({ isOpen: true, complaintId, response: "" });
@@ -72,15 +73,26 @@ function SubAdminComplaints({ state }) {
       return;
     }
     try {
+      // Get subAdminId from state or localStorage
+      const subAdminId = state?.subAdminId || localStorage.getItem('subAdminId');
+      
+      if (!subAdminId) {
+        console.error("No subAdminId found for forwarding");
+        alert("SubAdmin ID not found. Please log in again.");
+        return;
+      }
+      
+      console.log("Forwarding complaint with subAdminId:", subAdminId);
+      
       await axios.post(
         `http://localhost:5000/subadmin/complaint/${complaintId}/forward`,
-        { subAdminId: state.subAdminId } // Pass the SubAdmin ID for tracking
+        { subAdminId: subAdminId } // Pass the SubAdmin ID for tracking
       );
       alert("Complaint forwarded to admin!");
       fetchComplaints();
     } catch (err) {
       console.error("Failed to forward complaint:", err);
-      alert("Failed to forward complaint");
+      alert("Failed to forward complaint: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -101,8 +113,12 @@ function SubAdminComplaints({ state }) {
 
   if (loading) return <p>Loading complaints...</p>;
 
+  // Get subAdminId for status checker
+  const subAdminId = state?.subAdminId || localStorage.getItem('subAdminId');
+
   return (
-    <>
+    <SubAdminStatusChecker subAdminId={subAdminId}>
+      <>
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 16px" }}>
         <div
           style={{
@@ -469,7 +485,8 @@ function SubAdminComplaints({ state }) {
           </div>
         </div>
       )}
-    </>
+      </>
+    </SubAdminStatusChecker>
   );
 }
 

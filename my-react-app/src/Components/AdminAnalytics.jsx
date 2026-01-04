@@ -12,7 +12,31 @@ function AdminAnalytics() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => {
+    useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch revenue analytics
+        const revenueResponse = await axios.get(
+          `http://localhost:5000/admin/analytics/revenue?period=${selectedPeriod}`
+        );
+        
+        // Fetch daily analytics
+        const dailyResponse = await axios.get(
+          `http://localhost:5000/admin/analytics/daily?period=${selectedPeriod}`
+        );
+        
+        setRevenueData(revenueResponse.data);
+        setDailyData(dailyResponse.data);
+        setTotalRevenue(revenueResponse.data.reduce((sum, item) => sum + item.amount, 0));
+      } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (!state || state.role !== "admin") {
       navigate(-1);
       return;
@@ -21,29 +45,7 @@ function AdminAnalytics() {
     fetchAnalytics();
   }, [state, navigate, selectedPeriod]);
 
-  const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch revenue analytics
-      const revenueResponse = await axios.get(
-        `http://localhost:5000/admin/analytics/revenue?period=${selectedPeriod}`
-      );
-      
-      // Fetch daily analytics
-      const dailyResponse = await axios.get(
-        `http://localhost:5000/admin/analytics/daily?period=${selectedPeriod}`
-      );
-      
-      setRevenueData(revenueResponse.data);
-      setDailyData(dailyResponse.data);
-      setTotalRevenue(revenueResponse.data.reduce((sum, item) => sum + item.amount, 0));
-    } catch (error) {
-      console.error("Failed to fetch analytics:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const drawPieChart = (data, title, colors) => {
     if (!data || data.length === 0) return null;
