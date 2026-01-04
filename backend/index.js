@@ -1633,20 +1633,28 @@ app.post("/subadmin/complaint/:id/forward", async (req, res) => {
   }
 });
 
-// Check if SubAdmin exists
+// Check if SubAdmin exists and their status
 app.get("/subadmin/check/:id", async (req, res) => {
   try {
     const { id } = req.params;
     console.log("Checking SubAdmin existence for ID:", id);
     
-    const subAdmin = await SubAdmin.findById(id).select("_id");
+    const subAdmin = await SubAdmin.findById(id).select("_id isActive status");
     
     if (subAdmin) {
-      console.log("SubAdmin exists:", id);
-      res.json({ exists: true });
+      console.log("SubAdmin exists:", id, "Status:", subAdmin.isActive || subAdmin.status);
+      
+      // Check if SubAdmin is active (assuming there's an isActive field or status field)
+      const isActive = subAdmin.isActive !== false && subAdmin.status !== "deactivated";
+      
+      if (isActive) {
+        res.json({ exists: true, status: "active" });
+      } else {
+        res.json({ exists: true, status: "deactivated" });
+      }
     } else {
       console.log("SubAdmin does not exist:", id);
-      res.json({ exists: false });
+      res.json({ exists: false, status: "deleted" });
     }
   } catch (err) {
     console.error("Error checking SubAdmin existence:", err);
