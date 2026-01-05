@@ -271,7 +271,7 @@ const handleSubmit = async (e) => {
           <input
             type="email"
             name="instituteEmail"
-            placeholder="Institute Email"
+            placeholder={role == "vendor"?"Enter Enail":" Institute Email"}
             required
             style={{
               padding: "11px 14px",

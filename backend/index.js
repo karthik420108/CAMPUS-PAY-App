@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 const app = express();
 
 // ===== CONFIG =====
-const MONGO_URI = "mongodb://127.0.0.1:27017/canteen";
+const MONGO_URI = "mongodb+srv://root:123@campuspay.i8ucsny.mongodb.net/";
 const INSTITUTE_TOTAL_BALANCE = 100000;
 
 app.use(cors());
@@ -3984,6 +3984,6 @@ app.get("/admin-actions/:userId/:role", async (req, res) => {
 });
 
 const PORT = 5000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Backend running on http://0.0.0.0:${PORT}`);
+app.listen(PORT,  () => {
+  console.log(`Backend running on http://localhost:${PORT}`);
 });
