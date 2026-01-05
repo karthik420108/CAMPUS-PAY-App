@@ -12,6 +12,7 @@ function ComplaintHistory() {
   const [complaints, setComplaints] = useState([]);
   const [openCard, setOpenCard] = useState(null);
   const [activeTab, setActiveTab] = useState("active"); // Defaults to "active"
+  const [complaintSearch, setComplaintSearch] = useState("");
   const [theme, setTheme] = useState("light");
   const [loading, setLoading] = useState(true);
   const [isFrozen, setIsFrozen] = useState(false);
@@ -40,12 +41,6 @@ function ComplaintHistory() {
           setTimeout(() => navigate("/", { state: { userId } }), 2500);
           return;
         }
-
-        // Fetch transactions only if not blocked
-        const txnRes = await axios.get(
-          `http://localhost:5000/transactions/${userId}`
-        );
-        setTransactions(txnRes.data);
       } catch (err) {
         console.error(err);
       }
@@ -150,6 +145,20 @@ useEffect(() => {
 
   const currentComplaints =
     activeTab === "active" ? activeComplaints : resolvedComplaints;
+
+  const trimmedSearch = complaintSearch.trim().toLowerCase();
+  const visibleComplaints = trimmedSearch
+    ? currentComplaints.filter((c) => {
+        const id = String(c.complaintId || c._id || "").toLowerCase();
+        return id.includes(trimmedSearch);
+      })
+    : currentComplaints;
+
+  useEffect(() => {
+    if (!openCard) return;
+    const stillVisible = visibleComplaints.some((c) => c._id === openCard);
+    if (!stillVisible) setOpenCard(null);
+  }, [openCard, visibleComplaints]);
 
   // ---------- THEME-DEPENDENT STYLES (exact copy from RaiseComplaint) ----------
   const pageStyle = isLight
@@ -299,6 +308,56 @@ useEffect(() => {
             ...cardStyle,
           }}
         >
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              left: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 10px",
+              borderRadius: 14,
+              border: "1px solid rgba(148,163,184,0.6)",
+              background: isLight ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.7)",
+              zIndex: 6,
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
+          >
+            <input
+              value={complaintSearch}
+              onChange={(e) => setComplaintSearch(e.target.value)}
+              placeholder="Search Complaint ID"
+              style={{
+                width: 210,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: textMain,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            />
+            {complaintSearch.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => setComplaintSearch("")}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1,
+                  color: textSub,
+                  padding: 0,
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+
           {/* theme toggle */}
           <div
             style={{
@@ -467,7 +526,7 @@ useEffect(() => {
           </motion.div>
 
           {/* empty state */}
-          {currentComplaints.length === 0 && (
+          {visibleComplaints.length === 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -516,12 +575,16 @@ useEffect(() => {
                   marginBottom: 4,
                 }}
               >
-                {activeTab === "active"
+                {trimmedSearch
+                  ? "No matching complaints"
+                  : activeTab === "active"
                   ? "No active complaints"
                   : "No resolved complaints"}
               </p>
               <p style={{ color: textSub, fontSize: 13 }}>
-                {activeTab === "active"
+                {trimmedSearch
+                  ? "Try a different complaint id"
+                  : activeTab === "active"
                   ? "Raise your first complaint using the form"
                   : "Resolved complaints will appear here"}
               </p>
@@ -530,7 +593,7 @@ useEffect(() => {
 
           {/* ✅ ALL FUNCTIONALITY RESTORED */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {currentComplaints.map((c, index) => {
+            {visibleComplaints.map((c, index) => {
               const isOpen = openCard === c._id;
               const statusColor =
                 c.status?.toLowerCase() === "resolved" ? "#22c55e" : "#3b82f6";

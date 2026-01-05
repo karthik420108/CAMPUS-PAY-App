@@ -1,7 +1,7 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion"; // Added for animations
+import { motion, AnimatePresence } from "motion/react"; // Added for animations
 import Header from "./Header.jsx";
 
 function AdminMonitorVendors() {
@@ -10,12 +10,10 @@ function AdminMonitorVendors() {
 
   // --- Original Logic State ---
   const [vendors, setVendors] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [showAllVendorTxModal, setShowAllVendorTxModal] = useState(false);
-  const [showAllVendorComplaintsModal, setShowAllVendorComplaintsModal] = useState(false);
-  const [showAllVendorRedeemsModal, setShowAllVendorRedeemsModal] = useState(false);
 
   // --- New Visual State (From Target) ---
   const [theme, setTheme] = useState("light");
@@ -52,6 +50,17 @@ function AdminMonitorVendors() {
       console.error(err);
     }
   };
+
+  const filteredVendors = useMemo(() => {
+    if (!searchTerm.trim()) return vendors;
+    const q = searchTerm.trim().toLowerCase();
+    return vendors.filter((v) => {
+      const matchesName = v.vendorName && v.vendorName.toLowerCase().includes(q);
+      const matchesId = v.vendorid && v.vendorid.toLowerCase().includes(q);
+      const matchesEmail = v.Email && v.Email.toLowerCase().includes(q);
+      return matchesName || matchesId || matchesEmail;
+    });
+  }, [vendors, searchTerm]);
 
   const toggleFreeze = async (vendorId, currentStatus) => {
     try {
@@ -368,16 +377,99 @@ function AdminMonitorVendors() {
                   : "linear-gradient(90deg,transparent,#1e293b,#0f172a,transparent)",
                 marginTop: 15,
                 marginBottom: 20,
+                borderRadius: 999,
               }}
             />
           </div>
 
+          {/* Search Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4, ease: easingSoft }}
+            style={{ marginBottom: 25, position: "relative", zIndex: 10 }}
+          >
+            <div
+              style={{
+                position: "relative",
+                maxWidth: "500px",
+                margin: "0 auto",
+                zIndex: 10,
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Search by Vendor Name, Vendor ID, or Email ID"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 45px 12px 18px",
+                  borderRadius: "16px",
+                  border: `2px solid ${isLight ? "rgba(148,163,184,0.5)" : "rgba(71,85,105,0.6)"}`,
+                  background: isLight
+                    ? "rgba(255,255,255,0.95)"
+                    : "rgba(15,23,42,0.8)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  fontSize: "14px",
+                  color: isLight ? "#1e293b" : "#f1f5f9",
+                  outline: "none",
+                  transition: "all 0.3s ease",
+                  zIndex: 10,
+                  position: "relative",
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = isLight ? "#3b82f6" : "#60a5fa";
+                  e.target.style.boxShadow = isLight
+                    ? "0 0 0 3px rgba(59,130,246,0.1)"
+                    : "0 0 0 3px rgba(96,165,250,0.2)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = isLight ? "rgba(148,163,184,0.3)" : "rgba(71,85,105,0.4)";
+                  e.target.style.boxShadow = "none";
+                }}
+              />
+              {searchTerm && (
+                <AnimatePresence>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={() => setSearchTerm("")}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: isLight ? "#64748b" : "#94a3b8",
+                      cursor: "pointer",
+                      fontSize: "18px",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s ease",
+                    }}
+                    whileHover={{ scale: 1.1, color: isLight ? "#ef4444" : "#f87171" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    ×
+                  </motion.button>
+                </AnimatePresence>
+              )}
+            </div>
+          </motion.div>
+
           {/* Logic Content */}
           {!showDetails ? (
             <>
-              {vendors.length === 0 ? (
+              {filteredVendors.length === 0 ? (
                 <p style={{ color: textSub, textAlign: "center" }}>
-                  No vendors found
+                  {searchTerm.trim() ? "No matching vendors found" : "No vendors found"}
                 </p>
               ) : (
                 <div style={{ overflowX: "auto" }}>
@@ -401,7 +493,7 @@ function AdminMonitorVendors() {
                       </tr>
                     </thead>
                     <tbody>
-                      {vendors.map((vendor) => (
+                      {filteredVendors.map((vendor) => (
                         <tr key={vendor._id}>
                           <td style={tableCellStyle}>{vendor.vendorName}</td>
                           <td style={tableCellStyle}>{vendor.vendorid}</td>
@@ -514,13 +606,7 @@ function AdminMonitorVendors() {
               transition={{ duration: 0.3 }}
             >
               <button
-                onClick={() => {
-                  setShowDetails(false);
-                  setSelectedVendor(null);
-                  setShowAllVendorTxModal(false);
-                  setShowAllVendorComplaintsModal(false);
-                  setShowAllVendorRedeemsModal(false);
-                }}
+                onClick={() => setShowDetails(false)}
                 style={{
                   marginBottom: "20px",
                   background: "transparent",
@@ -623,17 +709,6 @@ function AdminMonitorVendors() {
                           </tbody>
                         </table>
                       )}
-
-                      {selectedVendor.transactions.length > 5 && (
-                        <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
-                          <button
-                            onClick={() => setShowAllVendorTxModal(true)}
-                            style={{ ...actionButtonStyle, background: "#3b82f6", color: "white" }}
-                          >
-                            View More
-                          </button>
-                        </div>
-                      )}
                     </div>
 
                     {/* Recent Redeems */}
@@ -667,65 +742,7 @@ function AdminMonitorVendors() {
                           </tbody>
                         </table>
                       )}
-
-                      {selectedVendor.redeemRequests.length > 5 && (
-                        <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
-                          <button
-                            onClick={() => setShowAllVendorRedeemsModal(true)}
-                            style={{ ...actionButtonStyle, background: "#3b82f6", color: "white" }}
-                          >
-                            View More
-                          </button>
-                        </div>
-                      )}
                     </div>
-                  </div>
-
-                  {/* Vendor Complaints */}
-                  <div style={{ marginTop: "22px" }}>
-                    <h4 style={{ color: textMain }}>Recent Complaints (Last 5)</h4>
-                    {!selectedVendor.complaints || selectedVendor.complaints.length === 0 ? (
-                      <p style={{ color: textSub }}>No complaints</p>
-                    ) : (
-                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead>
-                          <tr>
-                            <th style={{ ...tableHeaderStyle, padding: "8px" }}>ID</th>
-                            <th style={{ ...tableHeaderStyle, padding: "8px" }}>Description</th>
-                            <th style={{ ...tableHeaderStyle, padding: "8px" }}>Status</th>
-                            <th style={{ ...tableHeaderStyle, padding: "8px" }}>Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...selectedVendor.complaints]
-                            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                            .slice(0, 5)
-                            .map((c, idx) => (
-                              <tr key={idx}>
-                                <td style={{ ...tableCellStyle, padding: "8px", color: textSub }}>#{c.complaintId || c._id?.substring(0, 6)}</td>
-                                <td style={{ ...tableCellStyle, padding: "8px" }}>
-                                  {c.description && c.description.length > 60
-                                    ? c.description.substring(0, 60) + "..."
-                                    : c.description || "-"}
-                                </td>
-                                <td style={{ ...tableCellStyle, padding: "8px", color: getStatusColor(c.status) }}>{c.status}</td>
-                                <td style={{ ...tableCellStyle, padding: "8px", color: textSub }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "-"}</td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    )}
-
-                    {selectedVendor.complaints && selectedVendor.complaints.length > 5 && (
-                      <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
-                        <button
-                          onClick={() => setShowAllVendorComplaintsModal(true)}
-                          style={{ ...actionButtonStyle, background: "#3b82f6", color: "white" }}
-                        >
-                          View More
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -733,258 +750,6 @@ function AdminMonitorVendors() {
           )}
         </motion.div>
       </motion.div>
-
-      <AnimatePresence>
-        {showAllVendorTxModal && selectedVendor && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(4px)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 1200,
-              padding: "16px",
-            }}
-            onClick={() => setShowAllVendorTxModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                width: "100%",
-                maxWidth: "900px",
-                maxHeight: "80vh",
-                overflow: "hidden",
-                borderRadius: "16px",
-                background: isLight ? "#fff" : "#0f172a",
-                border: `1px solid ${isLight ? "rgba(148,163,184,0.35)" : "rgba(148,163,184,0.45)"}`,
-                boxShadow: "0 20px 25px -5px rgba(0,0,0,0.25)",
-                color: textMain,
-                display: "flex",
-                flexDirection: "column",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{
-                padding: "16px 18px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
-              }}>
-                <div style={{ fontWeight: 700 }}>All Transactions ({selectedVendor.transactions.length})</div>
-                <button
-                  onClick={() => setShowAllVendorTxModal(false)}
-                  style={{ ...actionButtonStyle, background: isLight ? "#e2e8f0" : "#334155", color: textMain }}
-                >
-                  Close
-                </button>
-              </div>
-
-              <div style={{ padding: "16px 18px", overflowY: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Student</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Amount</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Status</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...selectedVendor.transactions]
-                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                      .map((tx, idx) => (
-                        <tr key={idx}>
-                          <td style={{ ...tableCellStyle, padding: "8px" }}>{tx.userId?.firstName} {tx.userId?.lastName}</td>
-                          <td style={{ ...tableCellStyle, padding: "8px" }}>₹{tx.amount}</td>
-                          <td style={{ ...tableCellStyle, padding: "8px", color: getStatusColor(tx.status) }}>{tx.status}</td>
-                          <td style={{ ...tableCellStyle, padding: "8px", color: textSub }}>{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : "-"}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showAllVendorComplaintsModal && selectedVendor && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(4px)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 1200,
-              padding: "16px",
-            }}
-            onClick={() => setShowAllVendorComplaintsModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                width: "100%",
-                maxWidth: "900px",
-                maxHeight: "80vh",
-                overflow: "hidden",
-                borderRadius: "16px",
-                background: isLight ? "#fff" : "#0f172a",
-                border: `1px solid ${isLight ? "rgba(148,163,184,0.35)" : "rgba(148,163,184,0.45)"}`,
-                boxShadow: "0 20px 25px -5px rgba(0,0,0,0.25)",
-                color: textMain,
-                display: "flex",
-                flexDirection: "column",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{
-                padding: "16px 18px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
-              }}>
-                <div style={{ fontWeight: 700 }}>All Complaints ({selectedVendor.complaints?.length || 0})</div>
-                <button
-                  onClick={() => setShowAllVendorComplaintsModal(false)}
-                  style={{ ...actionButtonStyle, background: isLight ? "#e2e8f0" : "#334155", color: textMain }}
-                >
-                  Close
-                </button>
-              </div>
-
-              <div style={{ padding: "16px 18px", overflowY: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>ID</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Description</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Status</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...(selectedVendor.complaints || [])]
-                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                      .map((c, idx) => (
-                        <tr key={idx}>
-                          <td style={{ ...tableCellStyle, padding: "8px", color: textSub }}>#{c.complaintId || c._id?.substring(0, 6)}</td>
-                          <td style={{ ...tableCellStyle, padding: "8px" }}>{c.description || "-"}</td>
-                          <td style={{ ...tableCellStyle, padding: "8px", color: getStatusColor(c.status) }}>{c.status}</td>
-                          <td style={{ ...tableCellStyle, padding: "8px", color: textSub }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "-"}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showAllVendorRedeemsModal && selectedVendor && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(4px)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 1200,
-              padding: "16px",
-            }}
-            onClick={() => setShowAllVendorRedeemsModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                width: "100%",
-                maxWidth: "900px",
-                maxHeight: "80vh",
-                overflow: "hidden",
-                borderRadius: "16px",
-                background: isLight ? "#fff" : "#0f172a",
-                border: `1px solid ${isLight ? "rgba(148,163,184,0.35)" : "rgba(148,163,184,0.45)"}`,
-                boxShadow: "0 20px 25px -5px rgba(0,0,0,0.25)",
-                color: textMain,
-                display: "flex",
-                flexDirection: "column",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                style={{
-                  padding: "16px 18px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
-                }}
-              >
-                <div style={{ fontWeight: 700 }}>All Redeems ({selectedVendor.redeemRequests.length})</div>
-                <button
-                  onClick={() => setShowAllVendorRedeemsModal(false)}
-                  style={{ ...actionButtonStyle, background: isLight ? "#e2e8f0" : "#334155", color: textMain }}
-                >
-                  Close
-                </button>
-              </div>
-
-              <div style={{ padding: "16px 18px", overflowY: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Amount</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Status</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px" }}>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...selectedVendor.redeemRequests]
-                      .sort((a, b) => new Date(b.date) - new Date(a.date))
-                      .map((redeem, idx) => (
-                        <tr key={idx}>
-                          <td style={{ ...tableCellStyle, padding: "8px" }}>₹{redeem.amount}</td>
-                          <td style={{ ...tableCellStyle, padding: "8px", color: getStatusColor(redeem.status) }}>{redeem.status}</td>
-                          <td style={{ ...tableCellStyle, padding: "8px", color: textSub }}>{redeem.date ? new Date(redeem.date).toLocaleDateString() : "-"}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

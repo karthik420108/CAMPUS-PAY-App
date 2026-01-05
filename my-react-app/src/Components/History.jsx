@@ -9,6 +9,7 @@ function History() {
   const location = useLocation();
   const { userId, role } = location.state || {};
   const [transactions, setTransactions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [theme, setTheme] = useState("light");
   const [isFrozen, setIsFrozen] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
@@ -27,7 +28,9 @@ function History() {
 
     axios
       .get(`http://localhost:5000/transactions/${userId}`)
-      .then((res) => setTransactions(res.data))
+      .then((res) => {
+        setTransactions(res.data);
+      })
       .catch(console.error);
   }, [userId, navigate]);
 
@@ -76,6 +79,16 @@ function History() {
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
   }, [transactions]);
+  const filteredTransactions = useMemo(() => {
+    if (!searchTerm.trim()) return sortedTransactions;
+    const q = searchTerm.trim().toLowerCase();
+    return sortedTransactions.filter((t) => {
+      const matchesTxid = t.txid && t.txid.toLowerCase().includes(q);
+      const matchesVendorName = t.vendorName && t.vendorName.toLowerCase().includes(q);
+      const matchesVendorIdName = t.vendorId?.vendorName && t.vendorId.vendorName.toLowerCase().includes(q);
+      return matchesTxid || matchesVendorName || matchesVendorIdName;
+    });
+  }, [sortedTransactions, searchTerm]);
 
   const getStatusColor = (status) => {
     const lower = status?.toLowerCase();
@@ -219,6 +232,56 @@ function History() {
             ...cardStyle,
           }}
         >
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              left: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 10px",
+              borderRadius: 14,
+              border: "1px solid rgba(148,163,184,0.6)",
+              background: isLight ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.7)",
+              zIndex: 6,
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
+          >
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by Transaction ID or Vendor Name"
+              style={{
+                width: 260,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: textMain,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            />
+            {searchTerm.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1,
+                  color: textSub,
+                  padding: 0,
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+
           {/* Theme Toggle */}
           <div
             style={{
@@ -328,7 +391,7 @@ function History() {
 
           {/* Transactions List */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {sortedTransactions.length === 0 ? (
+            {filteredTransactions.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -360,11 +423,11 @@ function History() {
                   </span>
                 </div>
                 <p style={{ fontSize: 15, fontWeight: 500, color: textMain }}>
-                  No transactions found
+                  {searchTerm.trim() ? "No matching transactions" : "No transactions found"}
                 </p>
               </motion.div>
             ) : (
-              sortedTransactions.map((t, index) => {
+              filteredTransactions.map((t, index) => {
                 const statusColor = getStatusColor(t.status);
 
                 return (
@@ -453,6 +516,9 @@ function History() {
 
                       <small style={{ color: textSub, fontSize: 12 }}>
                         TXID: {t.txid?.slice(0, 8)}...
+                      </small>
+                      <small style={{ color: textSub, fontSize: 12 }}>
+                        Vendor: {t.vendorName || t.vendorId?.vendorName || "Unknown"}
                       </small>
                       <small style={{ color: textSub, fontSize: 12 }}>
                         User: {t.userId?.firstName} {t.userId?.lastName}

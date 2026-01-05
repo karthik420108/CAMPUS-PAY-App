@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import Header3 from "./Header3";
 import Header1 from "./Header1"
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,92 +9,51 @@ import { useVendorStatus } from "../hooks/useVendorStatus";
 
 function VendorTransactions() {
   const [transactions, setTransactions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [theme, setTheme] = useState("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showAllTransactions, setShowAllTransactions] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const navigate = useNavigate();
 
   const { state } = useLocation();
-  const { userId, vendorId } = state || {};
-  
-  // Handle both parameter names for vendor ID
-  const actualVendorId = userId || vendorId;
-  
-  console.log('Location state:', state);
-  console.log('Extracted vendorId:', actualVendorId);
+  const { userId } = state || {};
   
   // Use vendor status hook for real-time monitoring
-  const { showSuspensionBanner, isFrozen } = useVendorStatus(actualVendorId);
+  const { showSuspensionBanner, isFrozen } = useVendorStatus(userId);
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        console.log('Fetching transactions for vendorId:', actualVendorId);
-        if (!actualVendorId) {
-          console.error('No vendor ID provided');
-          return;
-        }
-        const res = await axios.get(`http://localhost:5000/transactions/vendor/${actualVendorId}`);
+        const res = await axios.get(`http://localhost:5000/transactions/vendor/${userId}`);
         console.log('Vendor transactions response:', res.data);
-        console.log('Transactions array:', res.data.transactions);
-        console.log('Number of transactions:', res.data.transactions?.length || 0);
-        console.log('First transaction:', res.data.transactions?.[0]);
-        setTransactions(res.data.transactions || []);
-        
-        // Update last updated timestamp
-        setLastUpdated(new Date());
-        
-        // Force a re-render by updating state
-        setTimeout(() => {
-          setTransactions(prev => [...prev]);
-        }, 100);
+        console.log('First transaction:', res.data.transactions[0]);
+        setTransactions(res.data.transactions);
       } catch (err) {
         console.error("Failed to fetch transactions:", err);
-        console.error("Error details:", err.response?.data || err.message);
       }
     };
 
-    if (actualVendorId) {
-      fetchTransactions();
-      // Poll for new transactions every 10 seconds (reduced from 30 for faster updates)
-      const interval = setInterval(fetchTransactions, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [actualVendorId]);
+    if (userId) fetchTransactions();
+  }, [userId]);
 
   const sortedTransactions = useMemo(() => {
     return [...transactions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [transactions]);
 
-  // Show only last 5 transactions by default
-  const displayTransactions = showAllTransactions ? sortedTransactions : sortedTransactions.slice(0, 5);
-  
-  // Debug logging
-  console.log('Total transactions:', transactions.length);
-  console.log('Sorted transactions:', sortedTransactions.length);
-  console.log('Display transactions:', displayTransactions.length);
-  console.log('Show all transactions:', showAllTransactions);
+  const filteredTransactions = useMemo(() => {
+    if (!searchTerm.trim()) return sortedTransactions;
+    const q = searchTerm.trim().toLowerCase();
+    return sortedTransactions.filter((t) => {
+      const matchesTxid = t.txid && t.txid.toLowerCase().includes(q);
+      const matchesUserEmail = t.userId?.collegeEmail && t.userId.collegeEmail.toLowerCase().includes(q);
+      const matchesUserName = (t.userId?.firstName && t.userId.firstName.toLowerCase().includes(q)) ||
+                            (t.userId?.lastName && t.userId.lastName.toLowerCase().includes(q)) ||
+                            ((t.userId?.firstName + " " + t.userId?.lastName).toLowerCase().includes(q));
+      return matchesTxid || matchesUserEmail || matchesUserName;
+    });
+  }, [sortedTransactions, searchTerm]);
 
   const easingSoft = [0.16, 1, 0.3, 1];
   const isLight = theme === "light";
-
-  // Manual refresh function
-  const refreshTransactions = async () => {
-    try {
-      console.log('Manual refresh triggered');
-      if (!actualVendorId) {
-        console.error('No vendor ID provided for refresh');
-        return;
-      }
-      const res = await axios.get(`http://localhost:5000/transactions/vendor/${actualVendorId}`);
-      setTransactions(res.data.transactions || []);
-      setLastUpdated(new Date());
-      console.log('Refreshed transactions:', res.data.transactions?.length || 0);
-    } catch (err) {
-      console.error("Failed to refresh transactions:", err);
-    }
-  };
 
   // Status color logic - GREEN ONLY FOR SUCCESS/COMPLETED
   const getStatusColor = (status) => {
@@ -152,7 +111,7 @@ function VendorTransactions() {
 
   return (
     <>
-      <Header1 role="vendor" userId={actualVendorId} isFrozen={isFrozen} isOp={setSidebarOpen}/>
+      <Header1 role="vendor" userId={userId} isFrozen={isFrozen} isOp={setSidebarOpen}/>
       <SuspensionBanner show={showSuspensionBanner} />
       <motion.div
         style={{
@@ -308,42 +267,15 @@ function VendorTransactions() {
             </div>
             <h2
               style={{
-                fontSize: 28,
-                fontWeight: 800,
+                fontSize: 24,
+                letterSpacing: "0.05em",
+                fontWeight: 700,
                 color: textMain,
-                marginBottom: 8,
+                margin: 0,
               }}
             >
-              Transaction History
+              Vendor Transactions
             </h2>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-              <p style={{ fontSize: 15, color: textSub, margin: 0 }}>
-                {displayTransactions.length} of {transactions.length} transactions
-              </p>
-              {lastUpdated && (
-                <p style={{ fontSize: 12, color: textSub, margin: 0 }}>
-                  Last updated: {lastUpdated.toLocaleTimeString()}
-                </p>
-              )}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={refreshTransactions}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "linear-gradient(135deg, #10b981, #059669)",
-                  color: "white",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontSize: 12,
-                  boxShadow: "0 4px 12px rgba(16,185,129,0.3)",
-                }}
-              >
-                🔄 Refresh
-              </motion.button>
-            </div>
           </motion.div>
 
           <motion.div
@@ -360,31 +292,88 @@ function VendorTransactions() {
             }}
           />
 
-          {/* Debug Panel */}
-          <div style={{
-            background: isLight ? "#f3f4f6" : "#1f2937",
-            border: `1px solid ${isLight ? "#d1d5db" : "#374151"}`,
-            borderRadius: 8,
-            padding: "12px",
-            marginBottom: "16px",
-            fontSize: 11,
-            fontFamily: "monospace",
-            color: textSub,
-          }}>
-            <div><strong>DEBUG INFO:</strong></div>
-            <div>Vendor ID: {actualVendorId}</div>
-            <div>Total Transactions: {transactions.length}</div>
-            <div>Display Transactions: {displayTransactions.length}</div>
-            <div>Show All: {showAllTransactions.toString()}</div>
-            <div>Last Updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : 'Never'}</div>
-            {transactions.length > 0 && (
-              <div>Latest: {transactions[0].txid} ({transactions[0].createdAt})</div>
-            )}
-          </div>
+          {/* ✨ Search Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4, ease: easingSoft }}
+            style={{ marginBottom: 20 }}
+          >
+            <div
+              style={{
+                position: "relative",
+                maxWidth: "500px",
+                margin: "0 auto",
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Search by Transaction ID, User Email, or User Name"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 45px 12px 18px",
+                  borderRadius: "16px",
+                  border: `1px solid ${isLight ? "rgba(148,163,184,0.3)" : "rgba(71,85,105,0.4)"}`,
+                  background: isLight
+                    ? "rgba(255,255,255,0.9)"
+                    : "rgba(15,23,42,0.7)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  fontSize: "14px",
+                  color: isLight ? "#1e293b" : "#f1f5f9",
+                  outline: "none",
+                  transition: "all 0.3s ease",
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = isLight ? "#3b82f6" : "#60a5fa";
+                  e.target.style.boxShadow = isLight
+                    ? "0 0 0 3px rgba(59,130,246,0.1)"
+                    : "0 0 0 3px rgba(96,165,250,0.2)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = isLight ? "rgba(148,163,184,0.3)" : "rgba(71,85,105,0.4)";
+                  e.target.style.boxShadow = "none";
+                }}
+              />
+              {searchTerm && (
+                <AnimatePresence>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={() => setSearchTerm("")}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: isLight ? "#64748b" : "#94a3b8",
+                      cursor: "pointer",
+                      fontSize: "18px",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s ease",
+                    }}
+                    whileHover={{ scale: 1.1, color: isLight ? "#ef4444" : "#f87171" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    ×
+                  </motion.button>
+                </AnimatePresence>
+              )}
+            </div>
+          </motion.div>
 
           {/* ✨ Transactions List */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {displayTransactions.length === 0 ? (
+            {filteredTransactions.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -414,12 +403,11 @@ function VendorTransactions() {
                   </span>
                 </div>
                 <p style={{ fontSize: 15, fontWeight: 500, color: textMain }}>
-                  No transactions found
+                  {searchTerm.trim() ? "No matching transactions found" : "No transactions found"}
                 </p>
               </motion.div>
             ) : (
-              <>
-                {displayTransactions.map((t, index) => {
+              filteredTransactions.map((t, index) => {
                 const statusColor = getStatusColor(t.status); // ✅ GREEN ONLY FOR SUCCESS
 
                 return (
@@ -515,225 +503,11 @@ function VendorTransactions() {
                     </motion.span>
                   </motion.div>
                 );
-              })}
-              
-              {/* View More Button */}
-              {!showAllTransactions && transactions.length > 5 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3, duration: 0.4, ease: easingSoft }}
-                  style={{
-                    textAlign: "center",
-                    marginTop: "20px",
-                  }}
-                >
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowAllTransactions(true)}
-                    style={{
-                      padding: "12px 24px",
-                      borderRadius: 16,
-                      border: "none",
-                      background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
-                      color: "white",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      fontSize: 14,
-                      boxShadow: "0 8px 24px rgba(59,130,246,0.3)",
-                    }}
-                  >
-                    View More Transactions
-                  </motion.button>
-                </motion.div>
-              )}
-              </>
+              })
             )}
           </div>
         </motion.div>
       </motion.div>
-
-      {/* All Transactions Modal */}
-      <AnimatePresence>
-        {showAllTransactions && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              zIndex: 1000,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            onClick={() => setShowAllTransactions(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              style={{
-                width: "90%",
-                maxWidth: "800px",
-                maxHeight: "80vh",
-                backgroundColor: isLight ? "#ffffff" : "#020617",
-                borderRadius: 20,
-                boxShadow: "0 25px 50px rgba(0, 0, 0, 0.3)",
-                border: `1px solid ${isLight ? "rgba(148,163,184,0.3)" : "rgba(37,99,235,0.6)"}`,
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div
-                style={{
-                  padding: "20px 24px",
-                  borderBottom: `1px solid ${isLight ? "rgba(148,163,184,0.2)" : "rgba(37,99,235,0.4)"}`,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: textMain,
-                  }}
-                >
-                  All Transactions ({sortedTransactions.length})
-                </h3>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowAllTransactions(false)}
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "50%",
-                    border: "none",
-                    background: isLight ? "#f3f4f6" : "#374151",
-                    color: textMain,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 18,
-                  }}
-                >
-                  ×
-                </motion.button>
-              </div>
-
-              {/* Scrollable Transactions List */}
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  padding: "20px 24px",
-                  maxHeight: "60vh",
-                }}
-              >
-                {sortedTransactions.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "40px", color: textSub }}>
-                    No transactions found
-                  </div>
-                ) : (
-                  sortedTransactions.map((t, index) => {
-                    const statusColor = getStatusColor(t.status);
-
-                    return (
-                      <motion.div
-                        key={t._id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.02, duration: 0.3 }}
-                        style={{
-                          padding: "16px",
-                          borderRadius: 12,
-                          marginBottom: "12px",
-                          border: `1px solid ${isLight ? "rgba(148,163,184,0.2)" : "rgba(37,99,235,0.4)"}`,
-                          background: isLight 
-                            ? "linear-gradient(145deg, rgba(255,255,255,0.95), rgba(248,250,252,0.98))"
-                            : "linear-gradient(145deg, rgba(15,23,42,0.92), rgba(17,24,39,0.98))",
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                              <motion.span
-                                animate={{
-                                  boxShadow: [
-                                    `0 0 0 0 ${statusColor}44`,
-                                    `0 0 0 12px ${statusColor}00`,
-                                  ],
-                                }}
-                                transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
-                                style={{
-                                  padding: "6px 12px",
-                                  borderRadius: 999,
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  background: statusColor,
-                                  color: "#ffffff",
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.08em",
-                                  width: "fit-content",
-                                }}
-                              >
-                                {t.status}
-                              </motion.span>
-
-                              <div style={{ fontSize: 16, fontWeight: 600, color: textMain }}>
-                                {new Date(t.createdAt).toLocaleDateString()} ·{" "}
-                                {new Date(t.createdAt).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </div>
-                            </div>
-
-                            <div style={{ fontSize: 13, color: textSub }}>
-                              <div>TXID: {t.txid?.slice(0, 12)}...</div>
-                              <div>User: {t.userId?.firstName} {t.userId?.lastName}</div>
-                              <div>Email: {t.userId?.collegeEmail || t.userId?.email || t.userId?.Email || "No Email"}</div>
-                            </div>
-                          </div>
-
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            style={{
-                              fontSize: 20,
-                              fontWeight: 800,
-                              color: statusColor,
-                              letterSpacing: "-0.02em",
-                              textShadow: isLight ? "0 2px 8px rgba(0,0,0,0.1)" : "0 2px 8px rgba(255,255,255,0.1)",
-                            }}
-                          >
-                            ₹{t.amount}
-                          </motion.div>
-                        </div>
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

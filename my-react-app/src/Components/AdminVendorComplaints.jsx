@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
@@ -9,6 +9,7 @@ function AdminVendorComplaints() {
   const navigate = useNavigate();
 
   const [complaints, setComplaints] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [respondingTo, setRespondingTo] = useState(null);
   const [responseText, setResponseText] = useState("");
@@ -125,6 +126,17 @@ function AdminVendorComplaints() {
   const pendingComplaints = complaints.filter(c => c.status !== "resolved");
   const resolvedComplaints = complaints.filter(c => c.status === "resolved");
   const currentComplaints = activeTab === "pending" ? pendingComplaints : resolvedComplaints;
+  
+  // Apply search filter to current complaints
+  const filteredCurrentComplaints = useMemo(() => {
+    if (!searchTerm.trim()) return currentComplaints;
+    const q = searchTerm.trim().toLowerCase();
+    return currentComplaints.filter((c) => {
+      const complaintId = c.complaintId || c._id || "";
+      const matchesId = String(complaintId).toLowerCase().includes(q);
+      return matchesId;
+    });
+  }, [currentComplaints, searchTerm]);
 
   return (
     <div style={{ ...pageStyle, minHeight: "100vh", position: "relative", overflowX: "hidden" }}>
@@ -191,8 +203,90 @@ function AdminVendorComplaints() {
             </div>
         </div>
 
+        {/* Search Bar - Top Center */}
+        <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4, ease: easingSoft }}
+            style={{ marginBottom: 24, position: "relative", zIndex: 10 }}
+        >
+            <div
+                style={{
+                    position: "relative",
+                    maxWidth: "500px",
+                    margin: "0 auto",
+                    zIndex: 10,
+                }}
+            >
+                <input
+                    type="text"
+                    placeholder="Search by Complaint ID"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                        width: "100%",
+                        padding: "12px 45px 12px 18px",
+                        borderRadius: "16px",
+                        border: `2px solid ${isLight ? "rgba(148,163,184,0.5)" : "rgba(71,85,105,0.6)"}`,
+                        background: isLight
+                            ? "rgba(255,255,255,0.95)"
+                            : "rgba(15,23,42,0.8)",
+                        backdropFilter: "blur(10px)",
+                        WebkitBackdropFilter: "blur(10px)",
+                        fontSize: "14px",
+                        color: isLight ? "#1e293b" : "#f1f5f9",
+                        outline: "none",
+                        transition: "all 0.3s ease",
+                        zIndex: 10,
+                        position: "relative",
+                    }}
+                    onFocus={(e) => {
+                        e.target.style.borderColor = isLight ? "#3b82f6" : "#60a5fa";
+                        e.target.style.boxShadow = isLight
+                            ? "0 0 0 3px rgba(59,130,246,0.1)"
+                            : "0 0 0 3px rgba(96,165,250,0.2)";
+                    }}
+                    onBlur={(e) => {
+                        e.target.style.borderColor = isLight ? "rgba(148,163,184,0.5)" : "rgba(71,85,105,0.6)";
+                        e.target.style.boxShadow = "none";
+                    }}
+                />
+                {searchTerm && (
+                    <AnimatePresence>
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            onClick={() => setSearchTerm("")}
+                            style={{
+                                position: "absolute",
+                                right: "12px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                background: "none",
+                                border: "none",
+                                color: isLight ? "#64748b" : "#94a3b8",
+                                cursor: "pointer",
+                                fontSize: "18px",
+                                padding: "4px",
+                                borderRadius: "4px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                transition: "all 0.2s ease",
+                            }}
+                            whileHover={{ scale: 1.1, color: isLight ? "#ef4444" : "#f87171" }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            ×
+                        </motion.button>
+                    </AnimatePresence>
+                )}
+            </div>
+        </motion.div>
+
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
+        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", justifyContent: "center" }}>
             <button
                 onClick={() => setActiveTab("pending")}
                 style={{
@@ -220,12 +314,15 @@ function AdminVendorComplaints() {
         </div>
 
         <AnimatePresence mode="wait">
-            {currentComplaints.length === 0 ? (
+            {filteredCurrentComplaints.length === 0 ? (
                 <motion.div 
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     style={{ ...cardStyle, padding: "40px", borderRadius: "16px", textAlign: "center", color: textSub }}
                 >
-                    {activeTab === "pending" ? "No pending complaints found." : "No resolved complaints found."}
+                    {searchTerm.trim() ? 
+                        (activeTab === "pending" ? "No matching pending complaints found." : "No matching resolved complaints found.") :
+                        (activeTab === "pending" ? "No pending complaints found." : "No resolved complaints found.")
+                    }
                 </motion.div>
             ) : (
                 <motion.div 
@@ -234,7 +331,7 @@ function AdminVendorComplaints() {
                     transition={{ duration: 0.3, ease: easingSoft }}
                     style={{ display: "flex", flexDirection: "column", gap: "16px" }}
                 >
-                    {currentComplaints.map((complaint) => (
+                    {filteredCurrentComplaints.map((complaint) => (
                         <div 
                             key={complaint._id} 
                             style={{ 
