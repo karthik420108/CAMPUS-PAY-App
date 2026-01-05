@@ -455,7 +455,7 @@ function History() {
                         TXID: {t.txid?.slice(0, 8)}...
                       </small>
                       <small style={{ color: textSub, fontSize: 12 }}>
-                        User: {t.userId?.firstName} {t.userId?.lastName}
+                        User: {t.vendorName}
                       </small>
                     </div>
 

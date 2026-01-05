@@ -19,6 +19,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  ReferenceLine,
 } from "recharts";
 
 import { buildChartData } from "./utils/buildChartData";
@@ -76,70 +77,69 @@ function Login() {
       .then((res) => setTransactions(res.data))
       .catch(console.error);
   }, [userId, navigate]);
-useEffect(() => {
-  if (!userId) return;
+  useEffect(() => {
+    if (!userId) return;
 
-  const fetchUserStatus = () => {
-    axios
-      .get(`http://localhost:5000/user/${userId}`)
-      .then((res) => {
-        const userData = res.data;
+    const fetchUserStatus = () => {
+      axios
+        .get(`http://localhost:5000/user/${userId}`)
+        .then((res) => {
+          const userData = res.data;
+          console.log(userId);
+          setFrozen(userData.isFrozen);
+          setSuspended(userData.isSuspended || false);
+          setImageUrl(userData.ImageUrl || imageUrl);
+          setUsername(userData.firstName || username);
+          setWallBalance(userData.walletBalance || walletBalance);
 
-        setFrozen(userData.isFrozen);
-        setSuspended(userData.isSuspended || false);
-        setImageUrl(userData.ImageUrl || imageUrl);
-        setUsername(userData.firstName || username);
-        setWallBalance(userData.walletBalance || walletBalance);
+          if (userData.isSuspended) {
+            setShowEditProfile(false); // close popups
 
-        if (userData.isSuspended) {
-          setShowEditProfile(false); // close popups
+            // Redirect after 5 seconds if suspended
+            setTimeout(() => {
+              navigate("/", { replace: true });
+            }, 8000);
+          }
+        })
+        .catch(console.error);
+    };
 
-          // Redirect after 5 seconds if suspended
-          setTimeout(() => {
-            navigate("/", { replace: true });
-          }, 5000);
-        }
-      })
-      .catch(console.error);
-  };
+    // Call immediately once
+    fetchUserStatus();
 
-  // Call immediately once
-  fetchUserStatus();
+    // Then set interval every 5 seconds
+    const intervalId = setInterval(fetchUserStatus, 5000);
 
-  // Then set interval every 5 seconds
-  const intervalId = setInterval(fetchUserStatus, 5000);
+    // Cleanup on unmount
+    return () => clearInterval(intervalId);
+    // Only depend on userId and navigate to avoid infinite loop
+    // imageUrl, username, walletBalance are set inside this effect
+  }, [userId, imageUrl , username , walletBalance ,  navigate]);
 
-  // Cleanup on unmount
-  return () => clearInterval(intervalId);
-}, [userId, imageUrl, username, walletBalance, instBalance, navigate]);
+  useEffect(() => {
+    if (!userId) return;
 
+    const fetchNotifications = () => {
+      axios
+        .get(`http://localhost:5000/notifications/${userId}`, {
+          params: { role: "student" },
+        })
+        .then((res) => {
+          const unread = res.data.some((n) => !n.read);
+          setHasUnread(unread);
+        })
+        .catch(console.error);
+    };
 
+    // Call immediately once
+    fetchNotifications();
 
-useEffect(() => {
-  if (!userId) return;
+    // Poll every 5 seconds
+    const intervalId = setInterval(fetchNotifications, 7000);
 
-  const fetchNotifications = () => {
-    axios
-      .get(`http://localhost:5000/notifications/${userId}`, {
-        params: { role: "student" },
-      })
-      .then((res) => {
-        const unread = res.data.some((n) => !n.read);
-        setHasUnread(unread);
-      })
-      .catch(console.error);
-  };
-
-  // Call immediately once
-  fetchNotifications();
-
-  // Poll every 5 seconds
-  const intervalId = setInterval(fetchNotifications, 7000);
-
-  // Cleanup on unmount
-  return () => clearInterval(intervalId);
-}, [userId]);
-
+    // Cleanup on unmount
+    return () => clearInterval(intervalId);
+  }, [userId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -188,15 +188,27 @@ useEffect(() => {
     return transactions
       .filter(
         (t) =>
-          t.status === "SUCCESS" && dayjs(t.createdAt).isSame(dayjs(), "day")
+          (t.status === "SUCCESS" || t.status === "REFUND") &&
+          dayjs(t.createdAt).isSame(dayjs(), "day")
       )
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => {
+        if (t.status === "SUCCESS") return sum + t.amount;
+        if (t.status === "REFUND") return sum - t.amount; // subtract refund
+        return sum;
+      }, 0);
   }, [transactions]);
 
   const chartData = useMemo(() => {
-    const successTxns = transactions.filter((t) => t.status === "SUCCESS");
+    const relevantTxns = transactions.filter(
+      (t) => t.status === "SUCCESS" || t.status === "REFUND"
+    );
+
+    // when building chart data, subtract REFUND amounts
     return buildChartData({
-      transactions: successTxns,
+      transactions: relevantTxns.map((t) => ({
+        ...t,
+        amount: t.status === "REFUND" ? -t.amount : t.amount,
+      })),
       mode,
       fromDate,
       toDate,
@@ -275,8 +287,8 @@ useEffect(() => {
             <div>
               <strong>Account Suspended</strong>
               <br />
-              Your account has been suspended by the admins/subadmins for fraud actions. 
-              You cannot login to your account. Contact admins.
+              Your account has been suspended by the admins/subadmins for fraud
+              actions. You cannot login to your account. Contact admins.
             </div>
           </div>
         </motion.div>
@@ -562,8 +574,7 @@ useEffect(() => {
                         padding: "10px 16px",
                         border: "none",
                         borderRadius: "12px",
-                        background:
-                          "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                        background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
                         color: "white",
                         fontWeight: 600,
                         cursor: "pointer",
@@ -585,8 +596,7 @@ useEffect(() => {
                         padding: "10px 16px",
                         border: "none",
                         borderRadius: "12px",
-                        background:
-                          "linear-gradient(135deg, #10b981, #059669)",
+                        background: "linear-gradient(135deg, #10b981, #059669)",
                         color: "white",
                         fontWeight: 600,
                         cursor: "pointer",
@@ -890,9 +900,7 @@ useEffect(() => {
                     padding: "12px 20px",
                     borderRadius: "14px",
                     border: `1px solid ${
-                      isLight
-                        ? "rgba(148,163,184,0.6)"
-                        : "rgba(75,85,99,0.7)"
+                      isLight ? "rgba(148,163,184,0.6)" : "rgba(75,85,99,0.7)"
                     }`,
                     background:
                       mode === m
@@ -940,9 +948,7 @@ useEffect(() => {
                     : "linear-gradient(145deg, rgba(30,41,59,0.9), rgba(17,24,39,0.9))",
                   borderRadius: "18px",
                   border: `1px solid ${
-                    isLight
-                      ? "rgba(209,213,219,0.7)"
-                      : "rgba(51,65,85,0.8)"
+                    isLight ? "rgba(209,213,219,0.7)" : "rgba(51,65,85,0.8)"
                   }`,
                   backdropFilter: "blur(12px)",
                 }}
@@ -978,9 +984,7 @@ useEffect(() => {
                       padding: "12px 16px",
                       borderRadius: "12px",
                       border: `1px solid ${
-                        isLight
-                          ? "rgba(148,163,184,0.8)"
-                          : "rgba(75,85,99,0.8)"
+                        isLight ? "rgba(148,163,184,0.8)" : "rgba(75,85,99,0.8)"
                       }`,
                       background: isLight ? "white" : "#1e293b",
                       color: textMain,
@@ -1019,9 +1023,7 @@ useEffect(() => {
                       padding: "12px 16px",
                       borderRadius: "12px",
                       border: `1px solid ${
-                        isLight
-                          ? "rgba(148,163,184,0.8)"
-                          : "rgba(75,85,99,0.8)"
+                        isLight ? "rgba(148,163,184,0.8)" : "rgba(75,85,99,0.8)"
                       }`,
                       background: isLight ? "white" : "#1e293b",
                       color: textMain,
@@ -1048,9 +1050,7 @@ useEffect(() => {
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke={
-                      isLight
-                        ? "rgba(226,232,240,0.7)"
-                        : "rgba(51,65,85,0.5)"
+                      isLight ? "rgba(226,232,240,0.7)" : "rgba(51,65,85,0.5)"
                     }
                   />
                   <XAxis
@@ -1072,21 +1072,23 @@ useEffect(() => {
                         "-apple-system, BlinkMacSystemFont, sans-serif",
                     }}
                   />
+                  <ReferenceLine
+                    y={0} // align to zero
+                    stroke={isLight ? "#0f172a" : "#f9fafb"} // color based on theme
+                    strokeWidth={3} // thickness
+                  />
+
                   <Tooltip
                     contentStyle={{
                       background: isLight
                         ? "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.98))"
                         : "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.98))",
                       border: `1px solid ${
-                        isLight
-                          ? "rgba(209,213,219,0.8)"
-                          : "rgba(51,65,85,0.9)"
+                        isLight ? "rgba(209,213,219,0.8)" : "rgba(51,65,85,0.9)"
                       }`,
                       borderRadius: "16px",
                       boxShadow: `0 20px 48px ${
-                        isLight
-                          ? "rgba(15,23,42,0.25)"
-                          : "rgba(15,23,42,0.75)"
+                        isLight ? "rgba(15,23,42,0.25)" : "rgba(15,23,42,0.75)"
                       }`,
                       backdropFilter: "blur(16px)",
                       padding: "16px",

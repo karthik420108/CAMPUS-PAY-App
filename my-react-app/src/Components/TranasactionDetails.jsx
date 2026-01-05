@@ -314,17 +314,17 @@ function TransactionDetails() {
           <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
             <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>User</span>
             <div style={{ fontSize: 15, color: textMain, fontWeight: 500 }}>
-              {txn.userId?.firstName} {txn.userId?.lastName}
+              {txn.firstName} {txn.lastName}
             </div>
           </div>
 
-          {/* Email */}
           <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
-            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>Email</span>
+            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>Vendor Id</span>
             <div style={{ fontSize: 15, color: textMain, fontWeight: 500 }}>
-              {txn.userId?.collegeEmail || txn.userId?.email || txn.userId?.Email || "No Email"}
+              {txn.vendorid}
             </div>
           </div>
+
 
           {/* Vendor */}
           <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>

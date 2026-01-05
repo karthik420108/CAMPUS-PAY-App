@@ -759,27 +759,32 @@ app.get("/transactions/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
+    // Find the user
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // Get user's transactions sorted by createdAt
     const transactions = (user.transactions || []).sort(
-      (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
-    // Extract user's name
+    // User's first & last name
     const { firstName, lastName } = user;
-    const txid = transactions.txid;
-    const vendorId = await Transaction.find({txid : txid})
-    // If you want vendor names for each transaction
+    console.log(firstName +" " + lastName)
+    let vendorid = ""
+    // Populate vendor name for each transaction
     const transactionsWithNames = await Promise.all(
       transactions.map(async (tx) => {
-        let vendorName = "";
+        let vendorName = "Unknown Vendor";
         if (tx.vendorId) {
-          const vendor = await Vendor.findById(vendorId);
-          vendorName = vendor ? vendor.vendorName : "";
+          const vendor = await Vendor.findById(tx.vendorId);
+          if (vendor) vendorName = vendor.vendorName;
+          vendorid = vendor.vendorid
         }
+        
         return {
-          ...tx.toObject(), // convert Mongoose doc to plain object
+          ...tx.toObject(), // Convert Mongoose doc to plain object
+          vendorid,
           firstName,
           lastName,
           vendorName,
@@ -793,6 +798,7 @@ app.get("/transactions/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch transactions" });
   }
 });
+
 
 
 function generateOTP() {
@@ -3265,32 +3271,54 @@ app.post("/amount/:vendorId", async (req, res) => {
 
 app.post("/refund", async (req, res) => {
   const { email, vendorId, amount, mpin } = req.body;
+  console.log("email : "+ email)
 
   if (!email || !vendorId || !amount || !mpin) {
     return res.status(400).json({ msg: "All fields are required" });
   }
 
+  if (amount <= 0) {
+    return res.status(400).json({ msg: "Invalid refund amount" });
+  }
+  console.log(req.body)
   try {
+    // Find user
+    
+    const user = await User.findOne({  collegeEmail : email })
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
     // Find vendor
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return res.status(404).json({ msg: "Vendor not found" });
 
+    // MPIN check
     if (vendor.Mpin !== mpin) {
       return res.status(400).json({ msg: "Wrong MPIN entered" });
     }
-    const updated = notification.toObject();
-    updated.read = (updated.readBy || []).map((id) => id.toString()).includes(userId);
 
-    res.json({ message: "Notification marked as read", notification: updated });
-    vendor.Wallet -= amount;
+    // Balance check
+    if (vendor.Wallet < amount) {
+      return res.status(400).json({ msg: "Vendor has insufficient balance" });
+    }
 
-    // Add amount to college balance
+    // Find college (single document assumption)
     const college = await College.findOne();
     if (!college) return res.status(404).json({ msg: "College not found" });
-    college.amount += amount;
 
-    // Deduct amount from student wallet
+    // Wallet updates
+    vendor.Wallet -= amount;
     user.walletBalance -= amount;
+    college.amount += amount;
+    user.notifications.push({
+    message: `₹${amount} has been refunded to your wallet`,
+    type: "success",       // use "success" for refunds
+    });
+
+    vendor.notifications.push({
+    message: `₹${amount} has been refunded from your wallet to ${user.firstName} ${user.lastName}`,
+    type: "info",
+    });
 
     // Create transaction
     const tx = new Transaction({
@@ -3302,13 +3330,12 @@ app.post("/refund", async (req, res) => {
       completedAt: new Date(),
     });
 
-    // Save transaction references
+    // Push transaction references
     user.transactions.push(tx);
 
-    // Add to college transactions
     college.transactions.push({
       studentId: user._id,
-      studentName: user.firstName + " " + user.lastName,
+      studentName: `${user.firstName} ${user.lastName}`,
       amount,
       category: "Refund",
       txid: tx._id.toString(),
@@ -3317,14 +3344,24 @@ app.post("/refund", async (req, res) => {
     });
 
     // Save all
-    await Promise.all([user.save(), vendor.save(), college.save(), tx.save()]);
+    await Promise.all([
+      user.save(),
+      vendor.save(),
+      college.save(),
+      tx.save(),
+    ]);
 
-    res.status(200).json({ msg: "Refund successful", transactionId: tx._id });
+    res.status(200).json({
+      msg: "Refund successful",
+      transactionId: tx._id,
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Server error", error: err.message });
   }
 });
+
 
 app.post("/vn", async (req, res) => {
   const { txid } = req.body;
