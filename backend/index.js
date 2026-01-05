@@ -188,6 +188,7 @@ const Vendorschema = new mongoose.Schema({
   ImageUrl: String,
   Mpin: String,
   isSuspended: { type: Boolean, default: false },
+  isFrozen: { type: Boolean, default: false },
   kyc: {
     imageUrl: String,
     status: {
@@ -598,6 +599,9 @@ app.post("/login", async (req, res) => {
       });
     }
 
+    // Allow frozen vendors to login but with restricted access
+    // Frozen status will be handled in frontend
+
     if (vendor.kyc.status !== "success") {
       return res.status(403).json({ error: "KYC not verified" });
     }
@@ -609,6 +613,7 @@ app.post("/login", async (req, res) => {
       imageUrl: vendor.ImageUrl,
       vendorId: vendor._id,
       isSuspended: vendor.isSuspended,
+      isFrozen: vendor.isFrozen,
     });
   }
 

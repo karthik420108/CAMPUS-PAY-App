@@ -31,13 +31,25 @@ export const useVendorStatus = (vendorId) => {
             }, 5000);
           }
           
-          // Handle freezing - navigate to main dashboard if frozen
-          if (vendorData.isFrozen && window.location.pathname !== "/vlogin") {
-            // Navigate back to vendor dashboard
-            navigate("/vlogin", { 
-              state: { vendorId, role: "vendor" }, 
-              replace: true 
-            });
+          // Handle freezing - allow access to specific pages for frozen vendors
+          if (vendorData.isFrozen) {
+            const allowedPaths = [
+              "/vlogin",                    // Main dashboard
+              "/vendor-transaction",       // Transaction history
+              "/complaint-history",        // Complaint history  
+              "/raise-complaint",           // Raise complaint
+              "/viewv",                     // View profile
+              "/vendor-edit-profile",       // Edit profile
+              "/notifications"              // Notifications
+            ];
+            
+            // Only redirect if not on an allowed page
+            if (!allowedPaths.includes(window.location.pathname)) {
+              navigate("/vlogin", { 
+                state: { vendorId, role: "vendor" }, 
+                replace: true 
+              });
+            }
           }
         })
         .catch((err) => {

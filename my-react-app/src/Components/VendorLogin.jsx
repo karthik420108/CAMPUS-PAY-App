@@ -17,6 +17,7 @@ function VendorLogin() {
   const [showProfileOption, setShowProfileOption] = useState(false);
   const [theme, setTheme] = useState("light"); // "light" | "dark"
   const [hasUnread, setHasUnread] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Use vendor status hook for real-time monitoring
   const { isSuspended, isFrozen, showSuspensionBanner, setShowSuspensionBanner } = useVendorStatus(vendorId);
@@ -37,8 +38,8 @@ function VendorLogin() {
         setBalance(res.data.Wallet);
         setImageUrl(res.data.ImageUrl);
         
-        // Close profile options if suspended
-        if (res.data.isSuspended) {
+        // Close profile options if suspended or frozen
+        if (res.data.isSuspended || res.data.isFrozen) {
           setShowProfileOption(false);
         }
       })
@@ -150,15 +151,25 @@ function VendorLogin() {
     setShowProfileOption(false);
   };
 
+  const goToTransactions = () => {
+    navigate("/vendor-transaction", { state: { vendorId } });
+    setShowProfileOption(false);
+  };
+
+  const goToRaiseComplaint = () => {
+    navigate("/raise-complaint", { state: { vendorId, role: "vendor" } });
+    setShowProfileOption(false);
+  };
+
   const handleLogout = () => {
     navigate("/");
   };
 
   return (
     <>
-      <Header1 userId = {vendorId} role = "vendor" />
+      <Header1 userId = {vendorId} role = "vendor" isFrozen = {isFrozen} isOp = {setSidebarOpen} />
       <SuspensionBanner show={showSuspensionBanner} />
-
+      
       {/* click-outside wrapper */}
       <div
         onClick={() => {
@@ -177,6 +188,36 @@ function VendorLogin() {
             ...pageStyle,
           }}
         >
+          {/* Frozen Status Banner */}
+          {isFrozen && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{
+                position: "absolute",
+                top: "40px",
+                left: "30%",
+                transform: "translateX(-50%)",
+                zIndex: 100,
+                background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                color: "white",
+                padding: "12px 24px",
+                borderRadius: "12px",
+                boxShadow: "0 8px 24px rgba(59,130,246,0.4)",
+                fontSize: "14px",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                minWidth: "300px",
+                textAlign: "center",
+              }}
+            >
+              <span style={{ fontSize: "16px" }}>❄️</span>
+              Your account has been frozen. Please contact admin for assistance.
+            </motion.div>
+          )}
           {/* soft background orbs */}
           <motion.div
             style={{
@@ -467,6 +508,40 @@ function VendorLogin() {
                     🔔 Notifications from admin
                   </button>
                   <button
+                    onClick={goToTransactions}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: "transparent",
+                      color: textMain,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    📊 View Transactions
+                  </button>
+                  <button
+                    onClick={goToRaiseComplaint}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: "transparent",
+                      color: textMain,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    📝 Raise Complaint
+                  </button>
+                  <button
                     onClick={handleLogout}
                     style={{
                       width: "100%",
@@ -673,49 +748,67 @@ function VendorLogin() {
               transition={{ delay: 0.24, duration: 0.4, ease: easingSoft }}
             >
               <motion.button
-                onClick={goToGenerateQR}
-                whileHover={{
+                onClick={isFrozen ? null : goToGenerateQR}
+                whileHover={isFrozen ? {} : {
                   scale: 1.02,
                   boxShadow: "0 0 24px rgba(59,130,246,0.6)",
                 }}
-                whileTap={{ scale: 0.97 }}
+                whileTap={isFrozen ? {} : { scale: 0.97 }}
                 style={{
                   width: "100%",
                   padding: "16px 24px",
                   borderRadius: 20,
                   border: "none",
-                  background:
-                    "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
+                  background: isFrozen 
+                    ? "linear-gradient(120deg,#9ca3af,#6b7280)"
+                    : "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
                   backgroundSize: "220% 220%",
-                  color: "#f9fafb",
+                  color: isFrozen ? "#e5e7eb" : "#f9fafb",
                   fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: isFrozen ? "not-allowed" : "pointer",
                   fontSize: 16,
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow:
-                    "0 16px 40px rgba(59,130,246,0.4), 0 0 0 1px rgba(59,130,246,0.3)",
+                  boxShadow: isFrozen 
+                    ? "0 8px 24px rgba(107,114,128,0.3)"
+                    : "0 16px 40px rgba(59,130,246,0.4), 0 0 0 1px rgba(59,130,246,0.3)",
+                  opacity: isFrozen ? 0.7 : 1,
                 }}
-                animate={{
+                animate={!isFrozen ? {
                   backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                }}
+                } : {}}
                 transition={{
                   duration: 3,
-                  repeat: Infinity,
+                  repeat: !isFrozen ? Infinity : 0,
                   ease: "easeInOut",
                 }}
               >
-                Generate QR Code
+                {isFrozen ? "Account Frozen" : "Generate QR Code"}
               </motion.button>
             </motion.div>
           </motion.div>
         </motion.div>
        
       </div>
-      <button onClick={()=>navigate("/refund", { state: { vendorId } })}>Refund Money</button>
+      <button 
+        onClick={isFrozen ? null : () => navigate("/refund", { state: { vendorId } })}
+        disabled={isFrozen}
+        style={{
+          opacity: isFrozen ? 0.5 : 1,
+          cursor: isFrozen ? "not-allowed" : "pointer",
+          backgroundColor: isFrozen ? "#9ca3af" : "#3b82f6",
+          color: "white",
+          padding: "8px 16px",
+          border: "none",
+          borderRadius: "8px",
+          marginTop: "16px"
+        }}
+      >
+        {isFrozen ? "Account Frozen" : "Refund Money"}
+      </button>
     </>
   );
 }

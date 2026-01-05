@@ -18,6 +18,7 @@ function RaiseComplaint() {
   const [isFrozen, setIsFrozen] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
   const [blockingMessage, setBlockingMessage] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Use vendor status hook for real-time monitoring (only for vendors)
   const { showSuspensionBanner } = role === "vendor" ? useVendorStatus(userId) : { showSuspensionBanner: false };
@@ -136,6 +137,9 @@ function RaiseComplaint() {
         return;
       }
 
+      // Allow frozen vendors to access complaint form
+      // No blocking for frozen users
+
       // Fetch transactions only if not blocked
       const txnRes = await axios.get(`http://localhost:5000/transactions/${userId}`);
       setTransactions(txnRes.data);
@@ -253,7 +257,7 @@ function RaiseComplaint() {
 
   return (
     <>
-      <Header1 userId={userId} role = {role} isFrozen={isFrozen}/>
+      <Header1 userId={userId} role = {role} isFrozen={isFrozen} isOp={setSidebarOpen}/>
       <SuspensionBanner show={showSuspensionBanner} />
 
       <motion.div
@@ -716,17 +720,20 @@ function RaiseComplaint() {
               transition={{ delay: 0.22, duration: 0.4, ease: easingSoft }}
               style={{
                 padding: "12px 16px",
-                backgroundColor: isLight ? "#fef3c7" : "#78350f",
+                backgroundColor: isFrozen ? "#dbeafe" : (isLight ? "#fef3c7" : "#78350f"),
                 borderRadius: 12,
-                border: `1px solid ${isLight ? "#fbbf24" : "#92400e"}`,
+                border: `1px solid ${isFrozen ? "#3b82f6" : (isLight ? "#fbbf24" : "#92400e")}`,
                 textAlign: "center",
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 600, color: isLight ? "#92400e" : "#fef3c7", marginBottom: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: isFrozen ? "#1d4ed8" : (isLight ? "#92400e" : "#fef3c7"), marginBottom: 4 }}>
                 📋 Vendor Complaint
               </div>
-              <div style={{ fontSize: 11, color: isLight ? "#78350f" : "#fef3c7", lineHeight: 1.4 }}>
-                Your complaint will be sent directly to the admin team for review
+              <div style={{ fontSize: 11, color: isFrozen ? "#1e40af" : (isLight ? "#78350f" : "#fef3c7"), lineHeight: 1.4 }}>
+                {isFrozen 
+                  ? "Your account is frozen, but you can still raise complaints for review."
+                  : "Your complaint will be sent directly to the admin team for review"
+                }
               </div>
             </motion.div>
           )}

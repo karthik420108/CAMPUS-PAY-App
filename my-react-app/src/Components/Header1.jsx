@@ -80,22 +80,42 @@ const Header1 = ({ isOp, userId, isFrozen , role}) => {
           <li onClick={SHome}>🏠 Home</li>
 
           <li
-            className={isFrozen ? "disabled" : ""}
             onClick={() => {
-              if (!isFrozen && role == "student"){
+              if (role == "student"){
                 navigate("/History", { state: { userId , role} });
               }
               else {
               navigate("/vendor-transaction", {state : {userId , role}});
-            }
-            }
+              }
+            }}
             
-          } 
-          >
+          > 
             📊 Transaction History
           </li>
-          {role == "vendor" && <li onClick={() => navigate("/redeem" , { state: { vendorId : userId } })}>Redeem</li>}
-          {role == "vendor" && <li onClick={()=>navigate("/redeem-history", { state: { vendorId : userId } })}>Redeem History</li>}
+          {role == "vendor" && (
+            <li 
+              className={isFrozen ? "disabled" : ""}
+              onClick={() => {
+                if (!isFrozen) {
+                  navigate("/redeem", { state: { vendorId : userId } });
+                }
+              }}
+            >
+              Redeem
+            </li>
+          )}
+          {role == "vendor" && (
+            <li 
+              className={isFrozen ? "disabled" : ""}
+              onClick={() => {
+                if (!isFrozen) {
+                  navigate("/redeem-history", { state: { vendorId : userId } });
+                }
+              }}
+            >
+              Redeem History
+            </li>
+          )}
           <li onClick={() => navigate("/complaint-history", { state: { userId , role , isFrozen} })}>
             💼 View Complaint History
           </li>

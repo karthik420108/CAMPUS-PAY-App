@@ -10,13 +10,14 @@ import { useVendorStatus } from "../hooks/useVendorStatus";
 function VendorTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [theme, setTheme] = useState("light");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
   const { state } = useLocation();
   const { userId } = state || {};
   
   // Use vendor status hook for real-time monitoring
-  const { showSuspensionBanner } = useVendorStatus(userId);
+  const { showSuspensionBanner, isFrozen } = useVendorStatus(userId);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -96,7 +97,7 @@ function VendorTransactions() {
 
   return (
     <>
-      <Header1 role="vendor" userId={userId}/>
+      <Header1 role="vendor" userId={userId} isFrozen={isFrozen} isOp={setSidebarOpen}/>
       <SuspensionBanner show={showSuspensionBanner} />
       <motion.div
         style={{
