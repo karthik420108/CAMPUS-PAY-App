@@ -58,9 +58,9 @@ function Header({ title, userRole, userName }) {
 
   const styles = {
     header: {
-      backgroundColor: "white",
+      backgroundColor: "light blue",
       boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-      borderBottom: "1px solid #e5e7eb",
+      borderBottom: "1px solid rgba(229, 231, 235, 1)",
       position: "sticky",
       top: 0,
       zIndex: 30

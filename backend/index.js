@@ -335,6 +335,7 @@ const StudentSchema = new mongoose.Schema(
   {
     firstName: String,
     lastName: String,
+    role: { type: String, default: "student" },
     isFrozen: { type: Boolean, default: true },
     isSuspended: { type: Boolean, default: false },
     collegeEmail: { type: String, required: true, unique: true },
@@ -419,6 +420,29 @@ app.post("/fix-complaint-assignments", async (req, res) => {
 });
 
 // ===== ROUTES =====
+
+// Test endpoint
+app.get("/test", (req, res) => {
+  res.json({ message: "Server is working!" });
+});
+
+// Migration: Add role field to existing users without role
+app.post("/migrate-user-roles", async (req, res) => {
+  try {
+    const result = await User.updateMany(
+      { role: { $exists: false } },
+      { $set: { role: "student" } }
+    );
+    
+    res.json({ 
+      message: `Updated ${result.modifiedCount} users with role field`,
+      updatedCount: result.modifiedCount
+    });
+  } catch (err) {
+    console.error("Migration error:", err);
+    res.status(500).json({ message: "Migration failed" });
+  }
+});
 
 app.post("/usere/profile", async (req, res) => {
   try {
@@ -2251,12 +2275,17 @@ app.get("/transactions/vendor/:vendorId", async (req, res) => {
   try {
     const { vendorId } = req.params;
 
-    console.log(vendorId);
+    console.log('Backend: Fetching transactions for vendorId:', vendorId);
+    console.log('Backend: vendorId type:', typeof vendorId);
+    console.log('Backend: vendorId length:', vendorId?.length);
 
     const transactions = await Transaction.find({ vendorId })
       .sort({ createdAt: -1 })
       .populate("userId", "firstName lastName collegeEmail") // get user info including email
       .populate("vendorId", "vendorName"); // get vendor info
+
+    console.log('Backend: Found transactions:', transactions.length);
+    console.log('Backend: First transaction:', transactions[0]);
 
     res.json({ success: true, transactions });
   } catch (err) {
@@ -3587,12 +3616,17 @@ app.get("/admin/monitor/vendors", async (req, res) => {
           .sort({ createdAt: -1 })
           .limit(5);
 
+        const totalRedeems = await Redeem.countDocuments({ userId: vendor._id });
+        const totalTransactions = await Transaction.countDocuments({ vendorId: vendor._id });
+        const totalComplaints = await Complaint.countDocuments({ userId: vendor._id, role: "vendor" });
+
         return {
           ...vendor.toObject(),
           recentRedeems: redeemRequests,
           recentTransactions: transactions,
-          totalRedeems: redeemRequests.length,
-          totalTransactions: transactions.length
+          totalRedeems: totalRedeems,
+          totalTransactions: totalTransactions,
+          totalComplaints: totalComplaints
         };
       })
     );
@@ -3607,30 +3641,42 @@ app.get("/admin/monitor/vendors", async (req, res) => {
 // Monitor students - get all student activity and details
 app.get("/admin/monitor/students", async (req, res) => {
   try {
-    const students = await User.find({})
-      .select("firstName lastName collegeEmail ImageUrl isFrozen isSuspended walletBalance createdAt kyc")
-      .sort({ createdAt: -1 });
+    const students = await User.find({ role: "student" })
+      .select("firstName lastName collegeEmail ImageUrl isFrozen walletBalance createdAt kyc");
 
-    // Get additional stats for each student
+    // Handle case when no students exist
+    if (!students || students.length === 0) {
+      return res.json([]);
+    }
+
+    // Fetch real-time stats for each student
     const studentsWithStats = await Promise.all(
       students.map(async (student) => {
-        const transactions = student.transactions || [];
-        const complaints = await Complaint.find({ userId: student._id })
+        const recentTransactions = await Transaction.find({ userId: student._id })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .populate("vendorId", "vendorName vendorid");
+
+        const recentComplaints = await Complaint.find({ userId: student._id })
           .sort({ createdAt: -1 })
           .limit(5);
 
-        // Calculate total spending from successful transactions
-        const totalSpending = transactions
-          .filter(tx => tx.status === "SUCCESS")
-          .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        const totalTransactions = await Transaction.countDocuments({ userId: student._id });
+        const totalComplaints = await Complaint.countDocuments({ userId: student._id });
+
+        const spendingAgg = await Transaction.aggregate([
+          { $match: { userId: student._id, status: "SUCCESS" } },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]);
+        const totalSpending = spendingAgg?.[0]?.total || 0;
 
         return {
           ...student.toObject(),
-          recentTransactions: transactions.slice(-5), // Last 5 transactions
-          recentComplaints: complaints,
-          totalTransactions: transactions.length,
-          totalComplaints: complaints.length,
-          totalSpending: totalSpending
+          recentTransactions,
+          recentComplaints,
+          totalComplaints,
+          totalTransactions,
+          totalSpending,
         };
       })
     );
@@ -3661,13 +3707,18 @@ app.get("/admin/monitor/vendor/:vendorId", async (req, res) => {
       .populate("userId", "firstName lastName collegeEmail")
       .sort({ createdAt: -1 });
 
+    const complaints = await Complaint.find({ userId: vendorId, role: "vendor" })
+      .sort({ createdAt: -1 });
+
     res.json({
       vendor,
       redeemRequests,
       transactions,
+      complaints,
       stats: {
         totalRedeems: redeemRequests.length,
         totalTransactions: transactions.length,
+        totalComplaints: complaints.length,
         successfulTransactions: transactions.filter(t => t.status === "SUCCESS").length,
         totalRedeemAmount: redeemRequests.reduce((sum, r) => sum + r.amount, 0)
       }
@@ -3693,8 +3744,12 @@ app.get("/admin/monitor/student/:studentId", async (req, res) => {
     const complaints = await Complaint.find({ userId: studentId })
       .sort({ createdAt: -1 });
 
+    // Fetch transactions directly from Transaction collection for real-time updates
+    const transactions = await Transaction.find({ userId: studentId })
+      .sort({ createdAt: -1 })
+      .populate("vendorId", "vendorName vendorid");
+
     // Calculate total spending from successful transactions
-    const transactions = student.transactions || [];
     const totalSpending = transactions
       .filter(tx => tx.status === "SUCCESS")
       .reduce((sum, tx) => sum + (tx.amount || 0), 0);
