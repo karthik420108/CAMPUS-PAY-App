@@ -794,7 +794,7 @@ app.get("/transactions/:userId", async (req, res) => {
     // Get user's transactions sorted by createdAt
     const transactions = (user.transactions || []).sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      
     );
 
     // User's first & last name
