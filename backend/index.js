@@ -787,26 +787,33 @@ app.get("/transactions/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
+    // Find the user
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // Get user's transactions sorted by createdAt
     const transactions = (user.transactions || []).sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
-    // Extract user's name
+    // User's first & last name
     const { firstName, lastName } = user;
-    
-    // If you want vendor names for each transaction
+    console.log(firstName +" " + lastName)
+    let vendorid = ""
+    // Populate vendor name for each transaction
     const transactionsWithNames = await Promise.all(
       transactions.map(async (tx) => {
-        let vendorName = "";
+        let vendorName = "Unknown Vendor";
         if (tx.vendorId) {
           const vendor = await Vendor.findById(tx.vendorId);
-          vendorName = vendor ? vendor.vendorName : "";
+          if (vendor) vendorName = vendor.vendorName;
+          vendorid = vendor.vendorid
         }
+        
         return {
-          ...tx.toObject(), // convert Mongoose doc to plain object
+          ...tx.toObject(), // Convert Mongoose doc to plain object
+          vendorid,
           firstName,
           lastName,
           vendorName,
@@ -821,6 +828,7 @@ app.get("/transactions/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch transactions" });
   }
 });
+
 
 
 function generateOTP() {
@@ -3286,57 +3294,59 @@ app.post("/amount/:vendorId", async (req, res) => {
 });
 
 app.post("/refund", async (req, res) => {
-  console.log("Refund request received:", req.body);
   const { email, vendorId, amount, mpin } = req.body;
+  console.log("email : "+ email)
 
   if (!email || !vendorId || !amount || !mpin) {
-    console.log("Missing fields:", { email: !!email, vendorId: !!vendorId, amount: !!amount, mpin: !!mpin });
     return res.status(400).json({ msg: "All fields are required" });
   }
 
+  if (amount <= 0) {
+    return res.status(400).json({ msg: "Invalid refund amount" });
+  }
+  console.log(req.body)
   try {
+    // Find user
+    
+    const user = await User.findOne({  collegeEmail : email })
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
     // Find vendor
     const vendor = await Vendor.findById(vendorId);
-    if (!vendor) {
-      console.log("Vendor not found:", vendorId);
-      return res.status(404).json({ msg: "Vendor not found" });
-    }
+    if (!vendor) return res.status(404).json({ msg: "Vendor not found" });
 
+    // MPIN check
     if (vendor.Mpin !== mpin) {
-      console.log("Invalid MPIN for vendor:", vendorId);
       return res.status(400).json({ msg: "Wrong MPIN entered" });
     }
 
-    // Find user by email
-    const user = await User.findOne({ collegeEmail: email });
-    if (!user) {
-      console.log("User not found with email:", email);
-      return res.status(404).json({ msg: "User not found" });
-    }
-
-    // Check if vendor has sufficient balance (using correct field name)
+    // Balance check
     if (vendor.Wallet < amount) {
-      console.log("Insufficient balance. Vendor wallet:", vendor.Wallet, "Requested amount:", amount);
-      return res.status(400).json({ msg: "Insufficient balance" });
+      return res.status(400).json({ msg: "Vendor has insufficient balance" });
     }
 
-    // Deduct amount from vendor wallet
-    vendor.Wallet -= amount;
-
-    // Add amount to college balance
+    // Find college (single document assumption)
     const college = await College.findOne();
-    if (!college) {
-      console.log("College not found");
-      return res.status(404).json({ msg: "College not found" });
-    }
+    if (!college) return res.status(404).json({ msg: "College not found" });
+
+    // Wallet updates
+    vendor.Wallet -= amount;
+    user.walletBalance -= amount;
     college.amount += amount;
+    user.notifications.push({
+    message: `₹${amount} has been refunded to your wallet`,
+    type: "success",       // use "success" for refunds
+    });
 
-    // Add amount to student wallet
-    user.walletBalance += amount;
+    vendor.notifications.push({
+    message: `₹${amount} has been refunded from your wallet to ${user.firstName} ${user.lastName}`,
+    type: "info",
+    });
 
-    // Create transaction with proper txid
+    // Create transaction
     const tx = new Transaction({
-      txid: new mongoose.Types.ObjectId().toString(),
+      txid: new mongoose.Types.ObjectId(),
       userId: user._id,
       vendorId: vendor._id,
       amount,
@@ -3344,13 +3354,12 @@ app.post("/refund", async (req, res) => {
       completedAt: new Date(),
     });
 
-    // Save transaction references
-    user.transactions.push(tx._id);
+    // Push transaction references
+    user.transactions.push(tx);
 
-    // Add to college transactions
     college.transactions.push({
       studentId: user._id,
-      studentName: user.firstName + " " + user.lastName,
+      studentName: `${user.firstName} ${user.lastName}`,
       amount,
       category: "Refund",
       txid: tx._id.toString(),
@@ -3359,15 +3368,24 @@ app.post("/refund", async (req, res) => {
     });
 
     // Save all
-    await Promise.all([user.save(), vendor.save(), college.save(), tx.save()]);
+    await Promise.all([
+      user.save(),
+      vendor.save(),
+      college.save(),
+      tx.save(),
+    ]);
 
-    console.log("Refund successful for vendor:", vendorId, "to user:", email, "amount:", amount);
-    res.status(200).json({ msg: "Refund successful", transactionId: tx._id });
+    res.status(200).json({
+      msg: "Refund successful",
+      transactionId: tx._id,
+    });
+
   } catch (err) {
-    console.error("Refund error:", err);
+    console.error(err);
     res.status(500).json({ msg: "Server error", error: err.message });
   }
 });
+
 
 app.post("/vn", async (req, res) => {
   const { txid } = req.body;
