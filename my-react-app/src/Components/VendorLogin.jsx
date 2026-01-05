@@ -789,26 +789,66 @@ function VendorLogin() {
                 {isFrozen ? "Account Frozen" : "Generate QR Code"}
               </motion.button>
             </motion.div>
+
+            {/* Refund Button - Inside same card */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4, ease: easingSoft }}
+            >
+              <motion.button
+                onClick={isFrozen ? null : () => navigate("/refund", { state: { vendorId } })}
+                disabled={isFrozen}
+                whileHover={isFrozen ? {} : {
+                  scale: 1.02,
+                  boxShadow: "0 0 24px rgba(239,68,68,0.6)",
+                }}
+                whileTap={isFrozen ? {} : { scale: 0.97 }}
+                style={{
+                  width: "100%",
+                  padding: "16px 24px",
+                  borderRadius: 20,
+                  border: "none",
+                  background: isFrozen 
+                    ? "linear-gradient(120deg,#9ca3af,#6b7280)"
+                    : "linear-gradient(120deg,#ef4444,#dc2626,#b91c1c,#991b1b)",
+                  backgroundSize: "220% 220%",
+                  color: isFrozen ? "#e5e7eb" : "#f9fafb",
+                  fontWeight: 700,
+                  cursor: isFrozen ? "not-allowed" : "pointer",
+                  fontSize: 16,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: isFrozen 
+                    ? "0 8px 24px rgba(107,114,128,0.3)"
+                    : "0 16px 40px rgba(239,68,68,0.4), 0 0 0 1px rgba(239,68,68,0.3)",
+                  opacity: isFrozen ? 0.7 : 1,
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+                animate={!isFrozen ? {
+                  backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                } : {}}
+                transition={{
+                  duration: 3,
+                  repeat: !isFrozen ? Infinity : 0,
+                  ease: "easeInOut",
+                }}
+              >
+                {/* Icon */}
+                <span style={{ marginRight: "10px", fontSize: "20px" }}>
+                  {isFrozen ? "🔒" : "💰"}
+                </span>
+                {isFrozen ? "Account Frozen" : "Refund Money"}
+              </motion.button>
+            </motion.div>
           </motion.div>
         </motion.div>
        
       </div>
-      <button 
-        onClick={isFrozen ? null : () => navigate("/refund", { state: { vendorId } })}
-        disabled={isFrozen}
-        style={{
-          opacity: isFrozen ? 0.5 : 1,
-          cursor: isFrozen ? "not-allowed" : "pointer",
-          backgroundColor: isFrozen ? "#9ca3af" : "#3b82f6",
-          color: "white",
-          padding: "8px 16px",
-          border: "none",
-          borderRadius: "8px",
-          marginTop: "16px"
-        }}
-      >
-        {isFrozen ? "Account Frozen" : "Refund Money"}
-      </button>
     </>
   );
 }

@@ -3286,37 +3286,57 @@ app.post("/amount/:vendorId", async (req, res) => {
 });
 
 app.post("/refund", async (req, res) => {
+  console.log("Refund request received:", req.body);
   const { email, vendorId, amount, mpin } = req.body;
 
   if (!email || !vendorId || !amount || !mpin) {
+    console.log("Missing fields:", { email: !!email, vendorId: !!vendorId, amount: !!amount, mpin: !!mpin });
     return res.status(400).json({ msg: "All fields are required" });
   }
 
   try {
     // Find vendor
     const vendor = await Vendor.findById(vendorId);
-    if (!vendor) return res.status(404).json({ msg: "Vendor not found" });
+    if (!vendor) {
+      console.log("Vendor not found:", vendorId);
+      return res.status(404).json({ msg: "Vendor not found" });
+    }
 
     if (vendor.Mpin !== mpin) {
+      console.log("Invalid MPIN for vendor:", vendorId);
       return res.status(400).json({ msg: "Wrong MPIN entered" });
     }
-    const updated = notification.toObject();
-    updated.read = (updated.readBy || []).map((id) => id.toString()).includes(userId);
 
-    res.json({ message: "Notification marked as read", notification: updated });
+    // Find user by email
+    const user = await User.findOne({ collegeEmail: email });
+    if (!user) {
+      console.log("User not found with email:", email);
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    // Check if vendor has sufficient balance (using correct field name)
+    if (vendor.Wallet < amount) {
+      console.log("Insufficient balance. Vendor wallet:", vendor.Wallet, "Requested amount:", amount);
+      return res.status(400).json({ msg: "Insufficient balance" });
+    }
+
+    // Deduct amount from vendor wallet
     vendor.Wallet -= amount;
 
     // Add amount to college balance
     const college = await College.findOne();
-    if (!college) return res.status(404).json({ msg: "College not found" });
+    if (!college) {
+      console.log("College not found");
+      return res.status(404).json({ msg: "College not found" });
+    }
     college.amount += amount;
 
-    // Deduct amount from student wallet
-    user.walletBalance -= amount;
+    // Add amount to student wallet
+    user.walletBalance += amount;
 
-    // Create transaction
+    // Create transaction with proper txid
     const tx = new Transaction({
-      txid: new mongoose.Types.ObjectId(),
+      txid: new mongoose.Types.ObjectId().toString(),
       userId: user._id,
       vendorId: vendor._id,
       amount,
@@ -3325,7 +3345,7 @@ app.post("/refund", async (req, res) => {
     });
 
     // Save transaction references
-    user.transactions.push(tx);
+    user.transactions.push(tx._id);
 
     // Add to college transactions
     college.transactions.push({
@@ -3341,9 +3361,10 @@ app.post("/refund", async (req, res) => {
     // Save all
     await Promise.all([user.save(), vendor.save(), college.save(), tx.save()]);
 
+    console.log("Refund successful for vendor:", vendorId, "to user:", email, "amount:", amount);
     res.status(200).json({ msg: "Refund successful", transactionId: tx._id });
   } catch (err) {
-    console.error(err);
+    console.error("Refund error:", err);
     res.status(500).json({ msg: "Server error", error: err.message });
   }
 });
