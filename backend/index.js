@@ -62,7 +62,7 @@ const transactionSchema = new mongoose.Schema(
     txid: {
       type: String,
 
-      unique: true, // important for QR / payments
+      
     },
 
     userId: {
@@ -335,10 +335,9 @@ const StudentSchema = new mongoose.Schema(
   {
     firstName: String,
     lastName: String,
-    role: { type: String, default: "student" },
     isFrozen: { type: Boolean, default: true },
     isSuspended: { type: Boolean, default: false },
-    collegeEmail: { type: String, required: true, unique: true },
+    collegeEmail: { type: String,  },
     parentEmail: String,
     password: String,
     ImageUrl: String,
@@ -421,29 +420,6 @@ app.post("/fix-complaint-assignments", async (req, res) => {
 
 // ===== ROUTES =====
 
-// Test endpoint
-app.get("/test", (req, res) => {
-  res.json({ message: "Server is working!" });
-});
-
-// Migration: Add role field to existing users without role
-app.post("/migrate-user-roles", async (req, res) => {
-  try {
-    const result = await User.updateMany(
-      { role: { $exists: false } },
-      { $set: { role: "student" } }
-    );
-    
-    res.json({ 
-      message: `Updated ${result.modifiedCount} users with role field`,
-      updatedCount: result.modifiedCount
-    });
-  } catch (err) {
-    console.error("Migration error:", err);
-    res.status(500).json({ message: "Migration failed" });
-  }
-});
-
 app.post("/usere/profile", async (req, res) => {
   try {
     const { vendorId } = req.body; // this is actually student/user _id
@@ -465,75 +441,127 @@ app.post("/usere/profile", async (req, res) => {
 
 // Register
 app.post("/register", async (req, res) => {
-  const {
-    firstName,
-    lastName,
-    email,
-    parentEmail,
-    password,
-    profileImage,
-    mpin,
-    kyc,
-    role,
-    Acc ,
-    Ifsc
-  } = req.body;
-  console.log("Role at backend:", role);
-  console.log(kyc);
-  if (role == "student") {
-    const newStudent = new User({
+  try {
+    const {
       firstName,
       lastName,
-      collegeEmail: email,
+      email,
       parentEmail,
       password,
-      ImageUrl: profileImage,
-      Mpin: mpin,
+      profileImage,
+      mpin,
       kyc,
-    });
+      role,
+      Acc,
+      Ifsc
+    } = req.body;
 
-    await newStudent.save();
-    res.status(201).json({
-      message: "Student created successfully",
-      userId: newStudent._id,
-      username: newStudent.firstName,
-      userEmail: newStudent.collegeEmail,
-      ImageUrl: newStudent.ImageUrl,
-      walletBalance: 0,
-      isFrozen: true,
-    });
-  } else if (role == "vendor") {
-    async function generateUniqueVendorId() {
-      let vendorId;
-      let exists = true;
+    console.log("Role at backend:", role);
+    console.log("KYC:", kyc);
 
-      while (exists) {
-        vendorId = `vdr${nanoid(4)}`; // e.g., vdrA9f2
-        exists = await Vendor.exists({ vendorid: vendorId });
+    // --------------------
+    // STUDENT REGISTRATION
+    // --------------------
+    if (role === "student") {
+
+      // ✅ duplicate check
+      const existingStudent = await User.findOne({ collegeEmail: email });
+      if (existingStudent) {
+        return res.status(409).json({
+          message: "Student already registered with this college email"
+        });
       }
 
-      return vendorId;
+      const newStudent = new User({
+        firstName,
+        lastName,
+        collegeEmail: email,
+        parentEmail,
+        password,
+        ImageUrl: profileImage,
+        Mpin: mpin,
+        kyc,
+        transactions: [],   // ✅ IMPORTANT
+        walletBalance: 0,
+        isFrozen: true
+      });
+
+      await newStudent.save();
+
+      return res.status(201).json({
+        message: "Student created successfully",
+        userId: newStudent._id,
+        username: newStudent.firstName,
+        userEmail: newStudent.collegeEmail,
+        ImageUrl: newStudent.ImageUrl,
+        walletBalance: newStudent.walletBalance,
+        isFrozen: newStudent.isFrozen
+      });
     }
-    const newVendor = new Vendor({
-      vendorName: firstName + " " + lastName,
-      vendorid: await generateUniqueVendorId(),
-      Email: email,
-      password,
-      kyc,
-      ImageUrl: profileImage,
-      Mpin: mpin,
-      Acc , Ifsc
+
+    // --------------------
+    // VENDOR REGISTRATION
+    // --------------------
+    if (role === "vendor") {
+
+      // ✅ email duplicate check
+      const existingVendor = await Vendor.findOne({ Email: email });
+      if (existingVendor) {
+        return res.status(409).json({
+          message: "Vendor already registered with this email"
+        });
+      }
+
+      async function generateUniqueVendorId() {
+        let vendorId;
+        let exists = true;
+
+        while (exists) {
+          vendorId = `vdr${nanoid(4)}`;
+          exists = await Vendor.exists({ vendorid: vendorId });
+        }
+        return vendorId;
+      }
+
+      const newVendor = new Vendor({
+        vendorName: `${firstName} ${lastName}`,
+        vendorid: await generateUniqueVendorId(),
+        Email: email,
+        password,
+        kyc,
+        ImageUrl: profileImage,
+        Mpin: mpin,
+        Acc: Acc || null,
+        Ifsc: Ifsc || null,
+        transactions: []   // ✅ SAFE
+      });
+
+      await newVendor.save();
+
+      return res.status(201).json({
+        message: "Vendor created successfully",
+        vendorId: newVendor.vendorid,
+        vendorName: newVendor.vendorName,
+        ImageUrl: newVendor.ImageUrl
+      });
+    }
+
+    // --------------------
+    // INVALID ROLE
+    // --------------------
+    return res.status(400).json({
+      message: "Invalid role provided"
     });
-    console.log(newVendor);
-    await newVendor.save();
-    res.status(201).json({
-      message: "Vendor created successfully",
-      vendorId: newVendor.vendorid,
-      vendorName: newVendor.vendorName,
-      ImageUrl: newVendor.ImageUrl,
+
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+    return res.status(500).json({
+      message: "Registration failed",
+      error: err.message
     });
   }
 });
+
 // Upload image
 app.post("/upload", upload.single("profileImage"), (req, res) => {
   const { role } = req.body;
@@ -626,7 +654,7 @@ app.post("/login", async (req, res) => {
     // Allow frozen vendors to login but with restricted access
     // Frozen status will be handled in frontend
 
-    if (vendor.kyc.status === "pending" || vendor.kyc.status === "rejected") {
+    if (vendor.kyc.status !== "success") {
       return res.status(403).json({ error: "KYC not verified" });
     }
 
@@ -766,6 +794,7 @@ app.get("/transactions/:userId", async (req, res) => {
     // Get user's transactions sorted by createdAt
     const transactions = (user.transactions || []).sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
     // User's first & last name
@@ -792,6 +821,7 @@ app.get("/transactions/:userId", async (req, res) => {
       })
     );
 
+    console.log("Transactions with vendor names:", transactionsWithNames);
     res.json(transactionsWithNames);
   } catch (err) {
     console.error(err);
@@ -2281,17 +2311,12 @@ app.get("/transactions/vendor/:vendorId", async (req, res) => {
   try {
     const { vendorId } = req.params;
 
-    console.log('Backend: Fetching transactions for vendorId:', vendorId);
-    console.log('Backend: vendorId type:', typeof vendorId);
-    console.log('Backend: vendorId length:', vendorId?.length);
+    console.log(vendorId);
 
     const transactions = await Transaction.find({ vendorId })
       .sort({ createdAt: -1 })
       .populate("userId", "firstName lastName collegeEmail") // get user info including email
       .populate("vendorId", "vendorName"); // get vendor info
-
-    console.log('Backend: Found transactions:', transactions.length);
-    console.log('Backend: First transaction:', transactions[0]);
 
     res.json({ success: true, transactions });
   } catch (err) {
@@ -2660,7 +2685,6 @@ app.post("/google-login", async (req, res) => {
     }
 
     // ---------------- CHECK VENDOR ----------------
-    console.log(email)
     const vendor = await Vendor.findOne({ Email: email });
     console.log(vendor);
     if (vendor) {
@@ -2672,7 +2696,7 @@ app.post("/google-login", async (req, res) => {
         });
       }
 
-      if (vendor.kyc?.status && vendor.kyc.status === "pending" || vendor.kyc?.status === "rejected") {
+      if (vendor.kyc?.status && vendor.kyc.status !== "verified") {
         return res.status(403).json({ error: "KYC not verified" });
       }
 
@@ -3654,17 +3678,12 @@ app.get("/admin/monitor/vendors", async (req, res) => {
           .sort({ createdAt: -1 })
           .limit(5);
 
-        const totalRedeems = await Redeem.countDocuments({ userId: vendor._id });
-        const totalTransactions = await Transaction.countDocuments({ vendorId: vendor._id });
-        const totalComplaints = await Complaint.countDocuments({ userId: vendor._id, role: "vendor" });
-
         return {
           ...vendor.toObject(),
           recentRedeems: redeemRequests,
           recentTransactions: transactions,
-          totalRedeems: totalRedeems,
-          totalTransactions: totalTransactions,
-          totalComplaints: totalComplaints
+          totalRedeems: redeemRequests.length,
+          totalTransactions: transactions.length
         };
       })
     );
@@ -3679,42 +3698,30 @@ app.get("/admin/monitor/vendors", async (req, res) => {
 // Monitor students - get all student activity and details
 app.get("/admin/monitor/students", async (req, res) => {
   try {
-    const students = await User.find({ role: "student" })
-      .select("firstName lastName collegeEmail ImageUrl isFrozen walletBalance createdAt kyc");
+    const students = await User.find({})
+      .select("firstName lastName collegeEmail ImageUrl isFrozen isSuspended walletBalance createdAt kyc")
+      .sort({ createdAt: -1 });
 
-    // Handle case when no students exist
-    if (!students || students.length === 0) {
-      return res.json([]);
-    }
-
-    // Fetch real-time stats for each student
+    // Get additional stats for each student
     const studentsWithStats = await Promise.all(
       students.map(async (student) => {
-        const recentTransactions = await Transaction.find({ userId: student._id })
-          .sort({ createdAt: -1 })
-          .limit(5)
-          .populate("vendorId", "vendorName vendorid");
-
-        const recentComplaints = await Complaint.find({ userId: student._id })
+        const transactions = student.transactions || [];
+        const complaints = await Complaint.find({ userId: student._id })
           .sort({ createdAt: -1 })
           .limit(5);
 
-        const totalTransactions = await Transaction.countDocuments({ userId: student._id });
-        const totalComplaints = await Complaint.countDocuments({ userId: student._id });
-
-        const spendingAgg = await Transaction.aggregate([
-          { $match: { userId: student._id, status: "SUCCESS" } },
-          { $group: { _id: null, total: { $sum: "$amount" } } },
-        ]);
-        const totalSpending = spendingAgg?.[0]?.total || 0;
+        // Calculate total spending from successful transactions
+        const totalSpending = transactions
+          .filter(tx => tx.status === "SUCCESS")
+          .reduce((sum, tx) => sum + (tx.amount || 0), 0);
 
         return {
           ...student.toObject(),
-          recentTransactions,
-          recentComplaints,
-          totalComplaints,
-          totalTransactions,
-          totalSpending,
+          recentTransactions: transactions.slice(-5), // Last 5 transactions
+          recentComplaints: complaints,
+          totalTransactions: transactions.length,
+          totalComplaints: complaints.length,
+          totalSpending: totalSpending
         };
       })
     );
@@ -3745,18 +3752,13 @@ app.get("/admin/monitor/vendor/:vendorId", async (req, res) => {
       .populate("userId", "firstName lastName collegeEmail")
       .sort({ createdAt: -1 });
 
-    const complaints = await Complaint.find({ userId: vendorId, role: "vendor" })
-      .sort({ createdAt: -1 });
-
     res.json({
       vendor,
       redeemRequests,
       transactions,
-      complaints,
       stats: {
         totalRedeems: redeemRequests.length,
         totalTransactions: transactions.length,
-        totalComplaints: complaints.length,
         successfulTransactions: transactions.filter(t => t.status === "SUCCESS").length,
         totalRedeemAmount: redeemRequests.reduce((sum, r) => sum + r.amount, 0)
       }
@@ -3782,12 +3784,8 @@ app.get("/admin/monitor/student/:studentId", async (req, res) => {
     const complaints = await Complaint.find({ userId: studentId })
       .sort({ createdAt: -1 });
 
-    // Fetch transactions directly from Transaction collection for real-time updates
-    const transactions = await Transaction.find({ userId: studentId })
-      .sort({ createdAt: -1 })
-      .populate("vendorId", "vendorName vendorid");
-
     // Calculate total spending from successful transactions
+    const transactions = student.transactions || [];
     const totalSpending = transactions
       .filter(tx => tx.status === "SUCCESS")
       .reduce((sum, tx) => sum + (tx.amount || 0), 0);
@@ -4076,6 +4074,6 @@ app.get("/admin-actions/:userId/:role", async (req, res) => {
 });
 
 const PORT = 5000;
-app.listen(PORT,  () => {
-  console.log(`Backend running on http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Backend running on http://0.0.0.0:${PORT}`);
 });

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
@@ -9,16 +9,13 @@ function AdminMonitorStudents() {
   const navigate = useNavigate();
 
   const [students, setStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [theme, setTheme] = useState("light");
-  const [lastUpdatedList, setLastUpdatedList] = useState(null);
-  const [lastUpdatedDetails, setLastUpdatedDetails] = useState(null);
-  const [showAllTxModal, setShowAllTxModal] = useState(false);
-  const [showAllComplaintsModal, setShowAllComplaintsModal] = useState(false);
 
   useEffect(() => {
     if (!state || state.role !== "admin") {
@@ -26,24 +23,12 @@ function AdminMonitorStudents() {
       return;
     }
     fetchStudents();
-    const intervalId = setInterval(fetchStudents, 15000);
-    return () => clearInterval(intervalId);
   }, []);
-
-  useEffect(() => {
-    if (!showDetails || !selectedStudent?.student?._id) return;
-    const studentId = selectedStudent.student._id;
-    const intervalId = setInterval(() => {
-      fetchStudentDetails(studentId);
-    }, 15000);
-    return () => clearInterval(intervalId);
-  }, [showDetails, selectedStudent?.student?._id]);
 
   const fetchStudents = async () => {
     try {
       const res = await axios.get("http://localhost:5000/admin/monitor/students");
       setStudents(res.data);
-      setLastUpdatedList(new Date());
     } catch (err) {
       console.error(err);
     } finally {
@@ -56,17 +41,26 @@ function AdminMonitorStudents() {
       const res = await axios.get(`http://localhost:5000/admin/monitor/student/${studentId}`);
       setSelectedStudent(res.data);
       setShowDetails(true);
-      setLastUpdatedDetails(new Date());
     } catch (err) {
       console.error(err);
     }
   };
 
+  const filteredStudents = useMemo(() => {
+    if (!searchTerm.trim()) return students;
+    const q = searchTerm.trim().toLowerCase();
+    return students.filter((s) => {
+      const matchesName = (s.firstName && s.firstName.toLowerCase().includes(q)) ||
+                         (s.lastName && s.lastName.toLowerCase().includes(q)) ||
+                         ((s.firstName + " " + s.lastName).toLowerCase().includes(q));
+      const matchesEmail = s.collegeEmail && s.collegeEmail.toLowerCase().includes(q);
+      return matchesName || matchesEmail;
+    });
+  }, [students, searchTerm]);
+
   const handleBackToList = () => {
     setShowDetails(false);
     setSelectedStudent(null);
-    setShowAllTxModal(false);
-    setShowAllComplaintsModal(false);
   };
 
   const toggleFreeze = async (e, studentId, currentStatus) => {
@@ -193,32 +187,95 @@ function AdminMonitorStudents() {
           <div style={{ marginBottom: "25px" }}>
             <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: textSub, marginBottom: 6 }}>Admin Dashboard</div>
             <h2 style={{ fontSize: 24, fontWeight: 700, color: textMain, margin: 0 }}>Student Monitor</h2>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-              <div style={{ fontSize: 12, color: textSub }}>
-                {!showDetails
-                  ? (lastUpdatedList ? `Last updated: ${lastUpdatedList.toLocaleTimeString()}` : "")
-                  : (lastUpdatedDetails ? `Last updated: ${lastUpdatedDetails.toLocaleTimeString()}` : "")}
-              </div>
-              <button
-                onClick={() => {
-                  if (!showDetails) {
-                    fetchStudents();
-                  } else if (selectedStudent?.student?._id) {
-                    fetchStudentDetails(selectedStudent.student._id);
-                  }
-                }}
-                style={{ ...buttonBase, background: "#10b981", color: "white" }}
-              >
-                Refresh
-              </button>
-            </div>
             <div style={{ height: 2, width: "100%", background: "linear-gradient(90deg,#0ea5e9,#38bdf8,#22c55e,#0f766e)", marginTop: 15, opacity: 0.8, borderRadius: 999 }} />
           </div>
+
+          {/* Search Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4, ease: easingSoft }}
+            style={{ marginBottom: 25, position: "relative", zIndex: 10 }}
+          >
+            <div
+              style={{
+                position: "relative",
+                maxWidth: "500px",
+                margin: "0 auto",
+                zIndex: 10,
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Search by Student Name or Email ID"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 45px 12px 18px",
+                  borderRadius: "16px",
+                  border: `2px solid ${isLight ? "rgba(148,163,184,0.5)" : "rgba(71,85,105,0.6)"}`,
+                  background: isLight
+                    ? "rgba(255,255,255,0.95)"
+                    : "rgba(15,23,42,0.8)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  fontSize: "14px",
+                  color: isLight ? "#1e293b" : "#f1f5f9",
+                  outline: "none",
+                  transition: "all 0.3s ease",
+                  zIndex: 10,
+                  position: "relative",
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = isLight ? "#3b82f6" : "#60a5fa";
+                  e.target.style.boxShadow = isLight
+                    ? "0 0 0 3px rgba(59,130,246,0.1)"
+                    : "0 0 0 3px rgba(96,165,250,0.2)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = isLight ? "rgba(148,163,184,0.3)" : "rgba(71,85,105,0.4)";
+                  e.target.style.boxShadow = "none";
+                }}
+              />
+              {searchTerm && (
+                <AnimatePresence>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={() => setSearchTerm("")}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: isLight ? "#64748b" : "#94a3b8",
+                      cursor: "pointer",
+                      fontSize: "18px",
+                      padding: "4px",
+                      borderRadius: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s ease",
+                    }}
+                    whileHover={{ scale: 1.1, color: isLight ? "#ef4444" : "#f87171" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    ×
+                  </motion.button>
+                </AnimatePresence>
+              )}
+            </div>
+          </motion.div>
 
           <AnimatePresence mode="wait">
             {!showDetails ? (
               <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
-                {students.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: textSub }}>No students found</div> : (
+                {filteredStudents.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: textSub }}>{searchTerm.trim() ? "No matching students found" : "No students found"}</div> : (
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }} cellPadding={0} cellSpacing={0}>
                       <thead>
@@ -232,7 +289,7 @@ function AdminMonitorStudents() {
                         </tr>
                       </thead>
                       <tbody>
-                        {students.map((student) => (
+                        {filteredStudents.map((student) => (
                           <tr key={student._id}>
                             <td style={tableCellStyle}>
                               <div style={{ fontWeight: 600 }}>{student.firstName} {student.lastName}</div>
@@ -292,12 +349,9 @@ function AdminMonitorStudents() {
                               <tr><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Vendor</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Amount</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Status</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Date</th></tr>
                             </thead>
                             <tbody>
-                              {[...selectedStudent.transactions]
-                                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                                .slice(0, 5)
-                                .map((tx, i) => (
+                              {selectedStudent.transactions.slice(-5).reverse().map((tx, i) => (
                                 <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0" }}>{tx.vendorId?.vendorName || tx.vendorId?.vendorid || tx.vendorid || "-"}</td>
+                                  <td style={{ ...tableCellStyle, padding: "10px 0" }}>{tx.vendorid}</td>
                                   <td style={{ ...tableCellStyle, padding: "10px 0" }}>₹{tx.amount}</td>
                                   <td style={{ ...tableCellStyle, padding: "10px 0", color: getStatusColor(tx.status) }}>{tx.status}</td>
                                   <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>{new Date(tx.createdAt).toLocaleDateString()}</td>
@@ -305,17 +359,6 @@ function AdminMonitorStudents() {
                               ))}
                             </tbody>
                           </table>
-                        )}
-
-                        {selectedStudent.transactions.length > 5 && (
-                          <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
-                            <button
-                              onClick={() => setShowAllTxModal(true)}
-                              style={{ ...buttonBase, background: "#3b82f6", color: "white" }}
-                            >
-                              View More
-                            </button>
-                          </div>
                         )}
                       </div>
 
@@ -333,10 +376,7 @@ function AdminMonitorStudents() {
                               </tr>
                             </thead>
                             <tbody>
-                              {[...selectedStudent.complaints]
-                                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                                .slice(0, 5)
-                                .map((complaint, i) => (
+                              {selectedStudent.complaints.slice(0, 5).map((complaint, i) => (
                                 <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
                                   <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>#{complaint.complaintId || complaint._id?.substring(0,6)}</td>
                                   <td style={{ ...tableCellStyle, padding: "10px 0" }}>
@@ -356,17 +396,6 @@ function AdminMonitorStudents() {
                           </table>
                         ) : (
                           <p style={{ color: textSub, fontSize: 13 }}>No complaints found.</p>
-                        )}
-
-                        {selectedStudent.complaints && selectedStudent.complaints.length > 5 && (
-                          <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
-                            <button
-                              onClick={() => setShowAllComplaintsModal(true)}
-                              style={{ ...buttonBase, background: "#3b82f6", color: "white" }}
-                            >
-                              View More
-                            </button>
-                          </div>
                         )}
                       </div>
 
@@ -417,188 +446,6 @@ function AdminMonitorStudents() {
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
                 <button onClick={() => { setShowKycModal(false); setRejectionReason(""); }} style={{ ...buttonBase, background: isLight ? "#e2e8f0" : "#334155", color: textMain }}>Cancel</button>
                 <button onClick={() => handleKycApproval("rejected")} style={{ ...buttonBase, background: "#ef4444", color: "white" }}>Confirm Rejection</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showAllTxModal && selectedStudent && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(4px)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 1100,
-              padding: "16px",
-            }}
-            onClick={() => setShowAllTxModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                width: "100%",
-                maxWidth: "900px",
-                maxHeight: "80vh",
-                overflow: "hidden",
-                borderRadius: "16px",
-                background: isLight ? "#fff" : "#0f172a",
-                border: `1px solid ${isLight ? "rgba(148,163,184,0.35)" : "rgba(148,163,184,0.45)"}`,
-                boxShadow: "0 20px 25px -5px rgba(0,0,0,0.25)",
-                color: textMain,
-                display: "flex",
-                flexDirection: "column",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{
-                padding: "16px 18px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
-              }}>
-                <div style={{ fontWeight: 700 }}>
-                  All Transactions ({selectedStudent.transactions.length})
-                </div>
-                <button
-                  onClick={() => setShowAllTxModal(false)}
-                  style={{ ...buttonBase, padding: "6px 10px", background: isLight ? "#e2e8f0" : "#334155", color: textMain }}
-                >
-                  Close
-                </button>
-              </div>
-
-              <div style={{
-                padding: "16px 18px",
-                overflowY: "auto",
-              }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Vendor</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Amount</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Status</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...selectedStudent.transactions]
-                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                      .map((tx, i) => (
-                        <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
-                          <td style={{ ...tableCellStyle, padding: "10px 0" }}>{tx.vendorId?.vendorName || tx.vendorId?.vendorid || tx.vendorid || "-"}</td>
-                          <td style={{ ...tableCellStyle, padding: "10px 0" }}>₹{tx.amount}</td>
-                          <td style={{ ...tableCellStyle, padding: "10px 0", color: getStatusColor(tx.status) }}>{tx.status}</td>
-                          <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>{new Date(tx.createdAt).toLocaleDateString()}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showAllComplaintsModal && selectedStudent && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(4px)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 1200,
-              padding: "16px",
-            }}
-            onClick={() => setShowAllComplaintsModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                width: "100%",
-                maxWidth: "900px",
-                maxHeight: "80vh",
-                overflow: "hidden",
-                borderRadius: "16px",
-                background: isLight ? "#fff" : "#0f172a",
-                border: `1px solid ${isLight ? "rgba(148,163,184,0.35)" : "rgba(148,163,184,0.45)"}`,
-                boxShadow: "0 20px 25px -5px rgba(0,0,0,0.25)",
-                color: textMain,
-                display: "flex",
-                flexDirection: "column",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                style={{
-                  padding: "16px 18px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
-                }}
-              >
-                <div style={{ fontWeight: 700 }}>
-                  All Complaints ({selectedStudent.complaints?.length || 0})
-                </div>
-                <button
-                  onClick={() => setShowAllComplaintsModal(false)}
-                  style={{ ...buttonBase, padding: "6px 10px", background: isLight ? "#e2e8f0" : "#334155", color: textMain }}
-                >
-                  Close
-                </button>
-              </div>
-
-              <div
-                style={{
-                  padding: "16px 18px",
-                  overflowY: "auto",
-                }}
-              >
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>ID</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Description</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Status</th>
-                      <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...selectedStudent.complaints]
-                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                      .map((complaint, i) => (
-                        <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
-                          <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>#{complaint.complaintId || complaint._id?.substring(0,6)}</td>
-                          <td style={{ ...tableCellStyle, padding: "10px 0" }}>{complaint.description || "No description"}</td>
-                          <td style={{ ...tableCellStyle, padding: "10px 0", color: getStatusColor(complaint.status) }}>{complaint.status?.toUpperCase()}</td>
-                          <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>{complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString() : "N/A"}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
               </div>
             </motion.div>
           </div>
