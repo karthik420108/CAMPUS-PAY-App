@@ -157,7 +157,7 @@ function GenerateQR() {
             clearInterval(pollRef.current);
             showAlertOverlay("Payment Successful!", "success");
             resetQR(false);
-          } else if (status === "EXPIRED" || status === "CANCELLED") {
+          } else if (status === "EXPIRED" || status === "FAILED") {
             clearInterval(timerRef.current);
             clearInterval(pollRef.current);
             showAlertOverlay(`QR ${status}`, "warning");
