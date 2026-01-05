@@ -602,7 +602,7 @@ app.post("/login", async (req, res) => {
     // Allow frozen vendors to login but with restricted access
     // Frozen status will be handled in frontend
 
-    if (vendor.kyc.status !== "success") {
+    if (vendor.kyc.status === "pending" || vendor.kyc.status === "rejected") {
       return res.status(403).json({ error: "KYC not verified" });
     }
 
@@ -2625,6 +2625,7 @@ app.post("/google-login", async (req, res) => {
     }
 
     // ---------------- CHECK VENDOR ----------------
+    console.log(email)
     const vendor = await Vendor.findOne({ Email: email });
     console.log(vendor);
     if (vendor) {
@@ -2636,7 +2637,7 @@ app.post("/google-login", async (req, res) => {
         });
       }
 
-      if (vendor.kyc?.status && vendor.kyc.status !== "success") {
+      if (vendor.kyc?.status && vendor.kyc.status === "pending" || vendor.kyc?.status === "rejected") {
         return res.status(403).json({ error: "KYC not verified" });
       }
 

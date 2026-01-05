@@ -83,7 +83,7 @@ function Start() {
         setError("No account associated with this Google email. Please sign up first.");
         return;
       }
-
+      console.log(res)
       const res2 = await axios.post("http://localhost:5000/institute-balance");
       if (res.data.role === "student") {
         navigate("/login", {

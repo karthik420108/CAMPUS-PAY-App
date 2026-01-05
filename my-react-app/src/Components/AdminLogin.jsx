@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate , useLocation } from "react-router-dom";
 import { motion } from "framer-motion"; 
 import Header from "./Header.jsx";
 
@@ -11,7 +11,12 @@ function AdminLogin() {
   const [sr, setSr] = useState(0);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  
+  const {state} = useLocation();
+  useEffect(() => {
+    if (!state) {
+      navigate("/");
+    }
+  }, [state , navigate]);
   const [theme, setTheme] = useState("light"); 
   const isLight = theme === "light";
 
