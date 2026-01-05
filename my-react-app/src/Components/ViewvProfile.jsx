@@ -15,6 +15,7 @@ function ViewvProfile() {
   const [parentEmail, setParentEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState("light");
+  const [id , setId] = useState("");
 
   const isLight = theme === "light";
   const textMain = isLight ? "#0f172a" : "#e5e7eb";
@@ -71,6 +72,7 @@ function ViewvProfile() {
         setImageUrl(vendor.ImageUrl);
         setEmail(vendor.Email);
         setWallet(vendor.Wallet);
+        setId(vendor.vendorid)
       } catch (err) {
         console.error("Vendor profile error:", err);
       } finally {
@@ -284,6 +286,11 @@ function ViewvProfile() {
                 <strong>Parent Email:</strong> {parentEmail}
               </p>
             )}
+            
+            {role == "vendor" && <p style={{ color: textMain, fontSize: 16, fontWeight: 600 }}>
+              <strong>ID:</strong> {id}
+            </p>}
+            
             <p style={{ color: textMain, fontSize: 16, fontWeight: 600 }}>
               {role === "vendor"
                 ? `Wallet Balance: ₹${wallet}`

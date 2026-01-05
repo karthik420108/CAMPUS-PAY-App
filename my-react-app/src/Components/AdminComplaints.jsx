@@ -6,16 +6,20 @@ import Header from "./Header.jsx";
 
 function AdminComplaints() {
   const [complaints, setComplaints] = useState([]);
+  const [allComplaints, setAllComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [respondingTo, setRespondingTo] = useState(null);
   const [responseText, setResponseText] = useState("");
-  const [activeTab, setActiveTab] = useState("pending"); // "pending" or "resolved"
+  const [theme, setTheme] = useState("light");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  // Theme state
-  const [theme, setTheme] = useState("light");
   const isLight = theme === "light";
+  const easingSoft = [0.16, 1, 0.3, 1];
+  const textMain = isLight ? "#0f172a" : "#e5e7eb";
+  const textSub = isLight ? "#6b7280" : "#94a3b8";
 
   useEffect(() => {
     if (!state || state.role !== "admin") {
@@ -23,21 +27,55 @@ function AdminComplaints() {
       return;
     }
 
-    const fetchComplaints = async () => {
+    const fetchForwardedComplaints = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/admin/complaints");
-        // Filter to show only forwarded complaints
-        const forwardedComplaints = response.data.filter(complaint => complaint.isForwarded === true);
-        setComplaints(forwardedComplaints);
+        const response = await axios.get("http://localhost:5000/admin/forwarded-complaints");
+        console.log("Fetched forwarded complaints:", response.data);
+        setComplaints(response.data);
+        setAllComplaints(response.data);
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching complaints:", err);
+        console.error("Error fetching forwarded complaints:", err);
         setLoading(false);
       }
     };
 
-    fetchComplaints();
+    fetchForwardedComplaints();
   }, [state, navigate]);
+
+  // Search functionality
+  const handleSearch = async (searchValue) => {
+    setSearchTerm(searchValue);
+    
+    if (searchValue.trim() === "") {
+      // If search is empty, show all complaints
+      setComplaints(allComplaints);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await axios.get(`http://localhost:5000/admin/forwarded-complaints/search?query=${encodeURIComponent(searchValue.trim())}`);
+      console.log("Search results:", response.data);
+      setComplaints(response.data);
+    } catch (err) {
+      console.error("Error searching complaints:", err);
+      // If search fails, fall back to client-side filtering
+      const filtered = allComplaints.filter(complaint => 
+        complaint.complaintId.toLowerCase().includes(searchValue.toLowerCase()) ||
+        complaint.description.toLowerCase().includes(searchValue.toLowerCase()) ||
+        (complaint.response && complaint.response.toLowerCase().includes(searchValue.toLowerCase()))
+      );
+      setComplaints(filtered);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchTerm("");
+    setComplaints(allComplaints);
+  };
 
   const handleResponse = async (complaintId) => {
     if (!responseText.trim()) {
@@ -51,9 +89,13 @@ function AdminComplaints() {
       });
       
       // Refresh complaints list
-      const response = await axios.get("http://localhost:5000/admin/complaints");
-      const forwardedComplaints = response.data.filter(complaint => complaint.isForwarded === true);
-      setComplaints(forwardedComplaints);
+      const response = await axios.get("http://localhost:5000/admin/forwarded-complaints");
+      setAllComplaints(response.data);
+      setComplaints(searchTerm ? response.data.filter(complaint => 
+        complaint.complaintId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        complaint.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (complaint.response && complaint.response.toLowerCase().includes(searchTerm.toLowerCase()))
+      ) : response.data);
       
       setRespondingTo(null);
       setResponseText("");
@@ -68,15 +110,7 @@ function AdminComplaints() {
     return status === "resolved" ? "#10b981" : "#f59e0b";
   };
 
-  const getForwardedColor = (isForwarded) => {
-    return isForwarded ? "#ef4444" : "inherit";
-  };
-
   // --- STYLING CONSTANTS ---
-  const easingSoft = [0.16, 1, 0.3, 1];
-  const textMain = isLight ? "#0f172a" : "#e5e7eb";
-  const textSub = isLight ? "#6b7280" : "#94a3b8";
-
   const pageStyle = isLight
     ? {
         background:
@@ -117,7 +151,6 @@ function AdminComplaints() {
     ? { background: "white", border: "1px solid #e2e8f0", color: textMain }
     : { background: "rgba(15, 23, 42, 0.6)", border: "1px solid #334155", color: "white" };
 
-
   if (loading) {
     return (
       <div style={{ ...pageStyle, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -126,7 +159,7 @@ function AdminComplaints() {
             transition={{ duration: 1.5, repeat: Infinity }}
             style={{ fontSize: "20px", fontWeight: "600", color: textSub }}
         >
-            Loading complaints...
+            Loading forwarded complaints...
         </motion.div>
       </div>
     );
@@ -135,7 +168,6 @@ function AdminComplaints() {
   // Separate complaints by status
   const pendingComplaints = complaints.filter(c => c.status !== "resolved");
   const resolvedComplaints = complaints.filter(c => c.status === "resolved");
-  const currentComplaints = activeTab === "pending" ? pendingComplaints : resolvedComplaints;
 
   return (
     <div style={{ ...pageStyle, minHeight: "100vh", position: "relative", overflowX: "hidden" }}>
@@ -144,7 +176,7 @@ function AdminComplaints() {
         style={{
           position: "absolute", width: 300, height: 300, borderRadius: "50%",
           background: isLight ? "radial-gradient(circle at 30% 0%, #bfdbfe, #60a5fa, #1d4ed8)" : "radial-gradient(circle at 30% 0%, #bfdbfe, #3b82f6, #1d4ed8)",
-          filter: "blur(60px)", opacity: 0.4, top: -50, left: -50, zIndex: 0, pointerEvents: "none"
+          top: "10%", left: "-5%", opacity: 0.4, filter: "blur(40px)"
         }}
         animate={{ x: [0, 40, -20, 0], y: [0, 18, -12, 0] }}
         transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
@@ -173,71 +205,170 @@ function AdminComplaints() {
       </div>
 
       <div style={{ position: "relative", zIndex: 100 }}>
-        <Header title="Admin Complaints" userRole="admin" userName="Admin" />
+        <Header title="Student Complaints" userRole="admin" userName="Admin" />
       </div>
 
       <main style={{ maxWidth: "1000px", margin: "0 auto", padding: "40px 24px", position: "relative", zIndex: 1 }}>
         
+        {/* Header Section */}
         <div style={{ marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-                <h2 style={{ fontSize: "28px", fontWeight: "800", color: textMain, margin: 0 }}>Forwarded Complaints</h2>
-                <p style={{ color: textSub, marginTop: "4px" }}>Manage issues escalated from sub-admins</p>
-            </div>
-            
-            {/* Custom Tabs */}
-            <div style={{ 
-                display: "flex", 
-                background: isLight ? "white" : "rgba(30,41,59,0.5)", 
-                padding: "4px", 
-                borderRadius: "12px",
-                border: isLight ? "1px solid #e2e8f0" : "1px solid #334155"
-            }}>
-                <button
-                onClick={() => setActiveTab("pending")}
-                style={{
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "14px", fontWeight: "600",
-                    background: activeTab === "pending" ? (isLight ? "#fef3c7" : "#78350f") : "transparent",
-                    color: activeTab === "pending" ? (isLight ? "#b45309" : "#fbbf24") : textSub,
-                    transition: "all 0.2s"
-                }}
-                >
-                ⏳ Pending ({pendingComplaints.length})
-                </button>
-                <button
-                onClick={() => setActiveTab("resolved")}
-                style={{
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "14px", fontWeight: "600",
-                    background: activeTab === "resolved" ? (isLight ? "#dcfce7" : "#064e3b") : "transparent",
-                    color: activeTab === "resolved" ? (isLight ? "#166534" : "#4ade80") : textSub,
-                    transition: "all 0.2s"
-                }}
-                >
-                ✅ Resolved ({resolvedComplaints.length})
-                </button>
+                <h2 style={{ fontSize: "28px", fontWeight: "800", color: textMain, margin: 0 }}>Student Complaints</h2>
+                <p style={{ color: textSub, marginTop: "4px" }}>Forwarded student complaints that need your attention</p>
             </div>
         </div>
 
-        {currentComplaints.length === 0 ? (
+        {/* Search Bar */}
+        <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4, ease: easingSoft }}
+            style={{ marginBottom: 24, position: "relative", zIndex: 10 }}
+        >
+            <div
+                style={{
+                    position: "relative",
+                    maxWidth: "500px",
+                    margin: "0 auto",
+                    zIndex: 10,
+                }}
+            >
+                <input
+                    type="text"
+                    placeholder="Search by Complaint ID, description, or response..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    style={{
+                        width: "100%",
+                        padding: "12px 45px 12px 18px",
+                        borderRadius: "16px",
+                        border: `2px solid ${isLight ? "rgba(148,163,184,0.5)" : "rgba(71,85,105,0.6)"}`,
+                        background: isLight
+                            ? "rgba(255,255,255,0.95)"
+                            : "rgba(15,23,42,0.8)",
+                        backdropFilter: "blur(10px)",
+                        WebkitBackdropFilter: "blur(10px)",
+                        fontSize: "14px",
+                        color: isLight ? "#1e293b" : "#f1f5f9",
+                        outline: "none",
+                        transition: "all 0.3s ease",
+                        zIndex: 10,
+                        position: "relative",
+                    }}
+                    onFocus={(e) => {
+                        e.target.style.borderColor = isLight ? "#3b82f6" : "#60a5fa";
+                        e.target.style.boxShadow = isLight
+                            ? "0 0 0 3px rgba(59,130,246,0.1)"
+                            : "0 0 0 3px rgba(96,165,250,0.2)";
+                    }}
+                    onBlur={(e) => {
+                        e.target.style.borderColor = isLight ? "rgba(148,163,184,0.5)" : "rgba(71,85,105,0.6)";
+                        e.target.style.boxShadow = "none";
+                    }}
+                />
+                {searchTerm && (
+                    <AnimatePresence>
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            onClick={clearSearch}
+                            style={{
+                                position: "absolute",
+                                right: "12px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                background: "none",
+                                border: "none",
+                                color: isLight ? "#64748b" : "#94a3b8",
+                                cursor: "pointer",
+                                fontSize: "18px",
+                                padding: "4px",
+                                borderRadius: "4px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                transition: "all 0.2s ease",
+                            }}
+                            whileHover={{ scale: 1.1, color: isLight ? "#ef4444" : "#f87171" }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            ×
+                        </motion.button>
+                    </AnimatePresence>
+                )}
+                {isSearching && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            right: "12px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            color: isLight ? "#3b82f6" : "#60a5fa",
+                            fontSize: "14px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                    >
+                        🔍
+                    </div>
+                )}
+            </div>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px", marginBottom: "30px" }}>
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{ ...cardStyle, padding: "20px", borderRadius: "16px", textAlign: "center" }}
+            >
+                <div style={{ fontSize: "32px", fontWeight: "700", color: "#f59e0b" }}>{pendingComplaints.length}</div>
+                <div style={{ fontSize: "14px", color: textSub, fontWeight: "600" }}>Pending Response</div>
+            </motion.div>
+            
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                style={{ ...cardStyle, padding: "20px", borderRadius: "16px", textAlign: "center" }}
+            >
+                <div style={{ fontSize: "32px", fontWeight: "700", color: "#10b981" }}>{resolvedComplaints.length}</div>
+                <div style={{ fontSize: "14px", color: textSub, fontWeight: "600" }}>Resolved</div>
+            </motion.div>
+            
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                style={{ ...cardStyle, padding: "20px", borderRadius: "16px", textAlign: "center" }}
+            >
+                <div style={{ fontSize: "32px", fontWeight: "700", color: "#3b82f6" }}>{complaints.length}</div>
+                <div style={{ fontSize: "14px", color: textSub, fontWeight: "600" }}>Total Forwarded</div>
+            </motion.div>
+        </div>
+
+        {complaints.length === 0 ? (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            style={{ textAlign: "center", padding: "40px", color: textSub, ...cardStyle, borderRadius: "20px" }}
+            style={{ textAlign: "center", padding: "60px", color: textSub, ...cardStyle, borderRadius: "20px" }}
           >
-            <p style={{ fontSize: "16px" }}>
-              {activeTab === "pending" ? "No pending complaints found." : "No resolved complaints found."}
+            <div style={{ fontSize: "48px", marginBottom: "16px" }}>📋</div>
+            <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 8px 0", color: textMain }}>
+              {searchTerm ? "No Matching Complaints" : "No Student Complaints"}
+            </h3>
+            <p style={{ fontSize: "16px", margin: 0 }}>
+              {searchTerm 
+                ? `No student complaints found matching "${searchTerm}"`
+                : "No student complaints have been forwarded by SubAdmins yet."
+              }
             </p>
           </motion.div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <AnimatePresence>
-                {currentComplaints.map((complaint) => (
+                {complaints.map((complaint) => (
                 <motion.div 
                     layout
                     key={complaint._id} 
@@ -259,21 +390,29 @@ function AdminComplaints() {
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                                     <span style={{ fontSize: "12px", fontWeight: "700", color: textSub, textTransform: "uppercase", letterSpacing: "0.05em" }}>ID: {complaint.complaintId}</span>
-                                    {complaint.isForwarded && (
-                                        <span style={{ 
-                                            fontSize: "10px", fontWeight: "700", color: "#ef4444", 
-                                            background: isLight ? "#fee2e2" : "rgba(127,29,29,0.3)", 
-                                            padding: "2px 6px", borderRadius: "4px" 
-                                        }}>
-                                            FORWARDED
-                                        </span>
-                                    )}
+                                    <span style={{ 
+                                        fontSize: "10px", fontWeight: "700", color: "#ef4444", 
+                                        background: isLight ? "#fee2e2" : "rgba(127,29,29,0.3)", 
+                                        padding: "2px 6px", borderRadius: "4px" 
+                                    }}>
+                                        FORWARDED
+                                    </span>
+                                    <span style={{ 
+                                        fontSize: "10px", fontWeight: "700", color: "#10b981", 
+                                        background: isLight ? "#d1fae5" : "rgba(16,185,129,0.3)", 
+                                        padding: "2px 6px", borderRadius: "4px" 
+                                    }}>
+                                        STUDENT
+                                    </span>
                                 </div>
                                 <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: textMain }}>
-                                    From: {complaint.role === "vendor" 
-                                        ? `${complaint.userId?.vendorName || "Unknown"} (${complaint.userId?.Email || "N/A"})`
-                                        : `${complaint.userId?.firstName || "Unknown"} ${complaint.userId?.lastName || ""} (${complaint.userId?.collegeEmail || "N/A"})`
-                                    }
+                                    From: {complaint.userId ? (
+                                        `${complaint.userId.firstName || "Unknown"} ${complaint.userId.lastName || ""} (${complaint.userId.collegeEmail || "N/A"})`
+                                    ) : (
+                                        <span style={{ color: "#ef4444" }}>
+                                            Student information not available
+                                        </span>
+                                    )}
                                 </h3>
                             </div>
                             <div style={{ fontSize: "13px", color: textSub, fontWeight: "500" }}>
@@ -282,7 +421,7 @@ function AdminComplaints() {
                         </div>
 
                         {/* Forwarded Info Box */}
-                        {complaint.isForwarded && complaint.forwardedBy && (
+                        {complaint.forwardedBy && (
                             <div style={{ 
                                 background: isLight ? "#fff7ed" : "rgba(124, 45, 18, 0.2)", 
                                 border: `1px solid ${isLight ? "#ffedd5" : "#7c2d12"}`,
@@ -323,13 +462,6 @@ function AdminComplaints() {
                                 <div style={{ color: "#059669", fontSize: "12px", fontWeight: "700", marginBottom: "4px", textTransform: "uppercase" }}>✅ Admin Response</div>
                                 <p style={{ margin: 0, fontSize: "14px", color: isLight ? "#047857" : "#d1fae5" }}>{complaint.response}</p>
                             </div>
-                        )}
-
-                        {/* Assigned To */}
-                        {complaint.assignedAdmins && complaint.assignedAdmins.length > 0 && (
-                             <div style={{ fontSize: "13px", color: textSub }}>
-                                <strong>Assigned to:</strong> {complaint.assignedAdmins.map(admin => admin.name).join(", ")}
-                             </div>
                         )}
 
                         {/* Action Area */}

@@ -5,21 +5,120 @@ import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 
 function AdminVendorComplaints() {
-  const { state } = useLocation();
-  const navigate = useNavigate();
-
-  const [complaints, setComplaints] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
+ const [complaints, setComplaints] = useState([]);
+ const [allComplaints, setAllComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [respondingTo, setRespondingTo] = useState(null);
   const [responseText, setResponseText] = useState("");
-  const [activeTab, setActiveTab] = useState("pending");
-  const [theme, setTheme] = useState("light");
+  const [activeTab, setActiveTab] = useState("pending"); // "pending" or "resolved"
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const { state } = useLocation();
+  const navigate = useNavigate();
 
+  // Theme state
+  const [theme, setTheme] = useState("light");
   const isLight = theme === "light";
-  const easingSoft = [0.16, 1, 0.3, 1];
+
+  useEffect(() => {
+    if (!state || state.role !== "admin") {
+      navigate(-1);
+      return;
+    }
+
+    const fetchComplaints = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/admin/vendor-complaints");
+        // Filter to show only forwarded vendor complaints
+        const forwardedVendorComplaints = response.data.filter(complaint => complaint.isForwarded === true);
+        setComplaints(forwardedVendorComplaints);
+        setAllComplaints(forwardedVendorComplaints);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching vendor complaints:", err);
+        setLoading(false);
+      }
+    };
+
+    fetchComplaints();
+  }, [state, navigate]);
+
+  // Search functionality
+  const handleSearch = async (searchValue) => {
+    setSearchTerm(searchValue);
+    
+    if (searchValue.trim() === "") {
+      // If search is empty, show all complaints
+      setComplaints(allComplaints);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await axios.get(`http://localhost:5000/admin/vendor-complaints/search?query=${encodeURIComponent(searchValue.trim())}`);
+      console.log("Vendor search results:", response.data);
+      // Filter forwarded complaints from search results
+      const forwardedResults = response.data.filter(complaint => complaint.isForwarded === true);
+      setComplaints(forwardedResults);
+    } catch (err) {
+      console.error("Error searching vendor complaints:", err);
+      // If search fails, fall back to client-side filtering
+      const filtered = allComplaints.filter(complaint => 
+        complaint.complaintId.toLowerCase().includes(searchValue.toLowerCase()) ||
+        complaint.description.toLowerCase().includes(searchValue.toLowerCase()) ||
+        (complaint.response && complaint.response.toLowerCase().includes(searchValue.toLowerCase()))
+      );
+      setComplaints(filtered);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchTerm("");
+    setComplaints(allComplaints);
+  };
+
+  const handleResponse = async (complaintId) => {
+    if (!responseText.trim()) {
+      alert("Please enter a response message");
+      return;
+    }
+
+    try {
+      await axios.post(`http://localhost:5000/admin/complaint/${complaintId}/respond`, {
+        response: responseText
+      });
+      
+      // Refresh complaints list
+      const response = await axios.get("http://localhost:5000/admin/vendor-complaints");
+      const forwardedVendorComplaints = response.data.filter(complaint => complaint.isForwarded === true);
+      setAllComplaints(forwardedVendorComplaints);
+      setComplaints(searchTerm ? forwardedVendorComplaints.filter(complaint => 
+        complaint.complaintId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        complaint.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (complaint.response && complaint.response.toLowerCase().includes(searchTerm.toLowerCase()))
+      ) : forwardedVendorComplaints);
+      
+      setRespondingTo(null);
+      setResponseText("");
+      alert("Response sent successfully!");
+    } catch (err) {
+      console.error("Error sending response:", err);
+      alert("Failed to send response");
+    }
+  };
+
+  const getStatusColor = (status) => {
+    return status === "resolved" ? "#10b981" : "#f59e0b";
+  };
+
+  const getForwardedColor = (isForwarded) => {
+    return isForwarded ? "#ef4444" : "inherit";
+  };
 
   // --- STYLING CONSTANTS ---
+  const easingSoft = [0.16, 1, 0.3, 1];
   const textMain = isLight ? "#0f172a" : "#e5e7eb";
   const textSub = isLight ? "#6b7280" : "#94a3b8";
 
@@ -47,101 +146,46 @@ function AdminVendorComplaints() {
 
   const cardStyle = isLight
     ? {
-        background: "rgba(255, 255, 255, 0.7)",
+        background: "rgba(255, 255, 255, 0.8)",
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(255, 255, 255, 0.5)",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
       }
     : {
-        background: "rgba(30, 41, 59, 0.6)",
+        background: "rgba(30, 41, 59, 0.7)",
         backdropFilter: "blur(12px)",
-        border: "1px solid rgba(255, 255, 255, 0.05)",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.2)",
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1)",
       };
 
-  const buttonStyleBase = {
-    padding: "8px 16px", 
-    borderRadius: "10px", 
-    fontSize: "13px", 
-    fontWeight: "600", 
-    cursor: "pointer", 
-    border: "none", 
-    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "6px"
-  };
+  const inputStyle = isLight 
+    ? { background: "white", border: "1px solid #e2e8f0", color: textMain }
+    : { background: "rgba(15, 23, 42, 0.6)", border: "1px solid #334155", color: "white" };
 
-  useEffect(() => {
-    if (!state || state.role !== "admin") {
-      navigate(-1);
-      return;
-    }
-
-    const fetchComplaints = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/admin/vendor-complaints");
-        setComplaints(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching vendor complaints:", err);
-        setLoading(false);
-      }
-    };
-
-    fetchComplaints();
-  }, [state, navigate]);
-
-  const handleResponse = async (complaintId) => {
-    if (!responseText.trim()) {
-      alert("Please enter a response message");
-      return;
-    }
-
-    try {
-      await axios.post(`http://localhost:5000/admin/complaint/${complaintId}/respond`, {
-        response: responseText
-      });
-      
-      const response = await axios.get("http://localhost:5000/admin/vendor-complaints");
-      setComplaints(response.data);
-      
-      setRespondingTo(null);
-      setResponseText("");
-    } catch (err) {
-      console.error("Error sending response:", err);
-      alert("Failed to send response");
-    }
-  };
 
   if (loading) {
     return (
       <div style={{ ...pageStyle, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: textSub, fontWeight: 600 }}>Loading vendor complaints...</span>
+        <motion.div 
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            style={{ fontSize: "20px", fontWeight: "600", color: textSub }}
+        >
+            Loading complaints...
+        </motion.div>
       </div>
     );
   }
 
+  // Separate complaints by status
   const pendingComplaints = complaints.filter(c => c.status !== "resolved");
   const resolvedComplaints = complaints.filter(c => c.status === "resolved");
   const currentComplaints = activeTab === "pending" ? pendingComplaints : resolvedComplaints;
-  
-  // Apply search filter to current complaints
-  const filteredCurrentComplaints = useMemo(() => {
-    if (!searchTerm.trim()) return currentComplaints;
-    const q = searchTerm.trim().toLowerCase();
-    return currentComplaints.filter((c) => {
-      const complaintId = c.complaintId || c._id || "";
-      const matchesId = String(complaintId).toLowerCase().includes(q);
-      return matchesId;
-    });
-  }, [currentComplaints, searchTerm]);
 
   return (
     <div style={{ ...pageStyle, minHeight: "100vh", position: "relative", overflowX: "hidden" }}>
-       {/* Background Orbs */}
-       <motion.div
+      {/* Background Orbs */}
+      <motion.div
         style={{
           position: "absolute", width: 300, height: 300, borderRadius: "50%",
           background: isLight ? "radial-gradient(circle at 30% 0%, #bfdbfe, #60a5fa, #1d4ed8)" : "radial-gradient(circle at 30% 0%, #bfdbfe, #3b82f6, #1d4ed8)",
@@ -150,60 +194,41 @@ function AdminVendorComplaints() {
         animate={{ x: [0, 40, -20, 0], y: [0, 18, -12, 0] }}
         transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
       />
+      
+      {/* Theme Switch */}
+      <div
+        style={{
+          position: "fixed", top: 20, right: 20, display: "flex", alignItems: "center", gap: 6,
+          padding: "4px 6px", borderRadius: 999, border: "1px solid rgba(148,163,184,0.6)",
+          background: isLight ? "rgba(255,255,255,0.8)" : "rgba(15,23,42,0.8)", backdropFilter: "blur(8px)", zIndex: 50,
+        }}
+      >
+        <span style={{ color: textSub, paddingLeft: 4, fontSize: 12 }}>Mode</span>
+        <button
+          type="button"
+          onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+          style={{
+            border: "none", borderRadius: 999, padding: "4px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600,
+            background: isLight ? "linear-gradient(120deg,#020617,#0f172a)" : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
+            color: isLight ? "#e5e7eb" : "#0f172a",
+          }}
+        >
+          {isLight ? "Dark" : "Light"}
+        </button>
+      </div>
 
       <div style={{ position: "relative", zIndex: 100 }}>
-        <Header title="Vendor Complaints" userRole="admin" userName="Admin" />
+        <Header title="Admin Complaints" userRole="admin" userName="Admin" />
       </div>
-      
-      <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "40px 24px", position: "relative", zIndex: 1 }}>
+
+      <main style={{ maxWidth: "1000px", margin: "0 auto", padding: "40px 24px", position: "relative", zIndex: 1 }}>
         
-        {/* Header Section */}
-        <div style={{ marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "end", flexWrap: "wrap", gap: "20px" }}>
+        <div style={{ marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
                 <h2 style={{ fontSize: "28px", fontWeight: "800", color: textMain, margin: 0 }}>Vendor Complaints</h2>
-                <p style={{ color: textSub, marginTop: "4px" }}>Manage and respond to issues raised by vendors</p>
             </div>
-            
-            {/* Theme Toggle - EXACT MATCH from RaiseComplaint */}
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "3px 5px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(148,163,184,0.6)",
-                    background: isLight ? "#f9fafb" : "rgba(15,23,42,0.9)",
-                    fontSize: 11,
-                    backdropFilter: "blur(8px)",
-                }}
-            >
-                <span style={{ color: "#6b7280", paddingLeft: 4 }}>Mode</span>
-                <button
-                    type="button"
-                    onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
-                    style={{
-                        border: "none",
-                        borderRadius: 999,
-                        padding: "3px 10px",
-                        cursor: "pointer",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        background: isLight
-                            ? "linear-gradient(120deg,#020617,#0f172a)"
-                            : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
-                        color: isLight ? "#e5e7eb" : "#0f172a",
-                    }}
-                >
-                    {isLight ? "Dark" : "Light"}
-                </button>
-            </div>
-        </div>
 
-        {/* Search Bar - Top Center */}
+        {/* Search Bar */}
         <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -220,9 +245,9 @@ function AdminVendorComplaints() {
             >
                 <input
                     type="text"
-                    placeholder="Search by Complaint ID"
+                    placeholder="Search vendor complaints by ID, description, or response..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearch(e.target.value)}
                     style={{
                         width: "100%",
                         padding: "12px 45px 12px 18px",
@@ -257,7 +282,7 @@ function AdminVendorComplaints() {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8 }}
-                            onClick={() => setSearchTerm("")}
+                            onClick={clearSearch}
                             style={{
                                 position: "absolute",
                                 right: "12px",
@@ -282,173 +307,258 @@ function AdminVendorComplaints() {
                         </motion.button>
                     </AnimatePresence>
                 )}
+                {isSearching && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            right: "12px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            color: isLight ? "#3b82f6" : "#60a5fa",
+                            fontSize: "14px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                    >
+                        🔍
+                    </div>
+                )}
             </div>
         </motion.div>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", justifyContent: "center" }}>
-            <button
+            {/* Custom Tabs */}
+            <div style={{ 
+                display: "flex", 
+                background: isLight ? "white" : "rgba(30,41,59,0.5)", 
+                padding: "4px", 
+                borderRadius: "12px",
+                border: isLight ? "1px solid #e2e8f0" : "1px solid #334155"
+            }}>
+                <button
                 onClick={() => setActiveTab("pending")}
                 style={{
-                    ...buttonStyleBase,
-                    background: activeTab === "pending" ? (isLight ? "#0f172a" : "#f8fafc") : (isLight ? "white" : "rgba(30,41,59,0.5)"),
-                    color: activeTab === "pending" ? (isLight ? "white" : "#0f172a") : textSub,
-                    border: activeTab === "pending" ? "none" : `1px solid ${isLight ? "#e2e8f0" : "#334155"}`,
-                    boxShadow: activeTab === "pending" ? "0 4px 12px rgba(0,0,0,0.1)" : "none"
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "14px", fontWeight: "600",
+                    background: activeTab === "pending" ? (isLight ? "#fef3c7" : "#78350f") : "transparent",
+                    color: activeTab === "pending" ? (isLight ? "#b45309" : "#fbbf24") : textSub,
+                    transition: "all 0.2s"
                 }}
-            >
+                >
                 ⏳ Pending ({pendingComplaints.length})
-            </button>
-            <button
+                </button>
+                <button
                 onClick={() => setActiveTab("resolved")}
                 style={{
-                    ...buttonStyleBase,
-                    background: activeTab === "resolved" ? "#10b981" : (isLight ? "white" : "rgba(30,41,59,0.5)"),
-                    color: activeTab === "resolved" ? "white" : textSub,
-                    border: activeTab === "resolved" ? "none" : `1px solid ${isLight ? "#e2e8f0" : "#334155"}`,
-                    boxShadow: activeTab === "resolved" ? "0 4px 12px rgba(16,185,129,0.2)" : "none"
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "14px", fontWeight: "600",
+                    background: activeTab === "resolved" ? (isLight ? "#dcfce7" : "#064e3b") : "transparent",
+                    color: activeTab === "resolved" ? (isLight ? "#166534" : "#4ade80") : textSub,
+                    transition: "all 0.2s"
                 }}
-            >
+                >
                 ✅ Resolved ({resolvedComplaints.length})
-            </button>
+                </button>
+            </div>
         </div>
 
-        <AnimatePresence mode="wait">
-            {filteredCurrentComplaints.length === 0 ? (
+        {currentComplaints.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            style={{ textAlign: "center", padding: "40px", color: textSub, ...cardStyle, borderRadius: "20px" }}
+          >
+            <p style={{ fontSize: "16px" }}>
+              {searchTerm 
+                ? `No vendor complaints found matching "${searchTerm}"`
+                : (activeTab === "pending" ? "No pending vendor complaints found." : "No resolved vendor complaints found.")
+              }
+            </p>
+          </motion.div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <AnimatePresence>
+                {currentComplaints.map((complaint) => (
                 <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    style={{ ...cardStyle, padding: "40px", borderRadius: "16px", textAlign: "center", color: textSub }}
+                    layout
+                    key={complaint._id} 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.4, ease: easingSoft }}
+                    style={{ 
+                        ...cardStyle, 
+                        borderRadius: "20px", 
+                        padding: "24px",
+                        position: "relative",
+                        borderLeft: `4px solid ${getStatusColor(complaint.status)}`
+                    }}
                 >
-                    {searchTerm.trim() ? 
-                        (activeTab === "pending" ? "No matching pending complaints found." : "No matching resolved complaints found.") :
-                        (activeTab === "pending" ? "No pending complaints found." : "No resolved complaints found.")
-                    }
-                </motion.div>
-            ) : (
-                <motion.div 
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.3, ease: easingSoft }}
-                    style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-                >
-                    {filteredCurrentComplaints.map((complaint) => (
-                        <div 
-                            key={complaint._id} 
-                            style={{ 
-                                ...cardStyle, 
-                                padding: "24px", 
-                                borderRadius: "16px", 
-                                position: "relative",
-                                overflow: "hidden" 
-                            }}
-                        >
-                            {/* Left accent border */}
-                            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "4px", background: complaint.status === "resolved" ? "#10b981" : "#f59e0b" }}></div>
-
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px", flexWrap: "wrap" }}>
-                                <div style={{ flex: 1, minWidth: "300px" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                                        <span style={{ fontSize: "12px", fontWeight: "700", color: textSub, letterSpacing: "0.05em" }}>#{complaint.complaintId}</span>
-                                        <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "99px", background: isLight ? "#f1f5f9" : "#1e293b", color: textSub, fontWeight: "600" }}>VENDOR</span>
-                                    </div>
-                                    
-                                    <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "12px" }}>
-                                        <h3 style={{ margin: 0, fontSize: "16px", color: textMain }}>{complaint.userId?.vendorName || "Unknown Vendor"}</h3>
-                                        <span style={{ fontSize: "13px", color: textSub }}>({complaint.userId?.Email})</span>
-                                    </div>
-
-                                    <p style={{ margin: "0 0 16px 0", fontSize: "15px", lineHeight: "1.6", color: textMain }}>
-                                        {complaint.description}
-                                    </p>
-
-                                    {complaint.screenshot && (
-                                        <div style={{ marginBottom: "16px" }}>
-                                            <div style={{ fontSize: "12px", fontWeight: "600", color: textSub, marginBottom: "6px" }}>ATTACHMENT</div>
-                                            <img 
-                                                src={complaint.screenshot} 
-                                                alt="Screenshot" 
-                                                style={{ height: "100px", borderRadius: "8px", border: `1px solid ${isLight ? "#e2e8f0" : "#334155"}`, cursor: "zoom-in" }}
-                                                onClick={() => window.open(complaint.screenshot, "_blank")}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {complaint.response && (
-                                        <div style={{ padding: "16px", borderRadius: "12px", background: isLight ? "rgba(16,185,129,0.1)" : "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.2)" }}>
-                                            <div style={{ fontSize: "12px", fontWeight: "700", color: "#059669", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                                <span>✓ ADMIN RESPONSE</span>
-                                            </div>
-                                            <p style={{ margin: 0, fontSize: "14px", color: isLight ? "#065f46" : "#34d399" }}>{complaint.response}</p>
-                                        </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {/* Header Row */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                                    <span style={{ fontSize: "12px", fontWeight: "700", color: textSub, textTransform: "uppercase", letterSpacing: "0.05em" }}>ID: {complaint.complaintId}</span>
+                                    {complaint.isForwarded && (
+                                        <span style={{ 
+                                            fontSize: "10px", fontWeight: "700", color: "#ef4444", 
+                                            background: isLight ? "#fee2e2" : "rgba(127,29,29,0.3)", 
+                                            padding: "2px 6px", borderRadius: "4px" 
+                                        }}>
+                                            FORWARDED
+                                        </span>
                                     )}
                                 </div>
-
-                                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "12px", minWidth: "200px" }}>
-                                    <div style={{ fontSize: "12px", color: textSub }}>{new Date(complaint.createdAt).toLocaleDateString()}</div>
-                                    
-                                    {complaint.status !== "resolved" && (
-                                        <div style={{ width: "100%" }}>
-                                            {respondingTo === complaint._id ? (
-                                                <motion.div 
-                                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                                    style={{ display: "flex", flexDirection: "column", gap: "10px", background: isLight ? "#f8fafc" : "#1e293b", padding: "12px", borderRadius: "12px", border: `1px solid ${isLight ? "#e2e8f0" : "#334155"}` }}
-                                                >
-                                                    <textarea
-                                                        value={responseText}
-                                                        onChange={(e) => setResponseText(e.target.value)}
-                                                        placeholder="Write your response..."
-                                                        style={{ 
-                                                            width: "100%", padding: "10px", borderRadius: "8px", 
-                                                            border: `1px solid ${isLight ? "#cbd5e1" : "#475569"}`,
-                                                            background: isLight ? "white" : "#0f172a",
-                                                            color: textMain,
-                                                            minHeight: "80px",
-                                                            fontSize: "13px",
-                                                            outline: "none"
-                                                        }}
-                                                        autoFocus
-                                                    />
-                                                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                                                        <button 
-                                                            onClick={() => setRespondingTo(null)}
-                                                            style={{ ...buttonStyleBase, background: "transparent", color: textSub, border: `1px solid ${isLight ? "#e2e8f0" : "#475569"}` }}
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleResponse(complaint._id)}
-                                                            style={{ ...buttonStyleBase, background: "#10b981", color: "white" }}
-                                                        >
-                                                            Send
-                                                        </button>
-                                                    </div>
-                                                </motion.div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => setRespondingTo(complaint._id)}
-                                                    style={{ 
-                                                        ...buttonStyleBase, 
-                                                        background: isLight ? "#eff6ff" : "rgba(59,130,246,0.15)", 
-                                                        color: "#3b82f6", 
-                                                        width: "100%",
-                                                        border: "1px solid rgba(59,130,246,0.3)"
-                                                    }}
-                                                >
-                                                    💬 Respond
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: textMain }}>
+                                    From: {complaint.role === "vendor" 
+                                        ? `${complaint.userId?.vendorName || "Unknown"} (${complaint.userId?.Email || "N/A"})`
+                                        : `${complaint.userId?.firstName || "Unknown"} ${complaint.userId?.lastName || ""} (${complaint.userId?.collegeEmail || "N/A"})`
+                                    }
+                                </h3>
+                            </div>
+                            <div style={{ fontSize: "13px", color: textSub, fontWeight: "500" }}>
+                                {new Date(complaint.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                             </div>
                         </div>
-                    ))}
+
+                        {/* Forwarded Info Box */}
+                        {complaint.isForwarded && complaint.forwardedBy && (
+                            <div style={{ 
+                                background: isLight ? "#fff7ed" : "rgba(124, 45, 18, 0.2)", 
+                                border: `1px solid ${isLight ? "#ffedd5" : "#7c2d12"}`,
+                                padding: "10px 14px", borderRadius: "10px", fontSize: "13px", color: isLight ? "#9a3412" : "#fdba74"
+                            }}>
+                                <strong>↪ Forwarded by:</strong> {complaint.forwardedBy.name} ({complaint.forwardedBy.email})
+                                {complaint.forwardedAt && (
+                                    <span style={{ opacity: 0.8 }}> • {new Date(complaint.forwardedAt).toLocaleDateString()}</span>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Content Body */}
+                        <div style={{ color: textMain, lineHeight: "1.6", fontSize: "15px" }}>
+                            {complaint.description}
+                        </div>
+
+                        {/* Screenshot */}
+                        {complaint.screenshot && (
+                            <div>
+                                <div style={{ fontSize: "12px", fontWeight: "600", color: textSub, marginBottom: "6px" }}>ATTACHMENT</div>
+                                <img 
+                                    src={complaint.screenshot} 
+                                    alt="Complaint screenshot" 
+                                    style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "8px", border: isLight ? "1px solid #e5e7eb" : "1px solid #334155" }}
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Admin Response Display */}
+                        {complaint.response && (
+                            <div style={{ 
+                                marginTop: "5px", padding: "16px", 
+                                backgroundColor: isLight ? "#ecfdf5" : "rgba(6, 78, 59, 0.3)", 
+                                border: `1px solid ${isLight ? "#d1fae5" : "#065f46"}`,
+                                borderRadius: "12px" 
+                            }}>
+                                <div style={{ color: "#059669", fontSize: "12px", fontWeight: "700", marginBottom: "4px", textTransform: "uppercase" }}>✅ Admin Response</div>
+                                <p style={{ margin: 0, fontSize: "14px", color: isLight ? "#047857" : "#d1fae5" }}>{complaint.response}</p>
+                            </div>
+                        )}
+
+                        {/* Assigned To */}
+                        {complaint.assignedAdmins && complaint.assignedAdmins.length > 0 && (
+                             <div style={{ fontSize: "13px", color: textSub }}>
+                                <strong>Assigned to:</strong> {complaint.assignedAdmins.map(admin => admin.name).join(", ")}
+                             </div>
+                        )}
+
+                        {/* Action Area */}
+                        <div style={{ marginTop: "10px", paddingTop: "15px", borderTop: isLight ? "1px solid #f1f5f9" : "1px solid #1e293b" }}>
+                            {complaint.status !== "resolved" ? (
+                                <AnimatePresence mode="wait">
+                                    {respondingTo === complaint._id ? (
+                                        <motion.div 
+                                            initial={{ opacity: 0, height: 0 }} 
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+                                        >
+                                            <textarea
+                                                value={responseText}
+                                                onChange={(e) => setResponseText(e.target.value)}
+                                                placeholder="Write your resolution message here..."
+                                                style={{
+                                                    ...inputStyle,
+                                                    width: "100%", padding: "12px", borderRadius: "8px", 
+                                                    minHeight: "100px", resize: "vertical", outline: "none"
+                                                }}
+                                                autoFocus
+                                            />
+                                            <div style={{ display: "flex", gap: "10px" }}>
+                                                <button
+                                                    onClick={() => handleResponse(complaint._id)}
+                                                    style={{
+                                                        padding: "8px 16px", backgroundColor: "#10b981", color: "white",
+                                                        border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "13px"
+                                                    }}
+                                                >
+                                                    Send Response
+                                                </button>
+                                                <button
+                                                    onClick={() => { setRespondingTo(null); setResponseText(""); }}
+                                                    style={{
+                                                        padding: "8px 16px", backgroundColor: isLight ? "#e5e7eb" : "#334155", 
+                                                        color: textMain, border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "13px"
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    ) : (
+                                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                            <button
+                                                onClick={() => setRespondingTo(complaint._id)}
+                                                style={{
+                                                    padding: "8px 20px",
+                                                    backgroundColor: "#3b82f6",
+                                                    color: "white",
+                                                    border: "none",
+                                                    borderRadius: "8px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "600",
+                                                    fontSize: "14px",
+                                                    display: "flex", alignItems: "center", gap: "6px",
+                                                    boxShadow: "0 2px 4px rgba(59,130,246,0.3)"
+                                                }}
+                                            >
+                                                💬 Respond
+                                            </button>
+                                        </div>
+                                    )}
+                                </AnimatePresence>
+                            ) : (
+                                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "6px", color: "#10b981", fontWeight: "600", fontSize: "14px" }}>
+                                    <span>🎉</span> Case Closed
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </motion.div>
-            )}
-        </AnimatePresence>
-      </div>
+                ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </main>
     </div>
   );
+
 }
 
 export default AdminVendorComplaints;

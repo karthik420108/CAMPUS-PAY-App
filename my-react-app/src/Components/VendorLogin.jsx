@@ -12,6 +12,7 @@ function VendorLogin() {
   const navigate = useNavigate();
 
   const [vendorName, setVendorName] = useState("");
+  const [id , setId] = useState("");
   const [balance, setBalance] = useState(0);
   const [imageUrl, setImageUrl] = useState("");
   const [showProfileOption, setShowProfileOption] = useState(false);
@@ -37,6 +38,7 @@ function VendorLogin() {
         setVendorName(res.data.vendorName);
         setBalance(res.data.Wallet);
         setImageUrl(res.data.ImageUrl);
+        setId(res.data.vendorid)
         
         // Close profile options if suspended or frozen
         if (res.data.isSuspended || res.data.isFrozen) {
@@ -423,7 +425,7 @@ function VendorLogin() {
                     textOverflow: "ellipsis",
                   }}
                 >
-                  ID: {vendorId}
+                  ID: {id}
                 </span>
               </div>
             </motion.div>

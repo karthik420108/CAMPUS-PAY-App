@@ -1727,6 +1727,173 @@ app.get("/subadmin/check/:id", async (req, res) => {
   }
 });
 
+// Search forwarded vendor complaints for admin
+app.get("/admin/vendor-complaints/search", async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query || query.trim().length === 0) {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const searchQuery = query.trim().toLowerCase();
+    console.log(`Searching forwarded vendor complaints with query: "${searchQuery}"`);
+
+    // Get forwarded vendor complaints that match the search query
+    const complaints = await Complaint.find({ 
+      isForwarded: true,
+      role: "vendor",
+      $or: [
+        { complaintId: { $regex: searchQuery, $options: "i" } },
+        { description: { $regex: searchQuery, $options: "i" } },
+        { response: { $regex: searchQuery, $options: "i" } }
+      ]
+    }).lean();
+
+    console.log(`Found ${complaints.length} matching forwarded vendor complaints`);
+
+    // Manually populate all related data
+    const populatedComplaints = await Promise.all(
+      complaints.map(async (complaint) => {
+        let user = null;
+        
+        // Only populate vendor information for vendor complaints
+        user = await Vendor.findById(complaint.userId)
+          .select("vendorName Email vendorid");
+        
+        // Get forwarded by info
+        let forwardedBy = null;
+        if (complaint.forwardedBy) {
+          forwardedBy = await SubAdmin.findById(complaint.forwardedBy)
+            .select("name email");
+        }
+
+        return {
+          ...complaint,
+          userId: user,
+          forwardedBy: forwardedBy
+        };
+      })
+    );
+
+    console.log(`Returning ${populatedComplaints.length} populated vendor search results`);
+    res.json(populatedComplaints || []);
+  } catch (err) {
+    console.error("Error searching forwarded vendor complaints:", err);
+    res.status(500).json({ message: "Failed to search vendor complaints" });
+  }
+});
+
+// Search forwarded student complaints for admin
+app.get("/admin/forwarded-complaints/search", async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query || query.trim().length === 0) {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const searchQuery = query.trim().toLowerCase();
+    console.log(`Searching forwarded student complaints with query: "${searchQuery}"`);
+
+    // Get forwarded student complaints that match the search query
+    const complaints = await Complaint.find({ 
+      isForwarded: true,
+      role: { $ne: "vendor" },
+      $or: [
+        { complaintId: { $regex: searchQuery, $options: "i" } },
+        { description: { $regex: searchQuery, $options: "i" } },
+        { response: { $regex: searchQuery, $options: "i" } }
+      ]
+    }).lean();
+
+    console.log(`Found ${complaints.length} matching forwarded student complaints`);
+
+    // Manually populate all related data
+    const populatedComplaints = await Promise.all(
+      complaints.map(async (complaint) => {
+        let user = null;
+        
+        // Only populate user for student complaints (vendors are excluded)
+        user = await User.findById(complaint.userId)
+          .select("firstName lastName collegeEmail");
+        
+        // Get forwarded by info
+        let forwardedBy = null;
+        if (complaint.forwardedBy) {
+          forwardedBy = await SubAdmin.findById(complaint.forwardedBy)
+            .select("name email");
+        }
+
+        return {
+          ...complaint,
+          userId: user,
+          forwardedBy: forwardedBy
+        };
+      })
+    );
+
+    console.log(`Returning ${populatedComplaints.length} populated search results`);
+    res.json(populatedComplaints || []);
+  } catch (err) {
+    console.error("Error searching forwarded complaints:", err);
+    res.status(500).json({ message: "Failed to search complaints" });
+  }
+});
+
+// Get forwarded complaints for admin
+app.get("/admin/forwarded-complaints", async (req, res) => {
+  try {
+    // Get only complaints that are forwarded AND are not from vendors
+    const complaints = await Complaint.find({ 
+      isForwarded: true,
+      role: { $ne: "vendor" }  // Exclude vendor complaints
+    }).lean();
+
+    console.log(`Found ${complaints.length} forwarded student complaints`);
+
+    // Manually populate all related data
+    const populatedComplaints = await Promise.all(
+      complaints.map(async (complaint) => {
+        let user = null;
+        
+        console.log(`Processing forwarded complaint ${complaint.complaintId}, role: ${complaint.role}, userId: ${complaint.userId}`);
+        
+        // Only populate user for student complaints (vendors are excluded)
+        user = await User.findById(complaint.userId)
+          .select("firstName lastName collegeEmail");
+        
+        console.log(`Found user for complaint ${complaint.complaintId}:`, user);
+        
+        // Get forwarded by info
+        let forwardedBy = null;
+        if (complaint.forwardedBy) {
+          forwardedBy = await SubAdmin.findById(complaint.forwardedBy)
+            .select("name email");
+        }
+
+        return {
+          ...complaint,
+          userId: user,
+          forwardedBy: forwardedBy
+        };
+      })
+    );
+
+    console.log("Final forwarded student complaints:", populatedComplaints.map(c => ({
+      complaintId: c.complaintId,
+      hasUser: !!c.userId,
+      userInfo: c.userId,
+      forwardedBy: c.forwardedBy
+    })));
+
+    res.json(populatedComplaints || []);
+  } catch (err) {
+    console.error("Error fetching forwarded complaints:", err);
+    res.status(500).json({ message: "Failed to fetch forwarded complaints" });
+  }
+});
+
 // Get complaints for admin
 app.get("/admin/complaints", async (req, res) => {
   try {
@@ -2293,7 +2460,7 @@ app.post("/vendore/profile", async (req, res) => {
     }
 
     const vendor = await Vendor.findById(vendorId).select(
-      "vendorName Email ImageUrl Wallet isFrozen"
+      "vendorName Email ImageUrl Wallet isFrozen vendorid"
     );
 
     if (!vendor) {
