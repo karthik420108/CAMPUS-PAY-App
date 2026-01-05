@@ -2635,6 +2635,60 @@ app.post("/reset-mpin", async (req, res) => {
   res.json({ message: "MPIN updated" });
 });
 
+// ------------------- VERIFY OLD MPIN -------------------
+app.post("/verify-old-mpin", async (req, res) => {
+  const { userId, oldMpin } = req.body;
+
+  if (!userId || !oldMpin) {
+    return res.status(400).json({ success: false, message: "User ID and old MPIN are required" });
+  }
+
+  try {
+    // Find user by ID
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Verify old MPIN - try multiple comparison methods
+    const storedMpinStr = user.Mpin?.toString()?.trim();
+    const inputMpinStr = oldMpin?.toString()?.trim();
+    
+    if (storedMpinStr !== inputMpinStr) {
+      return res.status(400).json({ success: false, message: "Invalid MPIN" });
+    }
+
+    res.json({ success: true, message: "MPIN verified successfully" });
+  } catch (error) {
+    console.error("Error verifying old MPIN:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ------------------- CHANGE MPIN -------------------
+app.post("/change-mpin", async (req, res) => {
+  const { userId, newMpin } = req.body;
+
+  if (!userId || !newMpin) {
+    return res.status(400).json({ success: false, message: "User ID and new MPIN are required" });
+  }
+
+  if (newMpin.length !== 6 || !/^\d+$/.test(newMpin)) {
+    return res.status(400).json({ success: false, message: "New MPIN must be 6 digits" });
+  }
+
+  try {
+    // Update user's MPIN
+    await User.findByIdAndUpdate(userId, { Mpin: newMpin });
+
+    res.json({ success: true, message: "MPIN changed successfully" });
+  } catch (error) {
+    console.error("Error changing MPIN:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 const client = new OAuth2Client(
   "299305949480-re6bmtmv7piq101mnt6l6dkanoplpmip.apps.googleusercontent.com"
 );
@@ -2749,7 +2803,7 @@ app.post("/google-login", async (req, res) => {
 app.get("/user/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select(
-      "firstName lastName ImageUrl isFrozen isSuspended walletBalance"
+      "firstName lastName ImageUrl isFrozen isSuspended walletBalance createdAt"
     );
 
     if (!user) {

@@ -28,6 +28,7 @@ import VendorLogin from "./Components/VendorLogin.jsx";
 import GenerateQR from "./Components/GenerateQr.jsx";
 import RedeemHistoryButton from "./Components/Reedemhistory.jsx";
 import RedeemForm from "./Components/Redeem.jsx";
+import ChangeMpin from "./Components/ChangeMpin.jsx";
 
 
 
@@ -142,6 +143,8 @@ function App() {
         <Route path="/generate-qr" element={<GenerateQR />} />
 
         <Route path="/edit-profile" element={<EditProfile />} />
+
+        <Route path="/change-mpin" element={<ChangeMpin />} />
 
         <Route path="/reset-mpin" element={<ResetMpin />} />
 
