@@ -18,6 +18,7 @@ function SubAdminDashboard() {
     email: "",
     imageUrl: "",
   });
+  const firstLetter = profile.name ? profile.name.charAt(0).toUpperCase() : "";
   const [hasUnread, setHasUnread] = useState(false);
   
   // Theme State
@@ -170,11 +171,11 @@ function SubAdminDashboard() {
                   {profile.imageUrl ? (
                     <img
                       src={profile.imageUrl} alt="Profile"
-                      onError={(e) => { e.target.onerror = null; e.target.src = "/default-avatar.png"; }}
+                      onError={() => setProfile((p) => ({ ...p, imageUrl: "" }))}
                       style={{ width: "36px", height: "36px", borderRadius: "10px", objectFit: "cover", border: `1px solid ${isLight ? "#e2e8f0" : "#334155"}` }}
                     />
                   ) : (
-                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #3b82f6, #2563eb)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", fontSize: "12px" }}>SA</div>
+                    <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #3b82f6, #2563eb)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", fontSize: "14px" }}>{firstLetter || "S"}</div>
                   )}
                   <div style={{ textAlign: "left", marginRight: "4px" }}>
                       <div style={{ fontSize: "13px", fontWeight: "600", color: textMain }}>{profile.name || "Admin"}</div>

@@ -47,7 +47,7 @@ function SubAdminEdit() {
           `http://localhost:5000/subadmin/${subAdminId}/profile`
         );
         setProfile(res.data);
-        setImagePreview(res.data.imageUrl || "/default-avatar.png");
+        setImagePreview(res.data.imageUrl || null);
       } catch (err) {
         setError("Failed to load profile");
       }
@@ -74,23 +74,35 @@ function SubAdminEdit() {
       setError("");
       setSuccess("");
 
-      // Update profile data
-      await axios.put(
-        `http://localhost:5000/subadmin/${subAdminId}/profile`,
-        profile
-      );
-
-      // Upload new image if changed
+      // If image changed, upload it first and get the new URL
+      const updatedProfile = { ...profile };
       if (imageFile) {
         const formData = new FormData();
         formData.append("profileImage", imageFile);
-        formData.append("role", "subadminpics");
 
-        await axios.post(
+        const uploadRes = await axios.post(
           "http://localhost:5000/upload/subadmin",
           formData,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
+
+        if (uploadRes && uploadRes.data && uploadRes.data.url) {
+          updatedProfile.imageUrl = uploadRes.data.url;
+          setImagePreview(uploadRes.data.url);
+        }
+      }
+
+      // Update profile data (include imageUrl when available)
+      const res = await axios.put(
+        `http://localhost:5000/subadmin/${subAdminId}/profile`,
+        {
+          name: updatedProfile.name,
+          imageUrl: updatedProfile.imageUrl,
+        }
+      );
+
+      if (res && res.data && res.data.subAdmin) {
+        setProfile(res.data.subAdmin);
       }
 
       showOverlayMessage("Profile Updated Successfully!", "success");
@@ -105,6 +117,30 @@ function SubAdminEdit() {
       }, 2000);
     } catch (err) {
       setError("Update failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!window.confirm("Remove profile photo?")) return;
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await axios.put(
+        `http://localhost:5000/subadmin/${subAdminId}/profile`,
+        { name: profile.name, imageUrl: "" }
+      );
+
+      if (res && res.data && res.data.subAdmin) {
+        setProfile(res.data.subAdmin);
+        setImagePreview(null);
+        setImageFile(null);
+        showOverlayMessage("Profile photo removed", "success");
+      }
+    } catch (err) {
+      setError("Failed to remove photo. Try again.");
     } finally {
       setLoading(false);
     }
@@ -160,6 +196,8 @@ function SubAdminEdit() {
     subAdminId || localStorage.getItem("subAdminId");
 
   if (!currentSubAdminId) return null;
+
+  const firstLetter = profile.name ? profile.name.charAt(0).toUpperCase() : null;
 
   return (
     <SubAdminStatusChecker subAdminId={currentSubAdminId}>
@@ -353,9 +391,10 @@ function SubAdminEdit() {
                       border: `4px solid ${
                         isLight ? "rgba(255,255,255,0.8)" : "rgba(30,41,59,0.8)"
                       }`,
+                      userSelect: "none",
                     }}
                   >
-                    👤
+                    {firstLetter || "👤"}
                   </div>
                 )}
                 <label
@@ -384,6 +423,26 @@ function SubAdminEdit() {
                     style={{ display: "none" }}
                   />
                 </label>
+                {(profile.imageUrl || imagePreview) && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    disabled={loading}
+                    style={{
+                      marginLeft: 12,
+                      marginTop: 8,
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "#ef4444",
+                      color: "white",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      fontSize: 12,
+                    }}
+                  >
+                    Remove photo
+                  </button>
+                )}
               </div>
             </div>
 
