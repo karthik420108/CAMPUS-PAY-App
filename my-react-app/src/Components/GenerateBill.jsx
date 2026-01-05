@@ -207,7 +207,7 @@ if (blockingMessage) {
                 <thead>
                   <tr style={{ backgroundColor: isLight ? "#dbeafe" : "#1e293b" }}>
                     <th style={{ padding: 12, borderBottom: "1px solid #ccc" }}>Date</th>
-                    <th style={{ padding: 12, borderBottom: "1px solid #ccc" }}>Type</th>
+                    
                     <th style={{ padding: 12, borderBottom: "1px solid #ccc" }}>Amount</th>
                     <th style={{ padding: 12, borderBottom: "1px solid #ccc" }}>Status</th>
                   </tr>
@@ -218,7 +218,7 @@ if (blockingMessage) {
                     return (
                       <tr key={i} style={{ textAlign: "center", backgroundColor: i % 2 === 0 ? (isLight ? "#f9fafb" : "#111827") : "transparent" }}>
                         <td style={{ padding: 12 }}>{new Date(t.createdAt).toLocaleDateString()}</td>
-                        <td style={{ padding: 12 }}>{t.type}</td>
+                       
                         <td style={{ padding: 12 }}>₹{t.amount}</td>
                         <td style={{ padding: 12, color: statusColor, fontWeight: 600 }}>{t.status}</td>
                       </tr>
