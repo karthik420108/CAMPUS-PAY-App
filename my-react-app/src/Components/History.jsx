@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
+import Header from "./Header3"
 
 function History() {
   const navigate = useNavigate();
@@ -155,6 +156,7 @@ function History() {
   return (
     <>
       <Header1 userId={userId} role={role} />
+      <Header></Header>
 
       <motion.div
         style={{

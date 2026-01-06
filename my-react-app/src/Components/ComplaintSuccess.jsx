@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-
+import Header from "./Header3"
 function ComplaintSuccess() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -61,6 +61,8 @@ function ComplaintSuccess() {
   const easingSoft = [0.16, 1, 0.3, 1];
 
   return (
+
+    
     <motion.div
       style={{
         minHeight: "100vh",
@@ -183,6 +185,7 @@ function ComplaintSuccess() {
             transition: "all 0.2s ease",
           }}
         >
+          < Header/>
           <span style={{ fontSize: 16 }}>←</span>
           <span>Back</span>
         </motion.button>

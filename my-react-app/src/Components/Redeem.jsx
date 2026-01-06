@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
+import Header from "./Header3"
 
 export default function RedeemForm() {
   const navigate = useNavigate();
@@ -152,6 +153,7 @@ export default function RedeemForm() {
   return (
     <>
       <Header1 role="vendor" userId={userId} />
+      <Header/>
       <SuspensionBanner show={showSuspensionBanner} />
 
       <motion.div

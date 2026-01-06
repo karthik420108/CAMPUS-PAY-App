@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import Header3 from "./Header3";
+import Header from "./Header3";
 import Header1 from "./Header1"
 import { useLocation, useNavigate } from "react-router-dom";
 import SuspensionBanner from "./SuspensionBanner";
@@ -112,6 +112,7 @@ function VendorTransactions() {
   return (
     <>
       <Header1 role="vendor" userId={userId} isFrozen={isFrozen} isOp={setSidebarOpen}/>
+      <Header/>
       <SuspensionBanner show={showSuspensionBanner} />
       <motion.div
         style={{

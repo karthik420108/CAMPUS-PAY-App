@@ -3,6 +3,7 @@ import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import Header1 from "./Header1";
+import Header from "./Header3"
 
 export default function RedeemHistoryPage() {
   const locationState = useLocation()?.state;
@@ -127,7 +128,9 @@ export default function RedeemHistoryPage() {
         transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
       />
 
+      <Header/>
       <Header1 role="vendor" userId={userId} />
+      
 
       {/* Theme Toggle */}
       <div

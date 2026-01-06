@@ -3,7 +3,7 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
-
+import Header from "./Header3"
 function ComplaintHistory() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -233,7 +233,7 @@ useEffect(() => {
   return (
     <>
       <Header1 userId={userId} role={role} isFrozen={isFrozen} />
-
+      <Header />
       <motion.div
         style={{
           minHeight: "100vh",

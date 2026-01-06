@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
+import Header from "./Header3"
 
 function RaiseComplaint() {
   const navigate = useNavigate();
@@ -259,7 +260,7 @@ function RaiseComplaint() {
     <>
       <Header1 userId={userId} role = {role} isFrozen={isFrozen} isOp={setSidebarOpen}/>
       <SuspensionBanner show={showSuspensionBanner} />
-
+      <Header/>
       <motion.div
         style={{
           minHeight: "100vh",

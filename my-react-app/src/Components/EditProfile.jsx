@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
+import Header from "./Header3"
 // Removed Header1 import to get rid of the hamburger menu
 
 function EditProfile() {

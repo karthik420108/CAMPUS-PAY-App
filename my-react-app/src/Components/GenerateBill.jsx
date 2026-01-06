@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import Header1 from "./Header1";
 import { motion } from "motion/react";
+import Header from "./Header3"
 import { useNavigate } from "react-router-dom";
 
 function GenerateBill() {
@@ -150,7 +151,7 @@ if (blockingMessage) {
   return (
     <>
       <Header1 userId={userId} role="student" isFrozen={isFrozen}/>
-
+      <Header/>
       <div style={pageStyle}>
         <motion.div
           initial={{ opacity: 0, y: 32 }}
