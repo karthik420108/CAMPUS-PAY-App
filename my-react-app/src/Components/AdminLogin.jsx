@@ -301,6 +301,7 @@ function AdminLogin() {
             {[
                 { path: "/add-funds", icon: "💰", label: "Add Institute Funds", color: "from-green-500 to-emerald-600" },
                 { path: "/rrequests", icon: "💸", label: "Redeem Requests", color: "from-blue-500 to-indigo-600" },
+                { path: "/redeem-history", icon: "📜", label: "Redeem Requests History", color: "from-amber-500 to-orange-600" },
                 { path: "/add-notifications", icon: "📢", label: "Add Notification", color: "from-orange-500 to-red-600" },
                 { path: "/admin-complaints", icon: "📝", label: "View Complaints", color: "from-purple-500 to-fuchsia-600" },
                 { path: "/admin-monitor-vendors", icon: "🏪", label: "Monitor Vendors", color: "from-cyan-500 to-blue-600" },
