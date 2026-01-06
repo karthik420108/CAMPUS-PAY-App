@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
-import Header from "./Header3"
+import Header from "./Header3";
 
 function VendorLogin() {
   const { state } = useLocation();
@@ -13,19 +13,35 @@ function VendorLogin() {
   const navigate = useNavigate();
 
   const [vendorName, setVendorName] = useState("");
-  const [id , setId] = useState("");
+  const [id, setId] = useState("");
   const [balance, setBalance] = useState(0);
   const [imageUrl, setImageUrl] = useState("");
   const [showProfileOption, setShowProfileOption] = useState(false);
-  const [theme, setTheme] = useState("light"); // "light" | "dark"
+  const [theme, setTheme] = useState("light");
   const [hasUnread, setHasUnread] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // Use vendor status hook for real-time monitoring
-  const { isSuspended, isFrozen, showSuspensionBanner, setShowSuspensionBanner } = useVendorStatus(vendorId);
+
+  const { isSuspended, isFrozen, showSuspensionBanner } =
+    useVendorStatus(vendorId);
 
   const easingSoft = [0.16, 1, 0.3, 1];
   const isLight = theme === "light";
+  const [deviceSize, setDeviceSize] = useState({
+    width: typeof window !== "undefined" ? window.innerWidth : 0,
+    height: typeof window !== "undefined" ? window.innerHeight : 0,
+  });
+  const isMobile = deviceSize.width <= 480;
+
+  useEffect(() => {
+    const handleResize = () => {
+      setDeviceSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   if (!vendorId) {
     navigate("/");
@@ -39,9 +55,7 @@ function VendorLogin() {
         setVendorName(res.data.vendorName);
         setBalance(res.data.Wallet);
         setImageUrl(res.data.ImageUrl);
-        setId(res.data.vendorid)
-        
-        // Close profile options if suspended or frozen
+        setId(res.data.vendorid);
         if (res.data.isSuspended || res.data.isFrozen) {
           setShowProfileOption(false);
         }
@@ -51,10 +65,8 @@ function VendorLogin() {
       });
   }, [vendorId]);
 
-  // Notification fetching with real-time polling
   useEffect(() => {
     if (!vendorId) return;
-    
     const fetchNotifications = () => {
       axios
         .get(`http://localhost:5000/notifications/${vendorId}`, {
@@ -67,17 +79,11 @@ function VendorLogin() {
         })
         .catch(console.error);
     };
-
-    // Initial fetch
     fetchNotifications();
-
-    // Set up polling for real-time updates
-    const interval = setInterval(fetchNotifications, 10000); // Check every 10 seconds
-
+    const interval = setInterval(fetchNotifications, 10000);
     return () => clearInterval(interval);
   }, [vendorId]);
 
-  // ---------- THEME-DEPENDENT STYLES ----------
   const pageStyle = isLight
     ? {
         background:
@@ -133,7 +139,6 @@ function VendorLogin() {
         boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.95)",
       };
 
-  // ---------- navigation helpers ----------
   const goToGenerateQR = () => {
     navigate("/generate-qr", { state: { vendorId, vendorName } });
   };
@@ -144,27 +149,22 @@ function VendorLogin() {
   };
 
   const goToViewProfile = () => {
-    console.log(vendorId)
-    navigate("/viewv", { state: { vendorId , role : "vendor"} });
+    navigate("/viewv", { state: { vendorId, role: "vendor" } });
     setShowProfileOption(false);
   };
 
   const handleLogout = () => {
-    // Clear any stored auth data
     localStorage.removeItem("vendorAuth");
     localStorage.removeItem("vendorId");
-    
-    // Navigate back to login
     navigate("/");
   };
 
   return (
     <>
-      <Header1 userId = {vendorId} role = "vendor" isFrozen = {isFrozen} isOp = {setSidebarOpen} />
-      <Header></Header>
+      <Header1 userId={vendorId} role="vendor" isFrozen={isFrozen} />
+      <Header />
       <SuspensionBanner show={showSuspensionBanner} />
-      
-      {/* click-outside wrapper */}
+
       <div
         onClick={() => {
           if (showProfileOption) setShowProfileOption(false);
@@ -172,25 +172,30 @@ function VendorLogin() {
       >
         <motion.div
           style={{
-            minHeight: "100vh",
+            width: deviceSize.width || "100vw",
+            minHeight: deviceSize.height || "100vh",
             display: "flex",
-            justifyContent: "center",
+            flexDirection: "column",
             alignItems: "center",
-            padding: "24px",
-            overflow: "hidden",
+            justifyContent: "flex-start",
+            padding: isMobile ? "72px 16px 16px" : "96px 24px 32px",
+            gap: 24,
+            overflowY: "auto",
+            overflowX: "hidden",
             position: "relative",
+            boxSizing: "border-box",
             ...pageStyle,
           }}
         >
-          {/* Frozen Status Banner */}
+          {/* Frozen Banner */}
           {isFrozen && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               style={{
                 position: "absolute",
-                top: "40px",
-                left: "30%",
+                top: "80px",
+                left: "50%",
                 transform: "translateX(-50%)",
                 zIndex: 100,
                 background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
@@ -209,10 +214,12 @@ function VendorLogin() {
               }}
             >
               <span style={{ fontSize: "16px" }}>❄️</span>
-              Your account has been frozen. Please contact admin for assistance.
+              Your account has been frozen. Please contact admin for
+              assistance.
             </motion.div>
           )}
-          {/* soft background orbs */}
+
+          {/* Orbs */}
           <motion.div
             style={{
               position: "absolute",
@@ -250,288 +257,573 @@ function VendorLogin() {
             transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
           />
 
-          {/* NOTIFICATION BUTTON */}
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.4, ease: easingSoft }}
-            style={{
-              position: "absolute",
-              top: 32,
-              right: 420,
-              zIndex: 20,
-            }}
-          >
+          {/* Notification + profile (responsive) */}
+          {isMobile ? (
+            // MOBILE: bell inside the pill bar, no absolute positioning
             <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() =>
-                navigate("/notifications", {
-                  state: { Id: vendorId, role: "vendor" },
-                })
-              }
               style={{
-                position: "relative",
-                cursor: "pointer",
-                padding: "12px 16px",
-                borderRadius: "16px",
-                background: isLight
-                  ? "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))"
-                  : "linear-gradient(145deg, rgba(15,23,42,0.9), rgba(30,41,59,0.9))",
-                backdropFilter: "blur(16px)",
-                border: `1px solid ${
-                  isLight ? "rgba(148,163,184,0.4)" : "rgba(75,85,99,0.6)"
-                }`,
-                boxShadow: `0 8px 24px ${
-                  isLight ? "rgba(15,23,42,0.12)" : "rgba(15,23,42,0.6)"
-                }`,
+                width: "100%",
+                marginTop: 12,
+                marginBottom: 8,
+                display: "flex",
+                justifyContent: "center",
+                zIndex: 40,
               }}
             >
-              <span style={{ fontSize: "24px", color: isLight ? "#1f2937" : "#e5e7eb" }}>🔔</span>
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.4, ease: easingSoft }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "10px 16px",
+                  borderRadius: 999,
+                  background: isLight
+                    ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(226,232,240,0.98))"
+                    : "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,64,175,0.85))",
+                  boxShadow: "0 10px 26px rgba(15,23,42,0.30)",
+                  border: isLight
+                    ? "1px solid rgba(148,163,184,0.5)"
+                    : "1px solid rgba(37,99,235,0.7)",
+                  maxWidth: 360,
+                  width: "100%",
+                }}
+              >
+                {/* Bell on the left */}
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/notifications", {
+                      state: { Id: vendorId, role: "vendor" },
+                    });
+                  }}
+                  style={{
+                    position: "relative",
+                    cursor: "pointer",
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background: isLight
+                      ? "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))"
+                      : "linear-gradient(145deg, rgba(15,23,42,0.9), rgba(30,41,59,0.9))",
+                    border: isLight
+                      ? "1px solid rgba(148,163,184,0.4)"
+                      : "1px solid rgba(75,85,99,0.6)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "18px",
+                      color: isLight ? "#1f2937" : "#e5e7eb",
+                    }}
+                  >
+                    🔔
+                  </span>
+                  <AnimatePresence>
+                    {hasUnread && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        style={{
+                          position: "absolute",
+                          top: "2px",
+                          right: "2px",
+                          width: "8px",
+                          height: "8px",
+                          background: "#ef4444",
+                          borderRadius: "50%",
+                          border: `2px solid ${
+                            isLight ? "#f8fafc" : "#0f172a"
+                          }`,
+                        }}
+                      />
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                {/* Profile text + avatar */}
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProfileOption((v) => !v);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flex: 1,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      flexShrink: 0,
+                      boxShadow: "0 4px 12px rgba(15,23,42,0.45)",
+                      background:
+                        "radial-gradient(circle at 30% 30%, #0f172a, #020617)",
+                    }}
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt="Vendor Avatar"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#e5e7eb",
+                          fontSize: 18,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {vendorName[0]?.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: textMain,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {vendorName}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: textSub,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      ID: {id}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Dropdown (still absolute, but relative to mobile bar) */}
               <AnimatePresence>
-                {hasUnread && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
+                {showProfileOption && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.2, ease: easingSoft }}
                     style={{
                       position: "absolute",
-                      top: "6px",
-                      right: "6px",
-                      width: "12px",
-                      height: "12px",
-                      background: "#ef4444",
-                      borderRadius: "50%",
-                      border: `2px solid ${isLight ? "#f8fafc" : "#0f172a"}`,
-                      boxShadow: "0 0 0 3px rgba(239,68,68,0.3)",
+                      right: 16,
+                      top: 70,
+                      background: isLight ? "#ffffff" : "#020617",
+                      borderRadius: 16,
+                      boxShadow: "0 20px 40px rgba(15,23,42,0.35)",
+                      border: isLight
+                        ? "1px solid rgba(148,163,184,0.45)"
+                        : "1px solid rgba(37,99,235,0.7)",
+                      padding: 8,
+                      minWidth: 220,
+                      zIndex: 40,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
                     }}
-                  />
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={goToViewProfile}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: "transparent",
+                        color: textMain,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      👤 View profile
+                    </button>
+                    <button
+                      onClick={goToEditProfile}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: "transparent",
+                        color: textMain,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✏️ Edit profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate("/vendor-change-mpin", { state: { vendorId } });
+                        setShowProfileOption(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: "transparent",
+                        color: textMain,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      🔐 Change MPIN
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: isLight
+                          ? "rgba(248,113,113,0.1)"
+                          : "rgba(127,29,29,0.6)",
+                        color: isLight ? "#b91c1c" : "#fee2e2",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        marginTop: 4,
+                      }}
+                    >
+                      🚪 Logout
+                    </button>
+                  </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
-          </motion.div>
-
-          {/* PROFILE PILL + DROPDOWN */}
-          <motion.div
-            style={{
-              position: "absolute",
-              top: 32,
-              right: 32,
-              display: "flex",
-              alignItems: "center",
-              zIndex: 20,
-            }}
-          >
+          ) : (
+            // DESKTOP / TABLET: original absolute top-right cluster
             <motion.div
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.4, ease: easingSoft }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowProfileOption((v) => !v);
-              }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
               style={{
+                position: "absolute",
+                top: 40,
+                right: 32,
                 display: "flex",
                 alignItems: "center",
-                gap: 14,
-                padding: "10px 18px",
-                borderRadius: 999,
-                background: isLight
-                  ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(226,232,240,0.98))"
-                  : "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,64,175,0.85))",
-                boxShadow: "0 10px 26px rgba(15,23,42,0.30)",
-                border: `1px solid ${
-                  isLight ? "rgba(148,163,184,0.5)" : "rgba(37,99,235,0.7)"
-                }`,
-                cursor: "pointer",
-                maxWidth: 420,
-                minWidth: 320,
+                gap: 12,
+                zIndex: 40,
               }}
             >
-              <div
+              {/* Notification button */}
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.4, ease: easingSoft }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() =>
+                  navigate("/notifications", {
+                    state: { Id: vendorId, role: "vendor" },
+                  })
+                }
                 style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                  flexShrink: 0,
-                  boxShadow: "0 6px 18px rgba(15,23,42,0.45)",
-                  background:
-                    "radial-gradient(circle at 30% 30%, #0f172a, #020617)",
+                  position: "relative",
+                  cursor: "pointer",
+                  padding: "10px 12px",
+                  borderRadius: "16px",
+                  background: isLight
+                    ? "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))"
+                    : "linear-gradient(145deg, rgba(15,23,42,0.9), rgba(30,41,59,0.9))",
+                  backdropFilter: "blur(16px)",
+                  border: isLight
+                    ? "1px solid rgba(148,163,184,0.4)"
+                    : "1px solid rgba(75,85,99,0.6)",
+                  boxShadow: isLight
+                    ? "0 8px 24px rgba(15,23,42,0.12)"
+                    : "0 8px 24px rgba(15,23,42,0.6)",
                 }}
               >
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt="Vendor Avatar"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <span
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#e5e7eb",
-                      fontSize: 20,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {vendorName[0]?.toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <div
+                <span
+                  style={{
+                    fontSize: "22px",
+                    color: isLight ? "#1f2937" : "#e5e7eb",
+                  }}
+                >
+                  🔔
+                </span>
+                <AnimatePresence>
+                  {hasUnread && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      style={{
+                        position: "absolute",
+                        top: "4px",
+                        right: "4px",
+                        width: "10px",
+                        height: "10px",
+                        background: "#ef4444",
+                        borderRadius: "50%",
+                        border: `2px solid ${
+                          isLight ? "#f8fafc" : "#0f172a"
+                        }`,
+                        boxShadow: "0 0 0 3px rgba(239,68,68,0.3)",
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+              </motion.div>
+
+              {/* Profile pill */}
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.4, ease: easingSoft }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowProfileOption((v) => !v);
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden",
+                  alignItems: "center",
+                  gap: 14,
+                  padding: "10px 18px",
+                  borderRadius: 999,
+                  background: isLight
+                    ? "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(226,232,240,0.98))"
+                    : "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,64,175,0.85))",
+                  boxShadow: "0 10px 26px rgba(15,23,42,0.30)",
+                  border: isLight
+                    ? "1px solid rgba(148,163,184,0.5)"
+                    : "1px solid rgba(37,99,235,0.7)",
+                  cursor: "pointer",
+                  maxWidth: 420,
+                  minWidth: 320,
                 }}
               >
-                <span
+                <div
                   style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: textMain,
-                    whiteSpace: "nowrap",
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
                     overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    flexShrink: 0,
+                    boxShadow: "0 6px 18px rgba(15,23,42,0.45)",
+                    background:
+                      "radial-gradient(circle at 30% 30%, #0f172a, #020617)",
                   }}
                 >
-                  {vendorName}
-                </span>
-                <span
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt="Vendor Avatar"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#e5e7eb",
+                        fontSize: 20,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {vendorName[0]?.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div
                   style={{
-                    fontSize: 11,
-                    color: textSub,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  ID: {id}
-                </span>
-              </div>
-            </motion.div>
-
-            <AnimatePresence>
-              {showProfileOption && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.2, ease: easingSoft }}
-                  style={{
-                    position: "absolute",
-                    right: 0,
-                    top: 70,
-                    background: isLight ? "#ffffff" : "#020617",
-                    borderRadius: 16,
-                    boxShadow: "0 20px 40px rgba(15,23,42,0.35)",
-                    border: `1px solid ${
-                      isLight
-                        ? "rgba(148,163,184,0.45)"
-                        : "rgba(37,99,235,0.7)"
-                    }`,
-                    padding: 8,
-                    minWidth: 220,
-                    zIndex: 40,
                     display: "flex",
                     flexDirection: "column",
-                    gap: 4,
+                    overflow: "hidden",
                   }}
-                  onClick={(e) => e.stopPropagation()}
                 >
-                  <button
-                    onClick={goToViewProfile}
+                  <span
                     style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "none",
-                      background: "transparent",
+                      fontSize: 15,
+                      fontWeight: 700,
                       color: textMain,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
-                    👤 View profile
-                  </button>
-                  <button
-                    onClick={goToEditProfile}
+                    {vendorName}
+                  </span>
+                  <span
                     style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "none",
-                      background: "transparent",
-                      color: textMain,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      cursor: "pointer",
+                      fontSize: 11,
+                      color: textSub,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
-                    ✏️ Edit profile
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigate("/vendor-change-mpin", { state: { vendorId } });
-                      setShowProfileOption(false);
-                    }}
+                    ID: {id}
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* Profile dropdown */}
+              <AnimatePresence>
+                {showProfileOption && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.2, ease: easingSoft }}
                     style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "none",
-                      background: "transparent",
-                      color: textMain,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      cursor: "pointer",
+                      position: "absolute",
+                      right: 0,
+                      top: 70,
+                      background: isLight ? "#ffffff" : "#020617",
+                      borderRadius: 16,
+                      boxShadow: "0 20px 40px rgba(15,23,42,0.35)",
+                      border: isLight
+                        ? "1px solid rgba(148,163,184,0.45)"
+                        : "1px solid rgba(37,99,235,0.7)",
+                      padding: 8,
+                      minWidth: 220,
+                      zIndex: 40,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
                     }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    🔐 Change MPIN
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "none",
-                      background: isLight
-                        ? "rgba(248,113,113,0.1)"
-                        : "rgba(127,29,29,0.6)",
-                      color: isLight ? "#b91c1c" : "#fee2e2",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      marginTop: 4,
-                    }}
-                  >
-                    🚪 Logout
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+                    <button
+                      onClick={goToViewProfile}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: "transparent",
+                        color: textMain,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      👤 View profile
+                    </button>
+                    <button
+                      onClick={goToEditProfile}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: "transparent",
+                        color: textMain,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✏️ Edit profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate("/vendor-change-mpin", {
+                          state: { vendorId },
+                        });
+                        setShowProfileOption(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: "transparent",
+                        color: textMain,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      🔐 Change MPIN
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: isLight
+                          ? "rgba(248,113,113,0.1)"
+                          : "rgba(127,29,29,0.6)",
+                        color: isLight ? "#b91c1c" : "#fee2e2",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        marginTop: 4,
+                      }}
+                    >
+                      🚪 Logout
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
 
           {/* MAIN CARD */}
           <motion.div
-            initial={{ opacity: 0, y: 32, scale: 0.98 }}
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.55, ease: easingSoft }}
             style={{
@@ -594,7 +886,7 @@ function VendorLogin() {
               </button>
             </div>
 
-            {/* top accent line (like RaiseComplaint) */}
+            {/* top accent */}
             <motion.div
               style={{
                 position: "absolute",
@@ -704,9 +996,7 @@ function VendorLogin() {
               </motion.h3>
             </motion.div>
 
-            <button onClick={() => navigate('/refund' , {state :{vendorId, vendorName}})}>Refund</button>
-
-            {/* button */}
+            {/* Generate QR button */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -714,17 +1004,21 @@ function VendorLogin() {
             >
               <motion.button
                 onClick={isFrozen ? null : goToGenerateQR}
-                whileHover={isFrozen ? {} : {
-                  scale: 1.02,
-                  boxShadow: "0 0 24px rgba(59,130,246,0.6)",
-                }}
+                whileHover={
+                  isFrozen
+                    ? {}
+                    : {
+                        scale: 1.02,
+                        boxShadow: "0 0 24px rgba(59,130,246,0.6)",
+                      }
+                }
                 whileTap={isFrozen ? {} : { scale: 0.97 }}
                 style={{
                   width: "100%",
                   padding: "16px 24px",
                   borderRadius: 20,
                   border: "none",
-                  background: isFrozen 
+                  background: isFrozen
                     ? "linear-gradient(120deg,#9ca3af,#6b7280)"
                     : "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
                   backgroundSize: "220% 220%",
@@ -737,14 +1031,18 @@ function VendorLogin() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: isFrozen 
+                  boxShadow: isFrozen
                     ? "0 8px 24px rgba(107,114,128,0.3)"
                     : "0 16px 40px rgba(59,130,246,0.4), 0 0 0 1px rgba(59,130,246,0.3)",
                   opacity: isFrozen ? 0.7 : 1,
                 }}
-                animate={!isFrozen ? {
-                  backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                } : {}}
+                animate={
+                  !isFrozen
+                    ? {
+                        backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                      }
+                    : {}
+                }
                 transition={{
                   duration: 3,
                   repeat: !isFrozen ? Infinity : 0,
@@ -755,8 +1053,100 @@ function VendorLogin() {
               </motion.button>
             </motion.div>
           </motion.div>
+
+          {/* SEPARATE REFUND CARD */}
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.25, duration: 0.45, ease: easingSoft }}
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              borderRadius: 24,
+              padding: "18px 20px 16px",
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              ...(isLight
+                ? {
+                    background:
+                      "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(239,246,255,0.98))",
+                    border: "1px solid rgba(209,213,219,0.9)",
+                    boxShadow:
+                      "0 14px 30px rgba(15,23,42,0.18), 0 0 0 1px rgba(148,163,184,0.3)",
+                  }
+                : {
+                    background:
+                      "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(15,23,42,1))",
+                    border: "1px solid rgba(30,64,175,0.85)",
+                    boxShadow:
+                      "0 16px 40px rgba(15,23,42,0.85), 0 0 0 1px rgba(30,64,175,0.7)",
+                  }),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 10,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: textMain,
+                }}
+              >
+                Refund actions
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: textSub,
+                }}
+              >
+                Kept separate from QR to avoid mis‑tap
+              </span>
+            </div>
+
+            <motion.button
+              type="button"
+              onClick={() =>
+                navigate("/refund", { state: { vendorId, vendorName } })
+              }
+              whileHover={{
+                scale: 1.02,
+                boxShadow: "0 14px 32px rgba(34,197,94,0.5)",
+              }}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                width: "100%",
+                padding: "12px 18px",
+                borderRadius: 16,
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                background:
+                  "linear-gradient(120deg,#22c55e,#16a34a,#0f766e)",
+                color: "#ecfdf5",
+                boxShadow:
+                  "0 12px 28px rgba(34,197,94,0.5), 0 0 0 1px rgba(21,128,61,0.5)",
+              }}
+            >
+              <span>💸</span>
+              <span>Refund Amount</span>
+            </motion.button>
+          </motion.div>
         </motion.div>
-       
       </div>
     </>
   );
