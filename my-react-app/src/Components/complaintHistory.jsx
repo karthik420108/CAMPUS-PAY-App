@@ -707,8 +707,8 @@ function ComplaintHistory() {
                           {c.description || "—"}
                         </p>
 
-                        {/* admins */}
-                        <p style={{ margin: 0, lineHeight: 1.5 }}>
+                        {/* ✅ ADMINS */}
+                       { role != "vendor" && <p style={{ margin: 0, lineHeight: 1.5 }}>
                           <span
                             style={{
                               fontWeight: 600,
@@ -731,7 +731,7 @@ function ComplaintHistory() {
                                 .filter(Boolean)
                                 .join(", ")
                             : "—"}
-                        </p>
+                        </p>}
 
                         {/* date */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>

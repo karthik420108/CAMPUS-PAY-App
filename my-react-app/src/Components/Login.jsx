@@ -727,7 +727,8 @@ function Login() {
                   color: "transparent",
                 }}
               >
-                ₹{walletBalance?.toLocaleString() || "0"}
+                ₹{wallBalance?.toLocaleString() || "0"}
+
               </h3>
             </motion.div>
 
@@ -779,7 +780,8 @@ function Login() {
                   color: "transparent",
                 }}
               >
-                ₹{instBalance?.toLocaleString() || "0"}
+                ₹{InstaBalance?.toLocaleString() || "0"}
+
               </h3>
             </motion.div>
 
