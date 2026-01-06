@@ -1,1 +1,4 @@
 backend/uploads/subAdminPics/bd44a52d-2c2c-4737-a17c-65b9c2c9926e.jpg
+# dependencies
+node_modules/
+package-lock.json

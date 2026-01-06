@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
+import Header from "./Header3"
 
 function SubAdminDashboard() {
   const navigate = useNavigate();
@@ -109,6 +110,8 @@ function SubAdminDashboard() {
 
   return (
     <SubAdminStatusChecker subAdminId={subAdminId}>
+
+      <Header/>
       <motion.div
         style={{
           minHeight: "100vh",

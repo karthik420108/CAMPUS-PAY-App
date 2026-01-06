@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
+import Header from "./Header3"
 
 function VendorLogin() {
   const { state } = useLocation();
@@ -160,6 +161,7 @@ function VendorLogin() {
   return (
     <>
       <Header1 userId = {vendorId} role = "vendor" isFrozen = {isFrozen} isOp = {setSidebarOpen} />
+      <Header></Header>
       <SuspensionBanner show={showSuspensionBanner} />
       
       {/* click-outside wrapper */}

@@ -8,6 +8,7 @@ import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import ScanPay from "./ScanPay";
 import { motion, AnimatePresence } from "motion/react";
+import Header from "./Header3"
 
 dayjs.extend(isSameOrBefore);
 
@@ -264,6 +265,7 @@ function Login() {
   return (
     <>
       <Header1 role="student" userId={userId} isFrozen={isFrozen} />
+      <Header></Header>
 
       {/* Suspension Banner */}
       {suspended && (
