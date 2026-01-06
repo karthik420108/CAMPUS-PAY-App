@@ -153,8 +153,8 @@ function AdminLogin() {
       <div
         style={{
           position: "fixed",
-          top: 20,
-          right: 20,
+          top: 120,
+          right: 160,
           display: "flex",
           alignItems: "center",
           gap: 6,
