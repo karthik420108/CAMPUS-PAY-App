@@ -1709,6 +1709,55 @@ app.post("/subadmin/complaint/:id/forward", async (req, res) => {
   }
 });
 
+// Get forwarded complaints by a specific subadmin
+app.get("/subadmin/:id/forwarded-complaints", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("Fetching forwarded complaints for subAdmin ID:", id);
+    
+    // Get complaints where this subadmin's ID is in the forwardedBy field
+    const complaints = await Complaint.find({ 
+      forwardedBy: id,
+      isForwarded: true
+    }).lean().sort({ createdAt: -1 });
+
+    // Manually populate user data like the regular complaints endpoint
+    const populatedComplaints = await Promise.all(
+      complaints.map(async (complaint) => {
+        let user = null;
+        
+        console.log(`Processing forwarded complaint ${complaint.complaintId}, role: ${complaint.role}, userId: ${complaint.userId}`);
+        
+        // Populate user based on role
+        if (complaint.role === "vendor") {
+          user = await Vendor.findById(complaint.userId)
+            .select("vendorName Email vendorId Phone");
+        } else {
+          user = await User.findById(complaint.userId)
+            .select("firstName lastName collegeEmail Phone");
+        }
+        
+        console.log(`Found user for forwarded complaint:`, user);
+
+        return {
+          ...complaint,
+          userId: user
+        };
+      })
+    );
+
+    console.log(`Found ${populatedComplaints.length} forwarded complaints for subadmin ${id}`);
+    populatedComplaints.forEach(complaint => {
+      console.log(`Forwarded Complaint: ${complaint.complaintId}, User: ${complaint.userId?.firstName || complaint.userId?.vendorName}, Status: ${complaint.status}`);
+    });
+
+    res.json(populatedComplaints);
+  } catch (err) {
+    console.error("Error fetching forwarded complaints:", err);
+    res.status(500).json({ message: "Failed to fetch forwarded complaints" });
+  }
+});
+
 // Check if SubAdmin exists and their status
 app.get("/subadmin/check/:id", async (req, res) => {
   try {

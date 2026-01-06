@@ -10,7 +10,7 @@ function SubAdminComplaints({ state }) {
   // --- Original Logic State ---
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("pending"); // "pending" or "resolved"
+  const [activeTab, setActiveTab] = useState("pending"); // "pending", "resolved", or "forwarded"
   const [searchTerm, setSearchTerm] = useState("");
   const [responseModal, setResponseModal] = useState({
     isOpen: false,
@@ -20,6 +20,8 @@ function SubAdminComplaints({ state }) {
 
   // --- Theme State ---
   const [theme, setTheme] = useState("light");
+
+  const [forwardedComplaints, setForwardedComplaints] = useState([]);
 
   const fetchComplaints = useCallback(async () => {
     try {
@@ -47,9 +49,34 @@ function SubAdminComplaints({ state }) {
     }
   }, [state?.subAdminId]);
 
+  const fetchForwardedComplaints = useCallback(async () => {
+    try {
+      // Get subAdminId from state or localStorage
+      const subAdminId =
+        state?.subAdminId || localStorage.getItem("subAdminId");
+
+      if (!subAdminId) {
+        console.error("No subAdminId found in state or localStorage");
+        alert("SubAdmin ID not found. Please log in again.");
+        return;
+      }
+
+      console.log("Fetching forwarded complaints for subAdminId:", subAdminId);
+      const res = await axios.get(
+        `http://localhost:5000/subadmin/${subAdminId}/forwarded-complaints`
+      );
+      console.log("Forwarded complaints response:", res.data);
+      setForwardedComplaints(res.data);
+    } catch (err) {
+      console.error("Failed to fetch forwarded complaints:", err);
+      alert("Failed to load forwarded complaints");
+    }
+  }, [state?.subAdminId]);
+
   useEffect(() => {
     fetchComplaints();
-  }, [fetchComplaints]);
+    fetchForwardedComplaints();
+  }, [fetchComplaints, fetchForwardedComplaints]);
 
   const handleResponse = (complaintId) => {
     setResponseModal({ isOpen: true, complaintId, response: "" });
@@ -126,14 +153,34 @@ function SubAdminComplaints({ state }) {
     );
   });
 
+  const filteredForwardedComplaints = forwardedComplaints.filter((complaint) => {
+    const searchLower = searchTerm.toLowerCase();
+    const studentName = complaint.role === "vendor" 
+      ? complaint.userId?.vendorName || ""
+      : `${complaint.userId?.firstName || ""} ${complaint.userId?.lastName || ""}`.trim();
+    const studentEmail = complaint.role === "vendor"
+      ? complaint.userId?.Email || ""
+      : complaint.userId?.collegeEmail || "";
+    
+    return (
+      studentName?.toLowerCase().includes(searchLower) ||
+      studentEmail?.toLowerCase().includes(searchLower) ||
+      complaint.description?.toLowerCase().includes(searchLower) ||
+      complaint.complaintId?.toLowerCase().includes(searchLower)
+    );
+  });
+
   const pendingComplaints = filteredComplaints.filter(
     (c) => c.status !== "resolved"
   );
   const resolvedComplaints = filteredComplaints.filter(
     (c) => c.status === "resolved"
   );
+  
   const currentComplaints =
-    activeTab === "pending" ? pendingComplaints : resolvedComplaints;
+    activeTab === "pending" ? pendingComplaints : 
+    activeTab === "resolved" ? resolvedComplaints : 
+    filteredForwardedComplaints;
 
   // --- STYLING CONSTANTS ---
   const isLight = theme === "light";
@@ -428,6 +475,25 @@ function SubAdminComplaints({ state }) {
                 >
                   ✅ Resolved ({resolvedComplaints.length})
                 </button>
+                <button
+                  onClick={() => setActiveTab("forwarded")}
+                  style={{
+                    ...buttonBase,
+                    background:
+                      activeTab === "forwarded"
+                        ? "#8b5cf6"
+                        : isLight
+                        ? "#f1f5f9"
+                        : "#1e293b",
+                    color: activeTab === "forwarded" ? "white" : textSub,
+                    border:
+                      activeTab === "forwarded"
+                        ? "none"
+                        : `1px solid ${isLight ? "#e2e8f0" : "#334155"}`,
+                  }}
+                >
+                  📤 Forwarded to Admin ({forwardedComplaints.length})
+                </button>
               </div>
             </div>
           </div>
@@ -471,7 +537,9 @@ function SubAdminComplaints({ state }) {
                 >
                   {activeTab === "pending"
                     ? "No pending complaints found"
-                    : "No resolved complaints found"}
+                    : activeTab === "resolved"
+                    ? "No resolved complaints found"
+                    : "No forwarded complaints found"}
                 </motion.div>
               ) : (
                 currentComplaints.map((complaint) => (
@@ -511,6 +579,10 @@ function SubAdminComplaints({ state }) {
                               background:
                                 complaint.status === "resolved"
                                   ? "#22c55e"
+                                  : complaint.status === "active"
+                                  ? "#f59e0b"
+                                  : activeTab === "forwarded"
+                                  ? "#8b5cf6"
                                   : "#f59e0b",
                               color: "white",
                               borderRadius: "20px",
@@ -519,7 +591,7 @@ function SubAdminComplaints({ state }) {
                               textTransform: "uppercase",
                             }}
                           >
-                            {complaint.status}
+                            {activeTab === "forwarded" ? "Forwarded to Admin" : complaint.status}
                           </span>
                           <span
                             style={{
@@ -633,7 +705,7 @@ function SubAdminComplaints({ state }) {
                       </div>
                     )}
 
-                    {complaint.status === "active" && (
+                    {complaint.status === "active" && activeTab !== "forwarded" && (
                       <div style={{ display: "flex", gap: "10px" }}>
                         <button
                           onClick={() => handleResponse(complaint._id)}
@@ -656,6 +728,23 @@ function SubAdminComplaints({ state }) {
                         >
                           Forward to Admin
                         </button>
+                      </div>
+                    )}
+
+                    {activeTab === "forwarded" && (
+                      <div style={{ 
+                        padding: "12px 16px",
+                        background: "rgba(139, 92, 246, 0.1)",
+                        border: "1px solid rgba(139, 92, 246, 0.3)",
+                        borderRadius: "8px",
+                        color: "#7c3aed",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px"
+                      }}>
+                        📤 This complaint has been forwarded to Admin for review
                       </div>
                     )}
                   </motion.div>
