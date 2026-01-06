@@ -110,7 +110,6 @@ function SubAdminDashboard() {
 
   return (
     <SubAdminStatusChecker subAdminId={subAdminId}>
-
       <Header/>
       <motion.div
         style={{
