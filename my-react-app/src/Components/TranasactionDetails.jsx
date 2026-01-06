@@ -1,19 +1,21 @@
-import { useState , useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import axios from 'axios'
+import axios from "axios";
 
 function TransactionDetails() {
   const { state } = useLocation();
+  console.log("Role : ", state.role);
+  const role = state.role;
   const navigate = useNavigate();
-  const [vendorName , setvendorName] = useState("");
+  const [vendorName, setvendorName] = useState("");
 
   const txn = state?.txn;
-  console.log('Transaction data:', txn);
-  console.log('User data:', txn?.userId);
-  console.log('First name:', txn?.userId?.firstName);
-  console.log('Last name:', txn?.userId?.lastName);
-  console.log('Email:', txn?.userId?.email);
+  console.log("Transaction data:", txn);
+  console.log("User data:", txn?.userId);
+  console.log("First name:", txn?.userId?.firstName);
+  console.log("Last name:", txn?.userId?.lastName);
+  console.log("Email:", txn?.userId?.email);
 
   const [theme, setTheme] = useState("light"); // "light" | "dark"
 
@@ -26,22 +28,21 @@ function TransactionDetails() {
     );
   }
   const txid = txn.txid;
-  console.log("trnsa"+txid)
+  console.log("trnsa" + txid);
   useEffect(() => {
-  const fetchVendor = async () => {
-    if (!txid) return navigate(-1);
+    const fetchVendor = async () => {
+      if (!txid) return navigate(-1);
 
-    try {
-      const res = await axios.post("http://localhost:5000/vn", { txid });
-      setvendorName(res.data)
-    } catch (err) {
-      console.error(err);
-    }
-  };
+      try {
+        const res = await axios.post("http://localhost:5000/vn", { txid });
+        setvendorName(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
 
-  fetchVendor();
-}, [txid, navigate]);
-
+    fetchVendor();
+  }, [txid, navigate]);
 
   const easingSoft = [0.16, 1, 0.3, 1];
   const isLight = theme === "light";
@@ -143,7 +144,10 @@ function TransactionDetails() {
       <motion.button
         type="button"
         onClick={() => navigate(-1)}
-        whileHover={{ scale: 1.02, boxShadow: "0 0 18px rgba(129,140,248,0.85)" }}
+        whileHover={{
+          scale: 1.02,
+          boxShadow: "0 0 18px rgba(129,140,248,0.85)",
+        }}
         whileTap={{ scale: 0.97 }}
         style={{
           position: "absolute",
@@ -213,7 +217,9 @@ function TransactionDetails() {
           <span style={{ color: "#6b7280" }}>Mode</span>
           <button
             type="button"
-            onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+            onClick={() =>
+              setTheme((prev) => (prev === "light" ? "dark" : "light"))
+            }
             style={{
               border: "none",
               borderRadius: 999,
@@ -236,10 +242,19 @@ function TransactionDetails() {
 
         {/* Header */}
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: textSub }}>
+          <span
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: textSub,
+            }}
+          >
             Transaction
           </span>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: textMain }}>Transaction Details</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: textMain }}>
+            Transaction Details
+          </h2>
         </div>
 
         {/* Divider */}
@@ -257,8 +272,16 @@ function TransactionDetails() {
         {/* Transaction Details */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* TXID */}
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
-            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>TXID</span>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "160px 1fr",
+              gap: 12,
+            }}
+          >
+            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+              TXID
+            </span>
             <div
               style={{
                 fontSize: 13,
@@ -266,9 +289,13 @@ function TransactionDetails() {
                 color: textMain,
                 wordBreak: "break-all",
                 padding: "10px 14px",
-                background: isLight ? "rgba(219,234,254,0.6)" : "rgba(30,64,175,0.2)",
+                background: isLight
+                  ? "rgba(219,234,254,0.6)"
+                  : "rgba(30,64,175,0.2)",
                 borderRadius: 12,
-                border: `1px solid ${isLight ? "rgba(148,163,184,0.4)" : "rgba(51,65,85,0.6)"}`,
+                border: `1px solid ${
+                  isLight ? "rgba(148,163,184,0.4)" : "rgba(51,65,85,0.6)"
+                }`,
               }}
             >
               {txn.txid}
@@ -276,14 +303,34 @@ function TransactionDetails() {
           </div>
 
           {/* Amount */}
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12, alignItems: "center" }}>
-            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>Amount</span>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#059669" }}>₹{txn.amount}</div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "160px 1fr",
+              gap: 12,
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+              Amount
+            </span>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#059669" }}>
+              ₹{txn.amount}
+            </div>
           </div>
 
           {/* Status */}
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12, alignItems: "center" }}>
-            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>Status</span>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "160px 1fr",
+              gap: 12,
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+              Status
+            </span>
             <div
               style={{
                 padding: "8px 16px",
@@ -311,38 +358,99 @@ function TransactionDetails() {
           </div>
 
           {/* User */}
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
-            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>User</span>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "160px 1fr",
+              gap: 12,
+            }}
+          >
+            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+              User
+            </span>
             <div style={{ fontSize: 15, color: textMain, fontWeight: 500 }}>
-              {txn.firstName} {txn.lastName}
+              {role !== "vendor"
+                ? `${txn.firstName} ${txn.lastName}`
+                : `${txn?.userId?.firstName} ${txn?.userId?.lastName}`}
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
-            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>Vendor Id</span>
-            <div style={{ fontSize: 15, color: textMain, fontWeight: 500 }}>
-              {txn.vendorid}
+          {state.role != "vendor" && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "160px 1fr",
+                gap: 12,
+              }}
+            >
+              <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+                Vendor Id
+              </span>
+              <div style={{ fontSize: 15, color: textMain, fontWeight: 500 }}>
+                {txn.vendorid}
+              </div>
             </div>
-          </div>
+          )}
+
+          {role === "vendor" && (
+  <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
+    <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+      User Email
+    </span>
+    <div style={{ fontSize: 15, color: textMain, fontWeight: 500 }}>
+      {txn.userId?.collegeEmail}
+    </div>
+  </div>
+)}
 
 
           {/* Vendor */}
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
-            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>Vendor</span>
-            <div style={{ fontSize: 15, color: textMain, fontWeight: 500 }}>{vendorName}</div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "160px 1fr",
+              gap: 12,
+            }}
+          >
+            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+              Vendor
+            </span>
+            <div style={{ fontSize: 15, color: textMain, fontWeight: 500 }}>
+              {vendorName}
+            </div>
           </div>
 
           {/* Created */}
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
-            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>Created</span>
-            <div style={{ fontSize: 14, color: textMain }}>{new Date(txn.createdAt).toLocaleString()}</div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "160px 1fr",
+              gap: 12,
+            }}
+          >
+            <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+              Created
+            </span>
+            <div style={{ fontSize: 14, color: textMain }}>
+              {new Date(txn.createdAt).toLocaleString()}
+            </div>
           </div>
 
           {/* Completed */}
           {txn.completedAt && (
-            <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
-              <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>Completed</span>
-              <div style={{ fontSize: 14, color: textMain }}>{new Date(txn.completedAt).toLocaleString()}</div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "160px 1fr",
+                gap: 12,
+              }}
+            >
+              <span style={{ fontWeight: 600, color: textSub, fontSize: 13 }}>
+                Completed
+              </span>
+              <div style={{ fontSize: 14, color: textMain }}>
+                {new Date(txn.completedAt).toLocaleString()}
+              </div>
             </div>
           )}
         </div>

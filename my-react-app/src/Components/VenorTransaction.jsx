@@ -424,7 +424,7 @@ function VendorTransactions() {
                     }}
                     onClick={() =>
                       navigate(`/transaction/${t.txid}`, {
-                        state: { txn: t },
+                        state: { txn : t  , role : "vendor"},
                       })
                     }
                     style={{

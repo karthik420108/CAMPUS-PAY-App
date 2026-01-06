@@ -787,47 +787,58 @@ app.get("/transactions/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
-    // Find the user
+    // 1️⃣ Find user
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-    // Get user's transactions sorted by createdAt
+    const { firstName, lastName } = user;
+
+    // 2️⃣ Sort user's transactions
     const transactions = (user.transactions || []).sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      
     );
 
-    // User's first & last name
-    const { firstName, lastName } = user;
-    console.log(firstName +" " + lastName)
-    let vendorid = ""
-    // Populate vendor name for each transaction
-    const transactionsWithNames = await Promise.all(
+    // 3️⃣ Enrich each transaction
+    const enrichedTransactions = await Promise.all(
       transactions.map(async (tx) => {
         let vendorName = "Unknown Vendor";
-        if (tx.vendorId) {
-          const vendor = await Vendor.findById(tx.vendorId);
-          if (vendor) vendorName = vendor.vendorName;
-          vendorid = vendor.vendorid
+        let vendorid = null;
+        let vendorEmail = null;
+
+        // 🔍 Find transaction using txid
+        const fullTx = await Transaction.findOne({ txid: tx.txid });
+
+        if (fullTx?.vendorId) {
+          // 🔍 Find vendor using vendorId
+          const vendor = await Vendor.findById(fullTx.vendorId);
+
+          if (vendor) {
+            vendorName = vendor.vendorName;
+            vendorid = vendor.vendorid;
+            vendorEmail = vendor.Email;
+          }
         }
-        
+
         return {
-          ...tx.toObject(), // Convert Mongoose doc to plain object
-          vendorid,
+          ...tx.toObject(),
           firstName,
           lastName,
           vendorName,
+          vendorid,
+          vendorEmail,
         };
       })
     );
 
-    console.log("Transactions with vendor names:", transactionsWithNames);
-    res.json(transactionsWithNames);
+    res.json(enrichedTransactions);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch transactions" });
   }
 });
+
 
 
 
