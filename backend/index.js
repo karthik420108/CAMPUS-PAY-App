@@ -3780,6 +3780,65 @@ app.post("/admin/redeem/update-status", async (req, res) => {
   }
 });
 
+// Get all redeem requests history (all statuses) for admin
+app.get("/admin/redeem-history", async (req, res) => {
+  try {
+    const { search, status, startDate, endDate } = req.query;
+    
+    // Build query
+    let query = {};
+    
+    // Filter by status if provided
+    if (status && status !== "all") {
+      query.status = status;
+    }
+    
+    // Filter by date range if provided
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) {
+        query.date.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.date.$lte = new Date(endDate);
+      }
+    }
+    
+    // Base query - fetch all redeems (not just pending)
+    let redeemQuery = Redeem.find(query)
+      .populate("userId", "vendorName Email Phone _id")
+      .sort({ date: -1 });
+    
+    const redeems = await redeemQuery;
+    
+    // Apply search filter if provided (client-side filtering for vendor name)
+    let filteredRedeems = redeems;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredRedeems = redeems.filter(redeem => {
+        const vendorName = redeem.userId?.vendorName?.toLowerCase() || "";
+        const vendorEmail = redeem.userId?.Email?.toLowerCase() || "";
+        const vendorPhone = redeem.userId?.Phone?.toLowerCase() || "";
+        const amount = redeem.amount?.toString() || "";
+        const ifsc = redeem.Ifsc?.toLowerCase() || "";
+        const account = redeem.Acc?.toLowerCase() || "";
+        
+        return vendorName.includes(searchLower) ||
+               vendorEmail.includes(searchLower) ||
+               vendorPhone.includes(searchLower) ||
+               amount.includes(searchLower) ||
+               ifsc.includes(searchLower) ||
+               account.includes(searchLower);
+      });
+    }
+    
+    res.json(filteredRedeems);
+  } catch (err) {
+    console.error("Error fetching redeem history:", err);
+    res.status(500).json({ msg: "Failed to fetch redeem history" });
+  }
+});
+
 
 // Get notifications for user
 app.get("/user/:userId/notifications", async (req, res) => {

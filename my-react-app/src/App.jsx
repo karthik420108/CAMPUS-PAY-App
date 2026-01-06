@@ -26,7 +26,7 @@ import EditProfile from "./Components/EditProfile.jsx";
 import RoleSelect from "./Components/Roleselect.jsx";
 import VendorLogin from "./Components/VendorLogin.jsx";
 import GenerateQR from "./Components/GenerateQr.jsx";
-import RedeemHistoryButton from "./Components/Reedemhistory.jsx";
+import AdminRedeemHistory from "./Components/RedeemHistory.jsx";
 import RedeemForm from "./Components/Redeem.jsx";
 import ChangeMpin from "./Components/ChangeMpin.jsx";
 import VendorChangeMpin from "./Components/VendorChangeMpin.jsx";
@@ -141,7 +141,7 @@ function App() {
    element={<TransactionDetails />}
   />
 
-        <Route path = "/redeem-history" element={<RedeemHistoryButton />} />
+        <Route path = "/redeem-history" element={<AdminRedeemHistory />} />
         <Route path="/generate-qr" element={<GenerateQR />} />
 
         <Route path="/edit-profile" element={<EditProfile />} />
