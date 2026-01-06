@@ -2856,6 +2856,60 @@ app.post("/change-mpin", async (req, res) => {
   }
 });
 
+// ------------------- VERIFY VENDOR OLD MPIN -------------------
+app.post("/verify-vendor-old-mpin", async (req, res) => {
+  const { vendorId, oldMpin } = req.body;
+
+  if (!vendorId || !oldMpin) {
+    return res.status(400).json({ success: false, message: "Vendor ID and old MPIN are required" });
+  }
+
+  try {
+    // Find vendor by ID
+    const vendor = await Vendor.findById(vendorId);
+    
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: "Vendor not found" });
+    }
+
+    // Verify old MPIN - try multiple comparison methods
+    const storedMpinStr = vendor.Mpin?.toString()?.trim();
+    const inputMpinStr = oldMpin?.toString()?.trim();
+    
+    if (storedMpinStr !== inputMpinStr) {
+      return res.status(400).json({ success: false, message: "Invalid MPIN" });
+    }
+
+    res.json({ success: true, message: "MPIN verified successfully" });
+  } catch (error) {
+    console.error("Error verifying vendor old MPIN:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ------------------- CHANGE VENDOR MPIN -------------------
+app.post("/change-vendor-mpin", async (req, res) => {
+  const { vendorId, newMpin } = req.body;
+
+  if (!vendorId || !newMpin) {
+    return res.status(400).json({ success: false, message: "Vendor ID and new MPIN are required" });
+  }
+
+  if (newMpin.length !== 6 || !/^\d+$/.test(newMpin)) {
+    return res.status(400).json({ success: false, message: "New MPIN must be 6 digits" });
+  }
+
+  try {
+    // Update vendor's MPIN
+    await Vendor.findByIdAndUpdate(vendorId, { Mpin: newMpin });
+
+    res.json({ success: true, message: "MPIN changed successfully" });
+  } catch (error) {
+    console.error("Error changing vendor MPIN:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 const client = new OAuth2Client(
   "299305949480-re6bmtmv7piq101mnt6l6dkanoplpmip.apps.googleusercontent.com"
 );
