@@ -746,7 +746,7 @@ useEffect(() => {
                         </p>
 
                         {/* ✅ ADMINS */}
-                        <p style={{ margin: 0, lineHeight: 1.5 }}>
+                       { role != "vendor" && <p style={{ margin: 0, lineHeight: 1.5 }}>
                           <span
                             style={{
                               fontWeight: 600,
@@ -769,7 +769,7 @@ useEffect(() => {
                                 .filter(Boolean)
                                 .join(", ")
                             : "—"}
-                        </p>
+                        </p>}
 
                         {/* ✅ DATE */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
