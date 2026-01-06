@@ -606,6 +606,28 @@ function Login() {
                     >
                       ✏️ Edit Profile
                     </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() =>
+                        navigate("/change-mpin", {
+                          state: { userId },
+                        })
+                      }
+                      style={{
+                        padding: "10px 16px",
+                        border: "none",
+                        borderRadius: "12px",
+                        background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                        color: "white",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontSize: "13px",
+                        textAlign: "left",
+                      }}
+                    >
+                      🔐 Change MPIN
+                    </motion.button>
                   </motion.div>
                 )}
               </AnimatePresence>

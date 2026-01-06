@@ -28,6 +28,8 @@ import VendorLogin from "./Components/VendorLogin.jsx";
 import GenerateQR from "./Components/GenerateQr.jsx";
 import RedeemHistoryButton from "./Components/Reedemhistory.jsx";
 import RedeemForm from "./Components/Redeem.jsx";
+import ChangeMpin from "./Components/ChangeMpin.jsx";
+import VendorChangeMpin from "./Components/VendorChangeMpin.jsx";
 
 
 
@@ -113,6 +115,7 @@ function App() {
         <Route path = "/add-funds" element = {<AddFunds/>}/>
         <Route path = "/notifications" element = {<Notifications/>}/>
         <Route path="/vlogin" element={<VendorLogin />} />
+        <Route path="/vendor-change-mpin" element={<VendorChangeMpin />} />
         <Route path="/generate-bill" element={<GenerateBill />} />
 
         <Route path="/role-select" element={<RoleSelect setRole={setRole} />} />
@@ -142,6 +145,8 @@ function App() {
         <Route path="/generate-qr" element={<GenerateQR />} />
 
         <Route path="/edit-profile" element={<EditProfile />} />
+
+        <Route path="/change-mpin" element={<ChangeMpin />} />
 
         <Route path="/reset-mpin" element={<ResetMpin />} />
 

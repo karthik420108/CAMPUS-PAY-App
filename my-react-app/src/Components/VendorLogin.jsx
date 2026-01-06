@@ -142,28 +142,18 @@ function VendorLogin() {
     setShowProfileOption(false);
   };
 
-  const goToNotifications = () => {
-    navigate("/notifications", { state: { Id: vendorId , role : "vendor"} });
-    setShowProfileOption(false);
-  };
-
   const goToViewProfile = () => {
     console.log(vendorId)
     navigate("/viewv", { state: { vendorId , role : "vendor"} });
     setShowProfileOption(false);
   };
 
-  const goToTransactions = () => {
-    navigate("/vendor-transaction", { state: { vendorId } });
-    setShowProfileOption(false);
-  };
-
-  const goToRaiseComplaint = () => {
-    navigate("/raise-complaint", { state: { vendorId, role: "vendor" } });
-    setShowProfileOption(false);
-  };
-
   const handleLogout = () => {
+    // Clear any stored auth data
+    localStorage.removeItem("vendorAuth");
+    localStorage.removeItem("vendorId");
+    
+    // Navigate back to login
     navigate("/");
   };
 
@@ -493,7 +483,10 @@ function VendorLogin() {
                     ✏️ Edit profile
                   </button>
                   <button
-                    onClick={goToNotifications}
+                    onClick={() => {
+                      navigate("/vendor-change-mpin", { state: { vendorId } });
+                      setShowProfileOption(false);
+                    }}
                     style={{
                       width: "100%",
                       textAlign: "left",
@@ -507,41 +500,7 @@ function VendorLogin() {
                       cursor: "pointer",
                     }}
                   >
-                    🔔 Notifications from admin
-                  </button>
-                  <button
-                    onClick={goToTransactions}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "none",
-                      background: "transparent",
-                      color: textMain,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                    }}
-                  >
-                    📊 View Transactions
-                  </button>
-                  <button
-                    onClick={goToRaiseComplaint}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "none",
-                      background: "transparent",
-                      color: textMain,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                    }}
-                  >
-                    📝 Raise Complaint
+                    🔐 Change MPIN
                   </button>
                   <button
                     onClick={handleLogout}
@@ -795,22 +754,6 @@ function VendorLogin() {
         </motion.div>
        
       </div>
-      <button 
-        onClick={isFrozen ? null : () => navigate("/refund", { state: { vendorId } })}
-        disabled={isFrozen}
-        style={{
-          opacity: isFrozen ? 0.5 : 1,
-          cursor: isFrozen ? "not-allowed" : "pointer",
-          backgroundColor: isFrozen ? "#9ca3af" : "#3b82f6",
-          color: "white",
-          padding: "8px 16px",
-          border: "none",
-          borderRadius: "8px",
-          marginTop: "16px"
-        }}
-      >
-        {isFrozen ? "Account Frozen" : "Refund Money"}
-      </button>
     </>
   );
 }
