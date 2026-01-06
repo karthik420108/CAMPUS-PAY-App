@@ -10,7 +10,7 @@ function ChangeMpin() {
   const location = useLocation();
   const { userId } = location.state || {};
 
-  const [step, setStep] = useState(1); // Step 1: Verify old MPIN, Step 2: Set new MPIN
+  const [step, setStep] = useState(1);
   const [oldMpin, setOldMpin] = useState("");
   const [newMpin, setNewMpin] = useState("");
   const [confirmMpin, setConfirmMpin] = useState("");
@@ -20,92 +20,154 @@ function ChangeMpin() {
   const [theme, setTheme] = useState("light");
 
   const isLight = theme === "light";
+  const easingSoft = [0.16, 1, 0.3, 1];
 
   useEffect(() => {
     if (!userId) navigate("/");
   }, [userId, navigate]);
 
-  const pageStyle = {
-    minHeight: "100vh",
-    background: isLight 
-      ? "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)"
-      : "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "20px",
-    position: "relative",
-    overflow: "hidden"
-  };
+  // ===== THEME (same pattern as RaiseComplaint) =====
+  const pageStyle = isLight
+    ? {
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+        overflow: "hidden",
+        position: "relative",
+        background:
+          "radial-gradient(circle at 0% 0%, #e0f2fe 0, transparent 55%)," +
+          "radial-gradient(circle at 100% 0%, #dbeafe 0, transparent 55%)," +
+          "radial-gradient(circle at 0% 100%, #e0f2fe 0, transparent 55%)," +
+          "radial-gradient(circle at 100% 100%, #d1fae5 0, transparent 55%)",
+        backgroundColor: "#f3f4f6",
+      }
+    : {
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+        overflow: "hidden",
+        position: "relative",
+        backgroundColor: "#020617",
+        backgroundImage:
+          "radial-gradient(circle at 0% 0%, rgba(37,99,235,0.35), transparent 55%)," +
+          "radial-gradient(circle at 100% 0%, rgba(56,189,248,0.30), transparent 55%)," +
+          "radial-gradient(circle at 0% 100%, rgba(16,185,129,0.18), transparent 55%)," +
+          "radial-gradient(circle at 100% 100%, rgba(37,99,235,0.32), transparent 55%)," +
+          "linear-gradient(to right, rgba(15,23,42,0.9) 1px, transparent 1px)," +
+          "linear-gradient(to bottom, rgba(15,23,42,0.9) 1px, transparent 1px)",
+        backgroundSize: "cover, cover, cover, cover, 80px 80px, 80px 80px",
+        backgroundPosition: "center, center, center, center, 0 0, 0 0",
+      };
 
-  const cardStyle = {
-    background: isLight 
-      ? "rgba(255,255,255,0.95)"
-      : "rgba(30,41,59,0.95)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-    borderRadius: "24px",
-    padding: "40px",
-    boxShadow: isLight 
-      ? "0 20px 60px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)"
-      : "0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)",
-    border: isLight 
-      ? "1px solid rgba(255,255,255,0.8)"
-      : "1px solid rgba(255,255,255,0.1)",
-    maxWidth: "480px",
-    width: "100%",
-    position: "relative",
-    zIndex: 10
-  };
+  const textMain = isLight ? "#0f172a" : "#e5e7eb";
+  const textSub = isLight ? "#6b7280" : "#94a3b8";
 
-  const inputStyle = {
+  const cardStyle = isLight
+    ? {
+        background:
+          "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(239,246,255,0.98))",
+        border: "1px solid rgba(148,163,184,0.35)",
+        boxShadow:
+          "0 16px 38px rgba(15,23,42,0.18), 0 0 0 1px rgba(148,163,184,0.28)",
+        borderRadius: 28,
+        padding: "28px 24px 22px",
+        width: "100%",
+        maxWidth: 520,
+        position: "relative",
+        zIndex: 10,
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+      }
+    : {
+        background:
+          "linear-gradient(145deg, rgba(15,23,42,0.88), rgba(15,23,42,0.98))",
+        border: "1px solid rgba(148,163,184,0.45)",
+        boxShadow:
+          "0 18px 55px rgba(15,23,42,0.85), 0 0 0 1px rgba(30,64,175,0.65)",
+        borderRadius: 28,
+        padding: "28px 24px 22px",
+        width: "100%",
+        maxWidth: 520,
+        position: "relative",
+        zIndex: 10,
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      };
+
+  const inputBase = {
     width: "100%",
-    padding: "16px 20px",
-    borderRadius: "16px",
-    border: `2px solid ${isLight ? "rgba(148,163,184,0.3)" : "rgba(71,85,105,0.4)"}`,
-    background: isLight 
-      ? "rgba(255,255,255,0.8)"
-      : "rgba(15,23,42,0.6)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    fontSize: "16px",
-    color: isLight ? "#1e293b" : "#f1f5f9",
+    padding: "14px 16px",
+    borderRadius: 16,
+    fontSize: 15,
     outline: "none",
-    transition: "all 0.3s ease",
-    marginBottom: "20px",
-    fontWeight: 500
+    transition: "all 0.25s ease",
+    marginBottom: 16,
+    fontWeight: 500,
   };
 
-  const buttonStyle = {
+  const inputStyle = isLight
+    ? {
+        ...inputBase,
+        border: "1px solid rgba(148,163,184,0.9)",
+        background:
+          "radial-gradient(circle at 0 0, rgba(219,234,254,0.9), transparent 70%), rgba(255,255,255,0.98)",
+        boxShadow:
+          "0 10px 24px rgba(15,23,42,0.10), inset 0 0 0 1px rgba(248,250,252,0.95)",
+        color: textMain,
+      }
+    : {
+        ...inputBase,
+        border: "1px solid rgba(51,65,85,0.95)",
+        background:
+          "radial-gradient(circle at 0 0, rgba(30,64,175,0.38), transparent 70%), #020617",
+        boxShadow:
+          "0 12px 30px rgba(15,23,42,0.75), inset 0 0 0 1px rgba(15,23,42,0.9)",
+        color: textMain,
+      };
+
+  const buttonBase = {
     width: "100%",
-    padding: "16px 24px",
-    borderRadius: "16px",
+    padding: "12px 18px",
+    borderRadius: 16,
     border: "none",
-    background: "linear-gradient(120deg,#8b5cf6,#7c3aed,#6d28d9)",
-    backgroundSize: "220% 220%",
-    color: "#ffffff",
     fontWeight: 700,
-    fontSize: "16px",
+    fontSize: 14,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
     cursor: "pointer",
-    boxShadow: "0 16px 40px rgba(139,92,246,0.4), 0 0 0 1px rgba(139,92,246,0.3)",
-    transition: "all 0.3s ease",
     position: "relative",
-    overflow: "hidden"
+    overflow: "hidden",
+  };
+
+  const primaryButtonStyle = {
+    ...buttonBase,
+    background:
+      "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
+    backgroundSize: "220% 220%",
+    color: "#f9fafb",
+    boxShadow:
+      "0 16px 40px rgba(59,130,246,0.35), 0 0 0 1px rgba(59,130,246,0.4)",
   };
 
   const secondaryButtonStyle = {
-    ...buttonStyle,
-    background: "linear-gradient(120deg,#64748b,#475569,#334155)",
-    boxShadow: "0 16px 40px rgba(100,116,139,0.3), 0 0 0 1px rgba(100,116,139,0.2)",
-    marginTop: "12px"
+    ...buttonBase,
+    marginTop: 10,
+    background: isLight
+      ? "linear-gradient(120deg,#64748b,#475569,#334155)"
+      : "linear-gradient(120deg,#0f172a,#020617,#020617)",
+    color: "#e5e7eb",
+    boxShadow:
+      "0 16px 40px rgba(100,116,139,0.3), 0 0 0 1px rgba(100,116,139,0.2)",
   };
 
-  // Step 1: Verify old MPIN
+  // ===== API handlers (unchanged) =====
   const handleVerifyOldMpin = async (e) => {
     e.preventDefault();
-    
+
     if (oldMpin.length !== 6 || !/^\d+$/.test(oldMpin)) {
       setMessage("Please enter valid 6-digit MPIN");
       return;
@@ -115,10 +177,10 @@ function ChangeMpin() {
     setMessage("");
 
     try {
-      const response = await axios.post("http://localhost:5000/verify-old-mpin", {
-        userId,
-        oldMpin
-      });
+      const response = await axios.post(
+        "http://localhost:5000/verify-old-mpin",
+        { userId, oldMpin }
+      );
 
       if (response.data.success) {
         setMessage("");
@@ -133,7 +195,6 @@ function ChangeMpin() {
     }
   };
 
-  // Step 2: Set new MPIN
   const handleSetNewMpin = async (e) => {
     e.preventDefault();
 
@@ -153,20 +214,19 @@ function ChangeMpin() {
     try {
       const response = await axios.post("http://localhost:5000/change-mpin", {
         userId,
-        newMpin
+        newMpin,
       });
 
       if (response.data.success) {
-        // Show success message
         setSuccessMessage("MPIN changed successfully!");
-        
-        // Fetch updated user data to maintain session
-        const userResponse = await axios.get(`http://localhost:5000/user/${userId}`);
+
+        const userResponse = await axios.get(
+          `http://localhost:5000/user/${userId}`
+        );
         const userData = userResponse.data;
-        
-        // Navigate back to user dashboard with full state
+
         setTimeout(() => {
-          navigate("/login", { 
+          navigate("/login", {
             state: {
               username: userData.firstName,
               userId: userData._id,
@@ -175,10 +235,10 @@ function ChangeMpin() {
               instBalance: userData.instBalance || 0,
               isFrozen: userData.isFrozen || false,
               isSuspended: userData.isSuspended || false,
-              userCreatedAt: userData.createdAt
-            }
+              userCreatedAt: userData.createdAt,
+            },
           });
-        }, 2000); // Show success message for 2 seconds
+        }, 2000);
       } else {
         setMessage(response.data.message || "Failed to change MPIN");
       }
@@ -189,7 +249,6 @@ function ChangeMpin() {
     }
   };
 
-  // Navigate to forgot MPIN
   const handleForgotMpin = () => {
     navigate("/forgot-mpin", { state: { userId, role: "student" } });
   };
@@ -199,78 +258,184 @@ function ChangeMpin() {
       <Header />
 
       <div style={pageStyle}>
-        {/* Background Orbs */}
+        {/* orbs like RaiseComplaint */}
         <motion.div
           style={{
             position: "absolute",
-            width: 400,
-            height: 400,
+            width: 240,
+            height: 240,
             borderRadius: "50%",
-            background: isLight 
-              ? "radial-gradient(circle at 30% 0%, #ddd6fe, #a5b4fc, #818cf8)"
-              : "radial-gradient(circle at 30% 0%, #ddd6fe, #a5b4fc, #818cf8)",
-            filter: "blur(80px)",
-            opacity: 0.3,
-            top: -100,
-            right: -100,
+            background: isLight
+              ? "radial-gradient(circle at 30% 0%, #bfdbfe, #60a5fa, #1d4ed8)"
+              : "radial-gradient(circle at 30% 0%, #1d4ed8, #4f46e5, #020617)",
+            filter: "blur(40px)",
+            opacity: isLight ? 0.5 : 0.75,
+            top: -40,
+            left: -60,
+            mixBlendMode: isLight ? "normal" : "screen",
             zIndex: 0,
-            pointerEvents: "none"
+            pointerEvents: "none",
           }}
-          animate={{ x: [0, 40, -20, 0], y: [0, 18, -12, 0] }}
+          animate={{ x: [0, 30, -15, 0], y: [0, 18, -10, 0] }}
           transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
         />
-        
+        <motion.div
+          style={{
+            position: "absolute",
+            width: 210,
+            height: 210,
+            borderRadius: "50%",
+            background: isLight
+              ? "radial-gradient(circle at 70% 80%, #bae6fd, #7dd3fc, #22c55e)"
+              : "radial-gradient(circle at 70% 80%, #22c55e, #0ea5e9, #020617)",
+            filter: "blur(34px)",
+            opacity: isLight ? 0.45 : 0.7,
+            bottom: -40,
+            right: -40,
+            mixBlendMode: isLight ? "normal" : "screen",
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+          animate={{ x: [0, -28, 12, 0], y: [0, -12, 20, 0] }}
+          transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+        />
+
+        {/* card */}
         <motion.div
           style={cardStyle}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          initial={{ opacity: 0, y: 32, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.55, ease: easingSoft }}
         >
-          {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: "32px" }}>
+          {/* theme toggle */}
+          <div
+            style={{
+              position: "absolute",
+              top: 14,
+              right: 18,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "3px 6px",
+              borderRadius: 999,
+              border: "1px solid rgba(148,163,184,0.6)",
+              background: isLight ? "#f9fafb" : "rgba(15,23,42,0.9)",
+              fontSize: 11,
+              zIndex: 5,
+            }}
+          >
+            <span style={{ color: "#6b7280" }}>Mode</span>
+            <button
+              type="button"
+              onClick={() =>
+                setTheme((prev) => (prev === "light" ? "dark" : "light"))
+              }
+              style={{
+                border: "none",
+                borderRadius: 999,
+                padding: "3px 10px",
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                background: isLight
+                  ? "linear-gradient(120deg,#020617,#0f172a)"
+                  : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
+                color: isLight ? "#e5e7eb" : "#0f172a",
+              }}
+            >
+              {isLight ? "Dark" : "Light"}
+            </button>
+          </div>
+
+          {/* top accent */}
+          <motion.div
+            style={{
+              position: "absolute",
+              left: 24,
+              right: 24,
+              top: 10,
+              height: 2,
+              borderRadius: 999,
+              background:
+                "linear-gradient(90deg,#0ea5e9,#38bdf8,#22c55e,#0f766e)",
+              opacity: 0.9,
+            }}
+            animate={{ x: [-8, 8, -8] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          />
+
+          {/* header */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.4, ease: easingSoft }}
+            style={{ textAlign: "center", marginTop: 16, marginBottom: 18 }}
+          >
             <motion.div
               style={{
-                width: "80px",
-                height: "80px",
+                width: 72,
+                height: 72,
                 borderRadius: "50%",
-                background: "linear-gradient(120deg,#8b5cf6,#7c3aed,#6d28d9)",
+                background:
+                  "linear-gradient(120deg,#8b5cf6,#7c3aed,#6d28d9)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                margin: "0 auto 20px",
-                fontSize: "36px",
-                boxShadow: "0 16px 40px rgba(139,92,246,0.3)"
+                margin: "0 auto 16px",
+                fontSize: 32,
+                boxShadow: "0 16px 40px rgba(139,92,246,0.3)",
               }}
               whileHover={{ scale: 1.05 }}
             >
               🔐
             </motion.div>
-            <h1 style={{ 
-              fontSize: "28px", 
-              fontWeight: 800, 
-              margin: 0, 
-              color: isLight ? "#1e293b" : "#f1f5f9",
-              marginBottom: "8px"
-            }}>
+            <h1
+              style={{
+                fontSize: 24,
+                fontWeight: 800,
+                margin: 0,
+                color: textMain,
+                marginBottom: 6,
+              }}
+            >
               Change MPIN
             </h1>
-            <p style={{ 
-              margin: 0, 
-              color: isLight ? "#64748b" : "#94a3b8",
-              fontSize: "16px"
-            }}>
+            <p
+              style={{
+                margin: 0,
+                color: textSub,
+                fontSize: 14,
+              }}
+            >
               {step === 1 ? "Verify your current MPIN" : "Set your new MPIN"}
             </p>
-          </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.45, ease: easingSoft }}
+            style={{
+              height: 1,
+              borderRadius: 999,
+              background: isLight
+                ? "linear-gradient(90deg,transparent,#dbeafe,#93c5fd,transparent)"
+                : "linear-gradient(90deg,transparent,#1e293b,#0f172a,transparent)",
+              marginBottom: 10,
+            }}
+          />
 
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div
                 key="step1"
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -18 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, x: 18 }}
+                transition={{ duration: 0.3, ease: easingSoft }}
               >
                 <form onSubmit={handleVerifyOldMpin}>
                   <input
@@ -281,18 +446,21 @@ function ChangeMpin() {
                     maxLength={6}
                     style={inputStyle}
                     onFocus={(e) => {
-                      e.target.style.borderColor = isLight ? "#8b5cf6" : "#a78bfa";
+                      e.target.style.borderColor = isLight
+                        ? "#8b5cf6"
+                        : "#a78bfa";
                       e.target.style.boxShadow = isLight
-                        ? "0 0 0 3px rgba(139,92,246,0.1)"
-                        : "0 0 0 3px rgba(167,139,250,0.2)";
+                        ? "0 0 0 3px rgba(139,92,246,0.15)"
+                        : "0 0 0 3px rgba(167,139,250,0.25)";
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = isLight ? "rgba(148,163,184,0.3)" : "rgba(71,85,105,0.4)";
+                      e.target.style.borderColor = isLight
+                        ? "rgba(148,163,184,0.9)"
+                        : "rgba(51,65,85,0.95)";
                       e.target.style.boxShadow = "none";
                     }}
                   />
 
-                  {/* Forgot MPIN Button */}
                   <button
                     type="button"
                     onClick={handleForgotMpin}
@@ -300,35 +468,35 @@ function ChangeMpin() {
                       background: "none",
                       border: "none",
                       color: isLight ? "#8b5cf6" : "#a78bfa",
-                      fontSize: "14px",
+                      fontSize: 13,
                       cursor: "pointer",
                       textDecoration: "underline",
                       fontWeight: 500,
-                      marginBottom: "20px",
+                      marginBottom: 16,
                       width: "100%",
-                      textAlign: "center"
+                      textAlign: "center",
                     }}
                   >
                     Forgot MPIN?
                   </button>
 
-                  {/* Message Display */}
                   <AnimatePresence>
                     {message && (
                       <motion.div
-                        initial={{ opacity: 0, y: -10 }}
+                        initial={{ opacity: 0, y: -8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.25, ease: easingSoft }}
                         style={{
                           background: isLight ? "#fef2f2" : "#7f1d1d",
                           color: isLight ? "#dc2626" : "#fca5a5",
-                          padding: "12px 16px",
-                          borderRadius: "12px",
-                          fontSize: "14px",
-                          marginBottom: "20px",
-                          border: isLight 
+                          padding: "10px 14px",
+                          borderRadius: 12,
+                          fontSize: 13,
+                          marginBottom: 16,
+                          border: isLight
                             ? "1px solid rgba(220,38,38,0.2)"
-                            : "1px solid rgba(248,113,113,0.3)"
+                            : "1px solid rgba(248,113,113,0.3)",
                         }}
                       >
                         {message}
@@ -336,20 +504,35 @@ function ChangeMpin() {
                     )}
                   </AnimatePresence>
 
-                  {/* Verify Button */}
                   <motion.button
                     type="submit"
                     disabled={loading}
                     style={{
-                      ...buttonStyle,
+                      ...primaryButtonStyle,
                       opacity: loading ? 0.7 : 1,
-                      cursor: loading ? "not-allowed" : "pointer"
+                      cursor: loading ? "not-allowed" : "pointer",
                     }}
-                    whileHover={!loading ? { scale: 1.02, boxShadow: "0 20px 50px rgba(139,92,246,0.5)" } : {}}
+                    whileHover={
+                      !loading
+                        ? {
+                            scale: 1.02,
+                            boxShadow:
+                              "0 20px 50px rgba(59,130,246,0.55)",
+                          }
+                        : {}
+                    }
                     whileTap={!loading ? { scale: 0.98 } : {}}
-                    animate={!loading ? {
-                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                    } : {}}
+                    animate={
+                      !loading
+                        ? {
+                            backgroundPosition: [
+                              "0% 50%",
+                              "100% 50%",
+                              "0% 50%",
+                            ],
+                          }
+                        : {}
+                    }
                     transition={{
                       duration: 3,
                       repeat: !loading ? Infinity : 0,
@@ -365,10 +548,10 @@ function ChangeMpin() {
             {step === 2 && (
               <motion.div
                 key="step2"
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 18 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, x: -18 }}
+                transition={{ duration: 0.3, ease: easingSoft }}
               >
                 <form onSubmit={handleSetNewMpin}>
                   <input
@@ -379,13 +562,17 @@ function ChangeMpin() {
                     maxLength={6}
                     style={inputStyle}
                     onFocus={(e) => {
-                      e.target.style.borderColor = isLight ? "#8b5cf6" : "#a78bfa";
+                      e.target.style.borderColor = isLight
+                        ? "#8b5cf6"
+                        : "#a78bfa";
                       e.target.style.boxShadow = isLight
-                        ? "0 0 0 3px rgba(139,92,246,0.1)"
-                        : "0 0 0 3px rgba(167,139,250,0.2)";
+                        ? "0 0 0 3px rgba(139,92,246,0.15)"
+                        : "0 0 0 3px rgba(167,139,250,0.25)";
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = isLight ? "rgba(148,163,184,0.3)" : "rgba(71,85,105,0.4)";
+                      e.target.style.borderColor = isLight
+                        ? "rgba(148,163,184,0.9)"
+                        : "rgba(51,65,85,0.95)";
                       e.target.style.boxShadow = "none";
                     }}
                   />
@@ -398,34 +585,38 @@ function ChangeMpin() {
                     maxLength={6}
                     style={inputStyle}
                     onFocus={(e) => {
-                      e.target.style.borderColor = isLight ? "#8b5cf6" : "#a78bfa";
+                      e.target.style.borderColor = isLight
+                        ? "#8b5cf6"
+                        : "#a78bfa";
                       e.target.style.boxShadow = isLight
-                        ? "0 0 0 3px rgba(139,92,246,0.1)"
-                        : "0 0 0 3px rgba(167,139,250,0.2)";
+                        ? "0 0 0 3px rgba(139,92,246,0.15)"
+                        : "0 0 0 3px rgba(167,139,250,0.25)";
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = isLight ? "rgba(148,163,184,0.3)" : "rgba(71,85,105,0.4)";
+                      e.target.style.borderColor = isLight
+                        ? "rgba(148,163,184,0.9)"
+                        : "rgba(51,65,85,0.95)";
                       e.target.style.boxShadow = "none";
                     }}
                   />
 
-                  {/* Message Display */}
                   <AnimatePresence>
                     {message && (
                       <motion.div
-                        initial={{ opacity: 0, y: -10 }}
+                        initial={{ opacity: 0, y: -8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.25, ease: easingSoft }}
                         style={{
                           background: isLight ? "#fef2f2" : "#7f1d1d",
                           color: isLight ? "#dc2626" : "#fca5a5",
-                          padding: "12px 16px",
-                          borderRadius: "12px",
-                          fontSize: "14px",
-                          marginBottom: "20px",
-                          border: isLight 
+                          padding: "10px 14px",
+                          borderRadius: 12,
+                          fontSize: 13,
+                          marginBottom: 16,
+                          border: isLight
                             ? "1px solid rgba(220,38,38,0.2)"
-                            : "1px solid rgba(248,113,113,0.3)"
+                            : "1px solid rgba(248,113,113,0.3)",
                         }}
                       >
                         {message}
@@ -433,20 +624,35 @@ function ChangeMpin() {
                     )}
                   </AnimatePresence>
 
-                  {/* Buttons */}
                   <motion.button
                     type="submit"
                     disabled={loading}
                     style={{
-                      ...buttonStyle,
+                      ...primaryButtonStyle,
                       opacity: loading ? 0.7 : 1,
-                      cursor: loading ? "not-allowed" : "pointer"
+                      cursor: loading ? "not-allowed" : "pointer",
                     }}
-                    whileHover={!loading ? { scale: 1.02, boxShadow: "0 20px 50px rgba(139,92,246,0.5)" } : {}}
+                    whileHover={
+                      !loading
+                        ? {
+                            scale: 1.02,
+                            boxShadow:
+                              "0 20px 50px rgba(59,130,246,0.55)",
+                          }
+                        : {}
+                    }
                     whileTap={!loading ? { scale: 0.98 } : {}}
-                    animate={!loading ? {
-                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                    } : {}}
+                    animate={
+                      !loading
+                        ? {
+                            backgroundPosition: [
+                              "0% 50%",
+                              "100% 50%",
+                              "0% 50%",
+                            ],
+                          }
+                        : {}
+                    }
                     transition={{
                       duration: 3,
                       repeat: !loading ? Infinity : 0,
@@ -470,8 +676,8 @@ function ChangeMpin() {
             )}
           </AnimatePresence>
         </motion.div>
-        
-        {/* Success Banner */}
+
+        {/* success banner (same as your version) */}
         <AnimatePresence>
           {successMessage && (
             <motion.div
@@ -481,24 +687,26 @@ function ChangeMpin() {
               transition={{ duration: 0.4, ease: "easeOut" }}
               style={{
                 position: "fixed",
-                top: "20px",
-                right: "20px",
-                background: "linear-gradient(120deg, #10b981, #059669, #047857)",
+                top: 20,
+                right: 20,
+                background:
+                  "linear-gradient(120deg, #10b981, #059669, #047857)",
                 color: "#ffffff",
                 padding: "16px 24px",
-                borderRadius: "16px",
-                boxShadow: "0 16px 40px rgba(16,185,129,0.4), 0 0 0 1px rgba(16,185,129,0.3)",
-                fontSize: "16px",
+                borderRadius: 16,
+                boxShadow:
+                  "0 16px 40px rgba(16,185,129,0.4), 0 0 0 1px rgba(16,185,129,0.3)",
+                fontSize: 16,
                 fontWeight: 600,
                 zIndex: 1000,
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
+                gap: 12,
                 backdropFilter: "blur(10px)",
-                WebkitBackdropFilter: "blur(10px)"
+                WebkitBackdropFilter: "blur(10px)",
               }}
             >
-              <span style={{ fontSize: "20px" }}>✅</span>
+              <span style={{ fontSize: 20 }}>✅</span>
               {successMessage}
             </motion.div>
           )}
