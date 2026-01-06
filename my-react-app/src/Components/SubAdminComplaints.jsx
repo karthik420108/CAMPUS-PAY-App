@@ -82,6 +82,18 @@ function SubAdminComplaints({ state }) {
     setResponseModal({ isOpen: true, complaintId, response: "" });
   };
 
+  const handleViewScreenshot = (screenshotUrl, complaint) => {
+    navigate("/screenshot-viewer", {
+      state: {
+        screenshotUrl: screenshotUrl,
+        complaintId: complaint.complaintId,
+        studentName: complaint.role === "vendor"
+          ? complaint.userId?.vendorName || "Unknown Vendor"
+          : `${complaint.userId?.firstName || "Unknown"} ${complaint.userId?.lastName || ""}`.trim()
+      }
+    });
+  };
+
   const handleSubmitResponse = async () => {
     if (!responseModal.response.trim()) {
       alert("Please enter a response");
@@ -689,19 +701,42 @@ function SubAdminComplaints({ state }) {
 
                     {complaint.screenshot && (
                       <div style={{ marginBottom: "16px" }}>
-                        <img
-                          src={complaint.screenshot}
-                          alt="Complaint screenshot"
+                        <div
                           style={{
-                            maxWidth: "100%",
-                            maxHeight: "300px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            padding: "12px",
+                            background: isLight
+                              ? "rgba(241, 245, 249, 0.8)"
+                              : "rgba(15, 23, 42, 0.4)",
                             borderRadius: "12px",
                             border: `1px solid ${
-                              isLight ? "#e5e7eb" : "#334155"
+                              isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"
                             }`,
-                            objectFit: "cover",
                           }}
-                        />
+                        >
+                          <span style={{ 
+                            color: textSub, 
+                            fontSize: "14px",
+                            fontWeight: 500 
+                          }}>
+                            📸 Screenshot available
+                          </span>
+                          <button
+                            onClick={() => handleViewScreenshot(complaint.screenshot, complaint)}
+                            style={{
+                              ...buttonBase,
+                              background: "rgba(59, 130, 246, 0.15)",
+                              color: "#3b82f6",
+                              border: "1px solid rgba(59, 130, 246, 0.3)",
+                              padding: "6px 12px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            👁️ View Screenshot
+                          </button>
+                        </div>
                       </div>
                     )}
 

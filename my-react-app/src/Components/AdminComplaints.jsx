@@ -110,6 +110,18 @@ function AdminComplaints() {
     return status === "resolved" ? "#10b981" : "#f59e0b";
   };
 
+  const handleViewScreenshot = (screenshotUrl, complaint) => {
+    navigate("/screenshot-viewer", {
+      state: {
+        screenshotUrl: screenshotUrl,
+        complaintId: complaint.complaintId,
+        studentName: complaint.studentName 
+          ? `${complaint.studentName.firstName || ""} ${complaint.studentName.lastName || ""}`.trim()
+          : "Unknown Student"
+      }
+    });
+  };
+
   // --- STYLING CONSTANTS ---
   const pageStyle = isLight
     ? {
@@ -443,11 +455,51 @@ function AdminComplaints() {
                         {complaint.screenshot && (
                             <div>
                                 <div style={{ fontSize: "12px", fontWeight: "600", color: textSub, marginBottom: "6px" }}>ATTACHMENT</div>
-                                <img 
-                                    src={complaint.screenshot} 
-                                    alt="Complaint screenshot" 
-                                    style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "8px", border: isLight ? "1px solid #e5e7eb" : "1px solid #334155" }}
-                                />
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "12px",
+                                    padding: "12px",
+                                    background: isLight
+                                      ? "rgba(241, 245, 249, 0.8)"
+                                      : "rgba(15, 23, 42, 0.4)",
+                                    borderRadius: "12px",
+                                    border: `1px solid ${
+                                      isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"
+                                    }`,
+                                  }}
+                                >
+                                  <span style={{ 
+                                    color: textSub, 
+                                    fontSize: "14px",
+                                    fontWeight: 500 
+                                  }}>
+                                    📸 Screenshot available
+                                  </span>
+                                  <button
+                                    onClick={() => handleViewScreenshot(complaint.screenshot, complaint)}
+                                    style={{
+                                      padding: "6px 12px",
+                                      background: "rgba(59, 130, 246, 0.15)",
+                                      color: "#3b82f6",
+                                      border: "1px solid rgba(59, 130, 246, 0.3)",
+                                      borderRadius: "6px",
+                                      cursor: "pointer",
+                                      fontSize: "12px",
+                                      fontWeight: 600,
+                                      transition: "all 0.2s ease",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.target.style.background = "rgba(59, 130, 246, 0.25)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.target.style.background = "rgba(59, 130, 246, 0.15)";
+                                    }}
+                                  >
+                                    👁️ View Screenshot
+                                  </button>
+                                </div>
                             </div>
                         )}
                         

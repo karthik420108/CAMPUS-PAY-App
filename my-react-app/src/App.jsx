@@ -58,6 +58,8 @@ import SubAdminStudents from "./Components/SubAdminStudents.jsx";
 import SubAdminProfile from "./Components/SubAdminProfile.jsx";
 import SubAdminEdit from "./Components/SubAdminEdit.jsx";
 import SubAdminNotificationSystem from "./Components/SubAdminNotificationSystem.jsx";
+import ScreenshotViewer from "./Components/ScreenshotViewer.jsx";
+import ViewKyc from "./Components/ViewKyc.jsx";
 
 
 function App() {
@@ -95,6 +97,8 @@ function App() {
         <Route path = "/subadmin-profile" element = {<SubAdminProfile/>}/>
         <Route path = "/subadmin-edit" element = {<SubAdminEdit/>}/>
         <Route path = "/subadmin-notification-system" element = {<SubAdminNotificationSystem/>}/>
+        <Route path = "/screenshot-viewer" element = {<ScreenshotViewer/>}/>
+        <Route path = "/view-kyc" element = {<ViewKyc/>}/>
         <Route path = "/vendor-transaction" element = {<VendorTransactions/>}/>
 
         {/* Signup Flow */}

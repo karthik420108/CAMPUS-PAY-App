@@ -143,6 +143,16 @@ useEffect(() => {
     (c) => (c.status || "").toLowerCase() === "resolved"
   );
 
+  const handleViewScreenshot = (screenshotUrl, complaint) => {
+    navigate("/screenshot-viewer", {
+      state: {
+        screenshotUrl: screenshotUrl,
+        complaintId: complaint.complaintId,
+        studentName: role === "student" ? "You" : complaint.studentName || "Unknown"
+      }
+    });
+  };
+
   const currentComplaints =
     activeTab === "active" ? activeComplaints : resolvedComplaints;
 
@@ -827,13 +837,13 @@ useEffect(() => {
                         {/* ✅ SCREENSHOT */}
                         {c.screenshot && (
                           <div style={{ marginTop: 8 }}>
-                            <motion.a
+                            <motion.button
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
-                              href={c.screenshot}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewScreenshot(c.screenshot, c);
+                              }}
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -843,7 +853,8 @@ useEffect(() => {
                                 borderRadius: 999,
                                 fontSize: 12,
                                 fontWeight: 600,
-                                textDecoration: "none",
+                                border: "none",
+                                cursor: "pointer",
                                 background:
                                   "linear-gradient(120deg,#86efac,#22c55e)",
                                 color: "#020617",
@@ -851,7 +862,7 @@ useEffect(() => {
                               }}
                             >
                               📸 View Screenshot
-                            </motion.a>
+                            </motion.button>
                           </div>
                         )}
                       </motion.div>
