@@ -27,6 +27,8 @@ import RoleSelect from "./Components/Roleselect.jsx";
 import VendorLogin from "./Components/VendorLogin.jsx";
 import GenerateQR from "./Components/GenerateQr.jsx";
 import AdminRedeemHistory from "./Components/RedeemHistory.jsx";
+import VendorRedeemHistory from "./Components/Reedemhistory.jsx";
+import RedeemHistoryWrapper from "./Components/RedeemHistoryWrapper.jsx";
 import RedeemForm from "./Components/Redeem.jsx";
 import ChangeMpin from "./Components/ChangeMpin.jsx";
 import VendorChangeMpin from "./Components/VendorChangeMpin.jsx";
@@ -56,6 +58,8 @@ import SubAdminStudents from "./Components/SubAdminStudents.jsx";
 import SubAdminProfile from "./Components/SubAdminProfile.jsx";
 import SubAdminEdit from "./Components/SubAdminEdit.jsx";
 import SubAdminNotificationSystem from "./Components/SubAdminNotificationSystem.jsx";
+import ScreenshotViewer from "./Components/ScreenshotViewer.jsx";
+import ViewKyc from "./Components/ViewKyc.jsx";
 
 
 function App() {
@@ -93,6 +97,8 @@ function App() {
         <Route path = "/subadmin-profile" element = {<SubAdminProfile/>}/>
         <Route path = "/subadmin-edit" element = {<SubAdminEdit/>}/>
         <Route path = "/subadmin-notification-system" element = {<SubAdminNotificationSystem/>}/>
+        <Route path = "/screenshot-viewer" element = {<ScreenshotViewer/>}/>
+        <Route path = "/view-kyc" element = {<ViewKyc/>}/>
         <Route path = "/vendor-transaction" element = {<VendorTransactions/>}/>
 
         {/* Signup Flow */}
@@ -141,7 +147,7 @@ function App() {
    element={<TransactionDetails />}
   />
 
-        <Route path = "/redeem-history" element={<AdminRedeemHistory />} />
+        <Route path = "/redeem-history" element={<RedeemHistoryWrapper />} />
         <Route path="/generate-qr" element={<GenerateQR />} />
 
         <Route path="/edit-profile" element={<EditProfile />} />

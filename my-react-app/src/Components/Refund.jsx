@@ -241,6 +241,7 @@ function Refund() {
 
   return (
     <div style={pageStyle}>
+      <button onClick = {()=>navigate(-1)}>Back</button>
       {/* orbs */}
       <motion.div
         style={{

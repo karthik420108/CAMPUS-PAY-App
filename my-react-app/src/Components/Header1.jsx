@@ -109,7 +109,7 @@ const Header1 = ({ isOp, userId, isFrozen , role}) => {
               className={isFrozen ? "disabled" : ""}
               onClick={() => {
                 if (!isFrozen) {
-                  navigate("/redeem-history", { state: { vendorId : userId } });
+                  navigate("/redeem-history", { state: { vendorId: userId, role } });
                 }
               }}
             >
