@@ -11,7 +11,7 @@ function ComplaintHistory() {
 
   const [complaints, setComplaints] = useState([]);
   const [openCard, setOpenCard] = useState(null);
-  const [activeTab, setActiveTab] = useState("active"); // Defaults to "active"
+  const [activeTab, setActiveTab] = useState("active");
   const [complaintSearch, setComplaintSearch] = useState("");
   const [theme, setTheme] = useState("light");
   const [loading, setLoading] = useState(true);
@@ -33,13 +33,11 @@ function ComplaintHistory() {
         setIsFrozen(isFrozen);
         setIsSuspended(isSuspended);
 
-        
         if (isSuspended) {
           setBlockingMessage(
             "Your account is suspended. Redirecting to homepage..."
           );
           setTimeout(() => navigate("/", { state: { userId } }), 2500);
-          return;
         }
       } catch (err) {
         console.error(err);
@@ -47,10 +45,6 @@ function ComplaintHistory() {
     };
 
     fetchUserData();
-
-    // Optional: real-time polling every 5s
-    const interval = setInterval(fetchUserData, 5000);
-    return () => clearInterval(interval);
   }, [userId, navigate]);
 
   if (blockingMessage) {
@@ -76,66 +70,31 @@ function ComplaintHistory() {
     return null;
   }
 
-useEffect(() => {
-  if (!userId) return;
+  useEffect(() => {
+    if (!userId) return;
 
-  const fetchComplaints = async () => {
-    try {
-      setLoading(true);
+    const fetchComplaints = async () => {
+      try {
+        setLoading(true);
 
-      const res = await axios.get(
-        `http://localhost:5000/complaints/user/${userId}`
-      );
+        const res = await axios.get(
+          `http://localhost:5000/complaints/user/${userId}`
+        );
 
-      const complaintsData = res.data.complaints || [];
-      console.log(`📄 Fetched ${complaintsData.length} complaints for user ${userId}:`);
+        const complaintsData = res.data.complaints || [];
+        setComplaints(complaintsData);
+      } catch (error) {
+        console.error("❌ Failed to fetch complaints:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      complaintsData.forEach((complaint, index) => {
-        console.log(`\nComplaint #${index + 1} (ID: ${complaint.complaintId}):`);
-        console.log(`  - Description: ${complaint.description}`);
-        console.log(`  - Role: ${complaint.role}`);
-        console.log(`  - Screenshot: ${complaint.screenshot || "None"}`);
-
-        if (complaint.assignedAdmins && complaint.assignedAdmins.length > 0) {
-          console.log(`  - Assigned Admins (${complaint.assignedAdmins.length}):`);
-          complaint.assignedAdmins.forEach((admin, i) => {
-            if (typeof admin === "object" && admin._id) {
-              console.log(`      ${i + 1}. ${admin.name || "(no name)"} [ID: ${admin._id}]`);
-            } else {
-              console.log(`      ${i + 1}. Admin ID: ${admin}`);
-            }
-          });
-        } else {
-          console.log("  - Assigned Admins: None");
-        }
-
-        console.log(`  - Status: ${complaint.status || "Pending"}`);
-        console.log(`  - Created At: ${complaint.createdAt}`);
-      });
-
-      setComplaints(complaintsData);
-    } catch (error) {
-      console.error("❌ Failed to fetch complaints:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial fetch
-  fetchComplaints();
-
-  // Poll every 5 seconds
-  const interval = setInterval(fetchComplaints, 5000);
-
-  // Cleanup on unmount
-  return () => clearInterval(interval);
-}, [userId]);
-
-
+    fetchComplaints();
+  }, [userId]);
 
   const isLight = theme === "light";
 
-  // ---------- EXACT ENUM MATCHING ----------
   const activeComplaints = complaints.filter(
     (c) => (c.status || "").toLowerCase() === "active"
   );
@@ -160,7 +119,6 @@ useEffect(() => {
     if (!stillVisible) setOpenCard(null);
   }, [openCard, visibleComplaints]);
 
-  // ---------- THEME-DEPENDENT STYLES (exact copy from RaiseComplaint) ----------
   const pageStyle = isLight
     ? {
         background:
@@ -308,56 +266,6 @@ useEffect(() => {
             ...cardStyle,
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: 16,
-              left: 20,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 10px",
-              borderRadius: 14,
-              border: "1px solid rgba(148,163,184,0.6)",
-              background: isLight ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.7)",
-              zIndex: 6,
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-            }}
-          >
-            <input
-              value={complaintSearch}
-              onChange={(e) => setComplaintSearch(e.target.value)}
-              placeholder="Search Complaint ID"
-              style={{
-                width: 210,
-                border: "none",
-                outline: "none",
-                background: "transparent",
-                color: textMain,
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            />
-            {complaintSearch.trim() !== "" && (
-              <button
-                type="button"
-                onClick={() => setComplaintSearch("")}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  fontSize: 14,
-                  lineHeight: 1,
-                  color: textSub,
-                  padding: 0,
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-
           {/* theme toggle */}
           <div
             style={{
@@ -448,6 +356,58 @@ useEffect(() => {
               Complaint History
             </h2>
           </motion.div>
+
+          {/* search bar BELOW heading */}
+          <div
+            style={{
+              marginTop: 16,
+              marginBottom: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 10px",
+              borderRadius: 14,
+              border: "1px solid rgba(148,163,184,0.6)",
+              background: isLight
+                ? "rgba(255,255,255,0.7)"
+                : "rgba(15,23,42,0.7)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
+          >
+            <input
+              value={complaintSearch}
+              onChange={(e) => setComplaintSearch(e.target.value)}
+              placeholder="Search Complaint ID"
+              style={{
+                flex: 1,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: textMain,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            />
+
+            {complaintSearch.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => setComplaintSearch("")}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1,
+                  color: textSub,
+                  padding: 0,
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
 
           <motion.div
             initial={{ scaleX: 0 }}
@@ -591,12 +551,14 @@ useEffect(() => {
             </motion.div>
           )}
 
-          {/* ✅ ALL FUNCTIONALITY RESTORED */}
+          {/* complaint cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {visibleComplaints.map((c, index) => {
               const isOpen = openCard === c._id;
               const statusColor =
-                c.status?.toLowerCase() === "resolved" ? "#22c55e" : "#3b82f6";
+                c.status?.toLowerCase() === "resolved"
+                  ? "#22c55e"
+                  : "#3b82f6";
 
               return (
                 <motion.div
@@ -713,7 +675,7 @@ useEffect(() => {
                     }}
                   />
 
-                  {/* ✅ COLLAPSIBLE DETAILS - ALL FIELDS RESTORED */}
+                  {/* collapsible details */}
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
@@ -731,7 +693,7 @@ useEffect(() => {
                           color: textMain,
                         }}
                       >
-                        {/* ✅ DESCRIPTION */}
+                        {/* description */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
                           <span
                             style={{
@@ -745,7 +707,7 @@ useEffect(() => {
                           {c.description || "—"}
                         </p>
 
-                        {/* ✅ ADMINS */}
+                        {/* admins */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
                           <span
                             style={{
@@ -771,7 +733,7 @@ useEffect(() => {
                             : "—"}
                         </p>
 
-                        {/* ✅ DATE */}
+                        {/* date */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
                           <span
                             style={{
@@ -787,13 +749,15 @@ useEffect(() => {
                             : "—"}
                         </p>
 
-                        {/* ✅ ADMIN RESPONSE */}
+                        {/* admin response */}
                         {c.response && (
                           <div
                             style={{
                               margin: "8px 0",
                               padding: "10px",
-                              backgroundColor: isLight ? "#f0fdf4" : "#14532d",
+                              backgroundColor: isLight
+                                ? "#f0fdf4"
+                                : "#14532d",
                               borderRadius: "8px",
                               border: `1px solid ${
                                 isLight ? "#bbf7d0" : "#22c55e"
@@ -824,7 +788,7 @@ useEffect(() => {
                           </div>
                         )}
 
-                        {/* ✅ SCREENSHOT */}
+                        {/* screenshot */}
                         {c.screenshot && (
                           <div style={{ marginTop: 8 }}>
                             <motion.a
@@ -847,7 +811,8 @@ useEffect(() => {
                                 background:
                                   "linear-gradient(120deg,#86efac,#22c55e)",
                                 color: "#020617",
-                                boxShadow: "0 10px 24px rgba(22,163,74,0.35)",
+                                boxShadow:
+                                  "0 10px 24px rgba(22,163,74,0.35)",
                               }}
                             >
                               📸 View Screenshot

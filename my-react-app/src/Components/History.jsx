@@ -232,57 +232,7 @@ function History() {
             ...cardStyle,
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: 16,
-              left: 20,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 10px",
-              borderRadius: 14,
-              border: "1px solid rgba(148,163,184,0.6)",
-              background: isLight ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.7)",
-              zIndex: 6,
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-            }}
-          >
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by Transaction ID or Vendor Name"
-              style={{
-                width: 260,
-                border: "none",
-                outline: "none",
-                background: "transparent",
-                color: textMain,
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            />
-            {searchTerm.trim() !== "" && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  fontSize: 14,
-                  lineHeight: 1,
-                  color: textSub,
-                  padding: 0,
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Theme Toggle */}
+          {/* Theme Toggle - Top right */}
           <div
             style={{
               position: "absolute",
@@ -374,6 +324,68 @@ function History() {
               Transaction History
             </h2>
           </motion.div>
+
+          {/* Full Width Search Bar */}
+          <div
+            style={{
+              width: "100%",
+              padding: "10px 16px",
+              borderRadius: 14,
+              border: "1px solid rgba(148,163,184,0.6)",
+              background: isLight ? "rgba(255,255,255,0.8)" : "rgba(15,23,42,0.8)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              zIndex: 6,
+            }}
+          >
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by Transaction ID or Vendor Name"
+              style={{
+                flex: 1,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: textMain,
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            />
+            {searchTerm.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 18,
+                  lineHeight: 1,
+                  color: textSub,
+                  padding: "4px",
+                  borderRadius: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 32,
+                  height: 32,
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = "transparent";
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
 
           <motion.div
             initial={{ scaleX: 0 }}
