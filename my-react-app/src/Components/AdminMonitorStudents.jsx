@@ -18,6 +18,9 @@ function AdminMonitorStudents() {
   const [showKycModal, setShowKycModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [theme, setTheme] = useState("light");
+  const [showTransactionsModal, setShowTransactionsModal] = useState(false);
+  const [showComplaintsModal, setShowComplaintsModal] = useState(false);
+  const [modalStudent, setModalStudent] = useState(null);
 
   useEffect(() => {
     if (!state || state.role !== "admin") {
@@ -30,9 +33,15 @@ function AdminMonitorStudents() {
   const fetchStudents = async () => {
     try {
       const res = await axios.get("http://localhost:5000/admin/monitor/students");
+      console.log("Fetched students data:", res.data);
       setStudents(res.data);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching students:", err);
+      showAlert({
+        type: "error",
+        title: "Data Fetch Failed",
+        message: "Failed to fetch student data"
+      });
     } finally {
       setLoading(false);
     }
@@ -41,10 +50,16 @@ function AdminMonitorStudents() {
   const fetchStudentDetails = async (studentId) => {
     try {
       const res = await axios.get(`http://localhost:5000/admin/monitor/student/${studentId}`);
+      console.log("Fetched student details:", res.data);
       setSelectedStudent(res.data);
       setShowDetails(true);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching student details:", err);
+      showAlert({
+        type: "error",
+        title: "Details Fetch Failed",
+        message: "Failed to fetch student details"
+      });
     }
   };
 
@@ -63,6 +78,42 @@ function AdminMonitorStudents() {
   const handleBackToList = () => {
     setShowDetails(false);
     setSelectedStudent(null);
+  };
+
+  const handleViewMoreTransactions = async (student) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/admin/monitor/student/${student._id}`);
+      setModalStudent(res.data);
+      setShowTransactionsModal(true);
+    } catch (err) {
+      console.error("Error fetching full transactions:", err);
+      showAlert({
+        type: "error",
+        title: "Fetch Failed",
+        message: "Failed to fetch full transaction history"
+      });
+    }
+  };
+
+  const handleViewMoreComplaints = async (student) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/admin/monitor/student/${student._id}`);
+      setModalStudent(res.data);
+      setShowComplaintsModal(true);
+    } catch (err) {
+      console.error("Error fetching full complaints:", err);
+      showAlert({
+        type: "error",
+        title: "Fetch Failed",
+        message: "Failed to fetch full complaint history"
+      });
+    }
+  };
+
+  const closeModal = () => {
+    setShowTransactionsModal(false);
+    setShowComplaintsModal(false);
+    setModalStudent(null);
   };
 
   const toggleFreeze = async (e, studentId, currentStatus) => {
@@ -304,7 +355,8 @@ function AdminMonitorStudents() {
                         <tr>
                           <th style={tableHeaderStyle}>Student</th>
                           <th style={tableHeaderStyle}>Contact</th>
-                          <th style={tableHeaderStyle}>Spending</th>
+                          <th style={tableHeaderStyle}>Total Spending</th>
+                          <th style={tableHeaderStyle}>Wallet Balance</th>
                           <th style={tableHeaderStyle}>Status</th>
                           <th style={tableHeaderStyle}>Activity</th>
                           <th style={tableHeaderStyle}>Actions</th>
@@ -319,6 +371,7 @@ function AdminMonitorStudents() {
                             </td>
                             <td style={tableCellStyle}>{student.collegeEmail}</td>
                             <td style={tableCellStyle}>₹{student.totalSpending?.toFixed(2) || "0.00"}</td>
+                            <td style={tableCellStyle}>₹{student.walletBalance?.toFixed(2) || "0.00"}</td>
                             <td style={tableCellStyle}>
                               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 <span style={{ fontSize: "11px", fontWeight: 600, color: getStatusColor(student.kyc?.status) }}>KYC: {student.kyc?.status?.toUpperCase() || "PENDING"}</span>
@@ -365,22 +418,52 @@ function AdminMonitorStudents() {
                       {/* Recent Transactions */}
                       <div style={sectionBoxStyle}>
                         <h4 style={{ marginTop: 0, marginBottom: 15, color: textMain }}>Recent Transactions (Last 5)</h4>
-                        {selectedStudent.transactions.length === 0 ? <p style={{ color: textSub, fontSize: 13 }}>No transactions found.</p> : (
-                          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                            <thead>
-                              <tr><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Vendor</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Amount</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Status</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Date</th></tr>
-                            </thead>
-                            <tbody>
-                              {selectedStudent.transactions.slice(-5).reverse().map((tx, i) => (
-                                <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0" }}>{tx.vendorid}</td>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0" }}>₹{tx.amount}</td>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0", color: getStatusColor(tx.status) }}>{tx.status}</td>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>{new Date(tx.createdAt).toLocaleDateString()}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                        {(!selectedStudent.transactions || selectedStudent.transactions.length === 0) ? <p style={{ color: textSub, fontSize: 13 }}>No transactions found.</p> : (
+                          <>
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Vendor</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Amount</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Status</th><th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Date</th></tr>
+                              </thead>
+                              <tbody>
+                                {(selectedStudent.transactions || []).slice(0, 5).map((tx, i) => (
+                                  <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
+                                    <td style={{ ...tableCellStyle, padding: "10px 0" }}>{tx.vendorName || 'N/A'}</td>
+                                    <td style={{ ...tableCellStyle, padding: "10px 0" }}>₹{tx.amount || '0.00'}</td>
+                                    <td style={{ ...tableCellStyle, padding: "10px 0", color: getStatusColor(tx.status) }}>{tx.status || 'PENDING'}</td>
+                                    <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            {selectedStudent.transactions && selectedStudent.transactions.length > 5 && (
+                              <div style={{ marginTop: "12px", textAlign: "center" }}>
+                                <button
+                                  onClick={() => handleViewMoreTransactions(selectedStudent.student)}
+                                  style={{
+                                    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 16px",
+                                    borderRadius: "8px",
+                                    fontSize: "12px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    transition: "all 0.3s ease"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.transform = "translateY(-2px)";
+                                    e.target.style.boxShadow = "0 4px 12px rgba(59,130,246,0.3)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.transform = "translateY(0)";
+                                    e.target.style.boxShadow = "none";
+                                  }}
+                                >
+                                  View All Transactions ({selectedStudent.transactions.length})
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
 
@@ -388,34 +471,64 @@ function AdminMonitorStudents() {
                       <div style={sectionBoxStyle}>
                         <h4 style={{ marginTop: 0, marginBottom: 15, color: textMain }}>Recent Complaints (Last 5)</h4>
                         {selectedStudent.complaints && selectedStudent.complaints.length > 0 ? (
-                          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                            <thead>
-                              <tr>
-                                <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>ID</th>
-                                <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Description</th>
-                                <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Status</th>
-                                <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Date</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedStudent.complaints.slice(0, 5).map((complaint, i) => (
-                                <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>#{complaint.complaintId || complaint._id?.substring(0,6)}</td>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0" }}>
-                                    {complaint.description && complaint.description.length > 50 
-                                      ? complaint.description.substring(0, 50) + "..." 
-                                      : complaint.description || "No description"}
-                                  </td>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0", color: getStatusColor(complaint.status) }}>
-                                    {complaint.status?.toUpperCase()}
-                                  </td>
-                                  <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>
-                                    {complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString() : "N/A"}
-                                  </td>
+                          <>
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>ID</th>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Description</th>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Status</th>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px 0" }}>Date</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {selectedStudent.complaints.slice(0, 5).map((complaint, i) => (
+                                  <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
+                                    <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>#{complaint.complaintId || complaint._id?.substring(0,6)}</td>
+                                    <td style={{ ...tableCellStyle, padding: "10px 0" }}>
+                                      {complaint.description && complaint.description.length > 50 
+                                        ? complaint.description.substring(0, 50) + "..." 
+                                        : complaint.description || "No description"}
+                                    </td>
+                                    <td style={{ ...tableCellStyle, padding: "10px 0", color: getStatusColor(complaint.status) }}>
+                                      {complaint.status?.toUpperCase()}
+                                    </td>
+                                    <td style={{ ...tableCellStyle, padding: "10px 0", color: textSub }}>
+                                      {complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString() : "N/A"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            {selectedStudent.complaints.length > 5 && (
+                              <div style={{ marginTop: "12px", textAlign: "center" }}>
+                                <button
+                                  onClick={() => handleViewMoreComplaints(selectedStudent.student)}
+                                  style={{
+                                    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 16px",
+                                    borderRadius: "8px",
+                                    fontSize: "12px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    transition: "all 0.3s ease"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.transform = "translateY(-2px)";
+                                    e.target.style.boxShadow = "0 4px 12px rgba(139,92,246,0.3)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.transform = "translateY(0)";
+                                    e.target.style.boxShadow = "none";
+                                  }}
+                                >
+                                  View All Complaints ({selectedStudent.complaints.length})
+                                </button>
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <p style={{ color: textSub, fontSize: 13 }}>No complaints found.</p>
                         )}
@@ -468,6 +581,121 @@ function AdminMonitorStudents() {
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
                 <button onClick={() => { setShowKycModal(false); setRejectionReason(""); }} style={{ ...buttonBase, background: isLight ? "#e2e8f0" : "#334155", color: textMain }}>Cancel</button>
                 <button onClick={() => handleKycApproval("rejected")} style={{ ...buttonBase, background: "#ef4444", color: "white" }}>Confirm Rejection</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Transactions Modal */}
+      <AnimatePresence>
+        {showTransactionsModal && modalStudent && (
+          <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} style={{ width: "90%", maxWidth: "800px", maxHeight: "80vh", padding: "24px", borderRadius: "16px", background: isLight ? "#fff" : "#1e293b", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", color: textMain, display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ margin: 0, color: textMain }}>All Transactions - {modalStudent.student.firstName} {modalStudent.student.lastName}</h3>
+                <button onClick={closeModal} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: textSub, padding: "0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "6px" }} onMouseEnter={(e) => { e.target.style.background = isLight ? "#f1f5f9" : "#334155"; }} onMouseLeave={(e) => { e.target.style.background = "none"; }}>&times;</button>
+              </div>
+              
+              <div style={{ flex: 1, overflowY: "auto", paddingRight: "8px" }}>
+                {(!modalStudent.transactions || modalStudent.transactions.length === 0) ? (
+                  <p style={{ color: textSub, fontSize: 13, textAlign: "center", padding: "40px" }}>No transactions found.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead style={{ position: "sticky", top: 0, background: isLight ? "#fff" : "#1e293b", zIndex: 10 }}>
+                      <tr>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>Date</th>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>Vendor</th>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>Amount</th>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>Status</th>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>TXN ID</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalStudent.transactions.map((tx, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "12px" }}>{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'N/A'}</td>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "12px" }}>{tx.vendorName || 'N/A'}</td>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "12px", fontWeight: 600 }}>₹{tx.amount || '0.00'}</td>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "12px", color: getStatusColor(tx.status) }}>{tx.status || 'PENDING'}</td>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "11px", color: textSub, fontFamily: "monospace" }}>{tx.txid || 'N/A'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              
+              <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: `1px solid ${isLight ? "#e2e8f0" : "#334155"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12px", color: textSub }}>Total: {modalStudent.transactions.length} transactions</span>
+                <button onClick={closeModal} style={{ ...buttonBase, background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", color: "white" }}>Close</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Complaints Modal */}
+      <AnimatePresence>
+        {showComplaintsModal && modalStudent && (
+          <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} style={{ width: "90%", maxWidth: "800px", maxHeight: "80vh", padding: "24px", borderRadius: "16px", background: isLight ? "#fff" : "#1e293b", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", color: textMain, display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ margin: 0, color: textMain }}>All Complaints - {modalStudent.student.firstName} {modalStudent.student.lastName}</h3>
+                <button onClick={closeModal} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: textSub, padding: "0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "6px" }} onMouseEnter={(e) => { e.target.style.background = isLight ? "#f1f5f9" : "#334155"; }} onMouseLeave={(e) => { e.target.style.background = "none"; }}>&times;</button>
+              </div>
+              
+              <div style={{ flex: 1, overflowY: "auto", paddingRight: "8px" }}>
+                {(!modalStudent.complaints || modalStudent.complaints.length === 0) ? (
+                  <p style={{ color: textSub, fontSize: 13, textAlign: "center", padding: "40px" }}>No complaints found.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {modalStudent.complaints.map((complaint, i) => (
+                      <div key={i} style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${isLight ? "#e2e8f0" : "#334155"}`, background: isLight ? "#f8fafc" : "#0f172a" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "10px", background: getStatusColor(complaint.status), color: "#fff" }}>
+                              {complaint.status?.toUpperCase()}
+                            </span>
+                            <span style={{ fontSize: "12px", color: textSub, fontFamily: "monospace" }}>#{complaint.complaintId || complaint._id?.substring(0,8)}</span>
+                          </div>
+                          <span style={{ fontSize: "11px", color: textSub }}>{complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                        
+                        <div style={{ marginBottom: "12px" }}>
+                          <p style={{ margin: 0, fontSize: "13px", lineHeight: "1.4", color: textMain }}>
+                            {complaint.description || "No description provided"}
+                          </p>
+                        </div>
+                        
+                        {complaint.response && (
+                          <div style={{ padding: "12px", borderRadius: "8px", background: isLight ? "#dbeafe" : "#1e3a8a", borderLeft: "3px solid #3b82f6" }}>
+                            <p style={{ margin: 0, fontSize: "12px", color: isLight ? "#1e40af" : "#dbeafe" }}>
+                              <strong>Response:</strong> {complaint.response}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {complaint.screenshot && (
+                          <div style={{ marginTop: "8px" }}>
+                            <img 
+                              src={complaint.screenshot} 
+                              alt="Complaint Screenshot" 
+                              style={{ maxWidth: "200px", height: "120px", objectFit: "cover", borderRadius: "8px", cursor: "pointer", border: `1px solid ${isLight ? "#cbd5e1" : "#475569"}` }}
+                              onClick={() => window.open(complaint.screenshot, "_blank")}
+                            />
+                            <div style={{ fontSize: "10px", color: textSub, marginTop: "4px" }}>Click to enlarge</div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: `1px solid ${isLight ? "#e2e8f0" : "#334155"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12px", color: textSub }}>Total: {modalStudent.complaints.length} complaints</span>
+                <button onClick={closeModal} style={{ ...buttonBase, background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "white" }}>Close</button>
               </div>
             </motion.div>
           </div>

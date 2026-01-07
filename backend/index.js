@@ -4093,29 +4093,70 @@ app.get("/admin/monitor/vendors", async (req, res) => {
 app.get("/admin/monitor/students", async (req, res) => {
   try {
     const students = await User.find({})
-      .select("firstName lastName collegeEmail ImageUrl isFrozen isSuspended walletBalance createdAt kyc")
+      .select("firstName lastName collegeEmail parentEmail ImageUrl isFrozen isSuspended walletBalance createdAt kyc transactions")
       .sort({ createdAt: -1 });
 
-    // Get additional stats for each student
+    // Get additional stats for each student - using same logic as user dashboard
     const studentsWithStats = await Promise.all(
       students.map(async (student) => {
-        const transactions = student.transactions || [];
+        // Use same logic as /transactions/:userId endpoint
+        const userTransactions = (student.transactions || []).sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
+        // Enrich each transaction with vendor data (same as user dashboard)
+        const enrichedTransactions = await Promise.all(
+          userTransactions.map(async (tx) => {
+            let vendorName = "Unknown Vendor";
+            let vendorid = null;
+            let vendorEmail = null;
+
+            // Find transaction using txid
+            const fullTx = await Transaction.findOne({ txid: tx.txid });
+
+            if (fullTx?.vendorId) {
+              // Find vendor using vendorId
+              const vendor = await Vendor.findById(fullTx.vendorId);
+
+              if (vendor) {
+                vendorName = vendor.vendorName;
+                vendorid = vendor.vendorid;
+                vendorEmail = vendor.Email;
+              }
+            }
+
+            return {
+              ...tx.toObject(),
+              firstName: student.firstName,
+              lastName: student.lastName,
+              vendorName,
+              vendorid,
+              vendorEmail,
+            };
+          })
+        );
+        
         const complaints = await Complaint.find({ userId: student._id })
           .sort({ createdAt: -1 })
           .limit(5);
 
-        // Calculate total spending from successful transactions
-        const totalSpending = transactions
-          .filter(tx => tx.status === "SUCCESS")
-          .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        // Calculate total spending using same logic as user dashboard (SUCCESS - REFUND)
+        const totalSpending = enrichedTransactions
+          .filter(tx => tx.status === "SUCCESS" || tx.status === "REFUND")
+          .reduce((sum, tx) => {
+            if (tx.status === "SUCCESS") return sum + (tx.amount || 0);
+            if (tx.status === "REFUND") return sum - (tx.amount || 0); // subtract refund
+            return sum;
+          }, 0);
 
         return {
           ...student.toObject(),
-          recentTransactions: transactions.slice(-5), // Last 5 transactions
+          recentTransactions: enrichedTransactions.slice(0, 5), // First 5 = newest 5 (same as user dashboard)
           recentComplaints: complaints,
-          totalTransactions: transactions.length,
+          totalTransactions: enrichedTransactions.length,
           totalComplaints: complaints.length,
-          totalSpending: totalSpending
+          totalSpending: Math.max(0, totalSpending), // Actual spending (SUCCESS - REFUND)
+          walletBalance: student.walletBalance // Current wallet balance (what user dashboard shows)
         };
       })
     );
@@ -4169,29 +4210,69 @@ app.get("/admin/monitor/student/:studentId", async (req, res) => {
     const { studentId } = req.params;
     
     const student = await User.findById(studentId)
-      .select("firstName lastName collegeEmail ImageUrl isFrozen walletBalance createdAt kyc");
+      .select("firstName lastName collegeEmail parentEmail ImageUrl isFrozen isSuspended walletBalance createdAt kyc transactions");
     
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
+    // Use same logic as /transactions/:userId endpoint
+    const userTransactions = (student.transactions || []).sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    // Enrich each transaction with vendor data (same as user dashboard)
+    const enrichedTransactions = await Promise.all(
+      userTransactions.map(async (tx) => {
+        let vendorName = "Unknown Vendor";
+        let vendorid = null;
+        let vendorEmail = null;
+
+        // Find transaction using txid
+        const fullTx = await Transaction.findOne({ txid: tx.txid });
+
+        if (fullTx?.vendorId) {
+          // Find vendor using vendorId
+          const vendor = await Vendor.findById(fullTx.vendorId);
+
+          if (vendor) {
+            vendorName = vendor.vendorName;
+            vendorid = vendor.vendorid;
+            vendorEmail = vendor.Email;
+          }
+        }
+
+        return {
+          ...tx.toObject(),
+          firstName: student.firstName,
+          lastName: student.lastName,
+          vendorName,
+          vendorid,
+          vendorEmail,
+        };
+      })
+    );
+    
     const complaints = await Complaint.find({ userId: studentId })
       .sort({ createdAt: -1 });
 
-    // Calculate total spending from successful transactions
-    const transactions = student.transactions || [];
-    const totalSpending = transactions
-      .filter(tx => tx.status === "SUCCESS")
-      .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    // Calculate total spending using same logic as user dashboard (SUCCESS - REFUND)
+    const totalSpending = enrichedTransactions
+      .filter(tx => tx.status === "SUCCESS" || tx.status === "REFUND")
+      .reduce((sum, tx) => {
+        if (tx.status === "SUCCESS") return sum + (tx.amount || 0);
+        if (tx.status === "REFUND") return sum - (tx.amount || 0); // subtract refund
+        return sum;
+      }, 0);
 
     res.json({
       student,
-      transactions: transactions,
+      transactions: enrichedTransactions,
       complaints,
       stats: {
-        totalTransactions: transactions.length,
+        totalTransactions: enrichedTransactions.length,
         totalComplaints: complaints.length,
-        totalSpending: totalSpending,
+        totalSpending: Math.max(0, totalSpending),
         walletBalance: student.walletBalance
       }
     });

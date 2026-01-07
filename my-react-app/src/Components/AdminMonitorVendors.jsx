@@ -19,6 +19,9 @@ function AdminMonitorVendors() {
 
   // --- New Visual State (From Target) ---
   const [theme, setTheme] = useState("light");
+  const [showTransactionsModal, setShowTransactionsModal] = useState(false);
+  const [showRedeemsModal, setShowRedeemsModal] = useState(false);
+  const [modalVendor, setModalVendor] = useState(null);
 
   useEffect(() => {
     if (!state || state.role !== "admin") {
@@ -123,6 +126,42 @@ function AdminMonitorVendors() {
       default:
         return isLight ? "#0f172a" : "#e5e7eb";
     }
+  };
+
+  const handleViewMoreTransactions = async (vendor) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/admin/monitor/vendor/${vendor._id}`);
+      setModalVendor(res.data);
+      setShowTransactionsModal(true);
+    } catch (err) {
+      console.error("Error fetching full transactions:", err);
+      showAlert({
+        type: "error",
+        title: "Fetch Failed",
+        message: "Failed to fetch full transaction history"
+      });
+    }
+  };
+
+  const handleViewMoreRedeems = async (vendor) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/admin/monitor/vendor/${vendor._id}`);
+      setModalVendor(res.data);
+      setShowRedeemsModal(true);
+    } catch (err) {
+      console.error("Error fetching full redeems:", err);
+      showAlert({
+        type: "error",
+        title: "Fetch Failed",
+        message: "Failed to fetch full redeem history"
+      });
+    }
+  };
+
+  const closeModal = () => {
+    setShowTransactionsModal(false);
+    setShowRedeemsModal(false);
+    setModalVendor(null);
   };
 
   // --- Styling Constants (From Target) ---
@@ -694,31 +733,61 @@ function AdminMonitorVendors() {
                       {selectedVendor.transactions.length === 0 ? (
                         <p style={{ color: textSub }}>No transactions</p>
                       ) : (
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                          <thead>
-                            <tr>
-                              <th style={{ ...tableHeaderStyle, padding: "8px" }}>Student</th>
-                              <th style={{ ...tableHeaderStyle, padding: "8px" }}>Amount</th>
-                              <th style={{ ...tableHeaderStyle, padding: "8px" }}>Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedVendor.transactions
-                              .slice(0, 5)
-                              .map((tx, index) => (
-                                <tr key={index}>
-                                  <td style={{ ...tableCellStyle, padding: "8px" }}>
-                                    {tx.userId?.firstName} {tx.userId?.lastName}
-                                  </td>
-                                  <td style={{ ...tableCellStyle, padding: "8px" }}>₹{tx.amount}</td>
-                                  <td style={{ ...tableCellStyle, padding: "8px", color: getStatusColor(tx.status) }}>
-                                    {tx.status}
-                                  </td>
+                          <>
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px" }}>Student</th>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px" }}>Amount</th>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px" }}>Status</th>
                                 </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      )}
+                              </thead>
+                              <tbody>
+                                {selectedVendor.transactions
+                                  .slice(0, 5)
+                                  .map((tx, index) => (
+                                    <tr key={index}>
+                                      <td style={{ ...tableCellStyle, padding: "8px" }}>
+                                        {tx.userId?.firstName} {tx.userId?.lastName}
+                                      </td>
+                                      <td style={{ ...tableCellStyle, padding: "8px" }}>₹{tx.amount}</td>
+                                      <td style={{ ...tableCellStyle, padding: "8px", color: getStatusColor(tx.status) }}>
+                                        {tx.status}
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                            {selectedVendor.transactions.length > 5 && (
+                              <div style={{ marginTop: "12px", textAlign: "center" }}>
+                                <button
+                                  onClick={() => handleViewMoreTransactions(selectedVendor.vendor)}
+                                  style={{
+                                    background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 16px",
+                                    borderRadius: "8px",
+                                    fontSize: "12px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    transition: "all 0.3s ease"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.transform = "translateY(-2px)";
+                                    e.target.style.boxShadow = "0 4px 12px rgba(59,130,246,0.3)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.transform = "translateY(0)";
+                                    e.target.style.boxShadow = "none";
+                                  }}
+                                >
+                                  View All Transactions ({selectedVendor.transactions.length})
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
                     </div>
 
                     {/* Recent Redeems */}
@@ -727,31 +796,61 @@ function AdminMonitorVendors() {
                       {selectedVendor.redeemRequests.length === 0 ? (
                         <p style={{ color: textSub }}>No redeem requests</p>
                       ) : (
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                          <thead>
-                            <tr>
-                              <th style={{ ...tableHeaderStyle, padding: "8px" }}>Amount</th>
-                              <th style={{ ...tableHeaderStyle, padding: "8px" }}>Status</th>
-                              <th style={{ ...tableHeaderStyle, padding: "8px" }}>Date</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedVendor.redeemRequests
-                              .slice(0, 5)
-                              .map((redeem, index) => (
-                                <tr key={index}>
-                                  <td style={{ ...tableCellStyle, padding: "8px" }}>₹{redeem.amount}</td>
-                                  <td style={{ ...tableCellStyle, padding: "8px", color: getStatusColor(redeem.status) }}>
-                                    {redeem.status}
-                                  </td>
-                                  <td style={{ ...tableCellStyle, padding: "8px" }}>
-                                    {new Date(redeem.date).toLocaleDateString()}
-                                  </td>
+                          <>
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px" }}>Amount</th>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px" }}>Status</th>
+                                  <th style={{ ...tableHeaderStyle, padding: "8px" }}>Date</th>
                                 </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      )}
+                              </thead>
+                              <tbody>
+                                {selectedVendor.redeemRequests
+                                  .slice(0, 5)
+                                  .map((redeem, index) => (
+                                    <tr key={index}>
+                                      <td style={{ ...tableCellStyle, padding: "8px" }}>₹{redeem.amount}</td>
+                                      <td style={{ ...tableCellStyle, padding: "8px", color: getStatusColor(redeem.status) }}>
+                                        {redeem.status}
+                                      </td>
+                                      <td style={{ ...tableCellStyle, padding: "8px" }}>
+                                        {new Date(redeem.date).toLocaleDateString()}
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                            {selectedVendor.redeemRequests.length > 5 && (
+                              <div style={{ marginTop: "12px", textAlign: "center" }}>
+                                <button
+                                  onClick={() => handleViewMoreRedeems(selectedVendor.vendor)}
+                                  style={{
+                                    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 16px",
+                                    borderRadius: "8px",
+                                    fontSize: "12px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    transition: "all 0.3s ease"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.transform = "translateY(-2px)";
+                                    e.target.style.boxShadow = "0 4px 12px rgba(139,92,246,0.3)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.transform = "translateY(0)";
+                                    e.target.style.boxShadow = "none";
+                                  }}
+                                >
+                                  View All Redeems ({selectedVendor.redeemRequests.length})
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -760,6 +859,108 @@ function AdminMonitorVendors() {
           )}
         </motion.div>
       </motion.div>
+
+      {/* Transactions Modal */}
+      <AnimatePresence>
+        {showTransactionsModal && modalVendor && (
+          <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} style={{ width: "90%", maxWidth: "800px", maxHeight: "80vh", padding: "24px", borderRadius: "16px", background: isLight ? "#fff" : "#1e293b", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", color: textMain, display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ margin: 0, color: textMain }}>All Transactions - {modalVendor.vendor.vendorName}</h3>
+                <button onClick={closeModal} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: textSub, padding: "0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "6px" }} onMouseEnter={(e) => { e.target.style.background = isLight ? "#f1f5f9" : "#334155"; }} onMouseLeave={(e) => { e.target.style.background = "none"; }}>&times;</button>
+              </div>
+              
+              <div style={{ flex: 1, overflowY: "auto", paddingRight: "8px" }}>
+                {(!modalVendor.transactions || modalVendor.transactions.length === 0) ? (
+                  <p style={{ color: textSub, fontSize: 13, textAlign: "center", padding: "40px" }}>No transactions found.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead style={{ position: "sticky", top: 0, background: isLight ? "#fff" : "#1e293b", zIndex: 10 }}>
+                      <tr>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>Date</th>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>Student</th>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>Amount</th>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>Status</th>
+                        <th style={{ ...tableHeaderStyle, padding: "12px 8px" }}>TXN ID</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalVendor.transactions.map((tx, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"}` }}>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "12px" }}>{tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'N/A'}</td>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "12px" }}>{tx.userId?.firstName} {tx.userId?.lastName || 'N/A'}</td>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "12px", fontWeight: 600 }}>₹{tx.amount || '0.00'}</td>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "12px", color: getStatusColor(tx.status) }}>{tx.status || 'PENDING'}</td>
+                          <td style={{ ...tableCellStyle, padding: "12px 8px", fontSize: "11px", color: textSub, fontFamily: "monospace" }}>{tx.txid || tx._id?.substring(0,8) || 'N/A'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              
+              <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: `1px solid ${isLight ? "#e2e8f0" : "#334155"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12px", color: textSub }}>Total: {modalVendor.transactions.length} transactions</span>
+                <button onClick={closeModal} style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", color: "white", border: "none", padding: "8px 16px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Close</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Redeems Modal */}
+      <AnimatePresence>
+        {showRedeemsModal && modalVendor && (
+          <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} style={{ width: "90%", maxWidth: "800px", maxHeight: "80vh", padding: "24px", borderRadius: "16px", background: isLight ? "#fff" : "#1e293b", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", color: textMain, display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ margin: 0, color: textMain }}>All Redeem Requests - {modalVendor.vendor.vendorName}</h3>
+                <button onClick={closeModal} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: textSub, padding: "0", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "6px" }} onMouseEnter={(e) => { e.target.style.background = isLight ? "#f1f5f9" : "#334155"; }} onMouseLeave={(e) => { e.target.style.background = "none"; }}>&times;</button>
+              </div>
+              
+              <div style={{ flex: 1, overflowY: "auto", paddingRight: "8px" }}>
+                {(!modalVendor.redeemRequests || modalVendor.redeemRequests.length === 0) ? (
+                  <p style={{ color: textSub, fontSize: 13, textAlign: "center", padding: "40px" }}>No redeem requests found.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {modalVendor.redeemRequests.map((redeem, i) => (
+                      <div key={i} style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${isLight ? "#e2e8f0" : "#334155"}`, background: isLight ? "#f8fafc" : "#0f172a" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "10px", background: getStatusColor(redeem.status), color: "#fff" }}>
+                              {redeem.status?.toUpperCase()}
+                            </span>
+                            <span style={{ fontSize: "12px", color: textSub, fontFamily: "monospace" }}>#{redeem._id?.substring(0,8) || 'N/A'}</span>
+                          </div>
+                          <span style={{ fontSize: "11px", color: textSub }}>{redeem.date ? new Date(redeem.date).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                        
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "14px", fontWeight: 600, color: textMain }}>₹{redeem.amount || '0.00'}</span>
+                          {redeem.status === 'pending' && (
+                            <span style={{ fontSize: "11px", color: textSub }}>Awaiting approval</span>
+                          )}
+                        </div>
+                        
+                        {redeem.upiId && (
+                          <div style={{ marginTop: "8px", fontSize: "11px", color: textSub }}>
+                            <strong>UPI ID:</strong> {redeem.upiId}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: `1px solid ${isLight ? "#e2e8f0" : "#334155"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12px", color: textSub }}>Total: {modalVendor.redeemRequests.length} redeem requests</span>
+                <button onClick={closeModal} style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "white", border: "none", padding: "8px 16px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Close</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
