@@ -17,7 +17,40 @@ function ChangeMpin() {
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const isLight = theme === "light";
   const easingSoft = [0.16, 1, 0.3, 1];
@@ -255,7 +288,30 @@ function ChangeMpin() {
 
   return (
     <>
-      <Header />
+      <Header theme={theme} setTheme={setTheme} />
+
+      {/* Back Button */}
+      <motion.button
+        onClick={() => navigate(-1)}
+        whileHover={{ scale: 1.02, boxShadow: "0 0 18px rgba(59,130,246,0.5)" }}
+        whileTap={{ scale: 0.98 }}
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: "20px",
+          padding: "8px 14px",
+          borderRadius: "14px",
+          border: "none",
+          background: "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
+          color: "#f9fafb",
+          fontWeight: 600,
+          cursor: "pointer",
+          fontSize: "14px",
+          zIndex: 10,
+        }}
+      >
+        ← Back
+      </motion.button>
 
       <div style={pageStyle}>
         {/* orbs like RaiseComplaint */}

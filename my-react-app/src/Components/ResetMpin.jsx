@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
 import Header from "./Header3.jsx";
@@ -15,7 +15,40 @@ function ResetMpin() {
   const [mpin, setMpin] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
   const isLight = theme === "light";
 
   if (!userId) return <h3>Invalid access</h3>;
@@ -88,7 +121,7 @@ function ResetMpin() {
 
   return (
     <>
-      <Header />
+      <Header theme={theme} setTheme={setTheme} />
       <motion.div
         style={{
           minHeight: "100vh",

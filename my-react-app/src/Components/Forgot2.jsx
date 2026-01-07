@@ -21,7 +21,40 @@ function Forgot2() {
   const [studentOtp, setStudentOtp] = useState(new Array(6).fill(""));
   const [parentOtp, setParentOtp] = useState(new Array(6).fill(""));
 
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
   const isLight = theme === "light";
 
   const handleChange = (setter, arr, idx, value, idPrefix) => {
@@ -132,7 +165,7 @@ function Forgot2() {
 
   return (
     <>
-      <Header />
+      <Header theme={theme} setTheme={setTheme} />
       <motion.div
         style={{
           minHeight: "100vh",

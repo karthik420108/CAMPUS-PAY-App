@@ -12,7 +12,40 @@ function Forgot() {
   const [role, setRole] = useState("auto");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
   const [screenSize, setScreenSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight
@@ -105,7 +138,7 @@ function Forgot() {
 
   return (
     <>
-      <Header />
+      <Header theme={theme} setTheme={setTheme} />
 
       <motion.div
         style={{

@@ -17,7 +17,40 @@ function VendorLogin() {
   const [balance, setBalance] = useState(0);
   const [imageUrl, setImageUrl] = useState("");
   const [showProfileOption, setShowProfileOption] = useState(false);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
   const [hasUnread, setHasUnread] = useState(false);
 
   const { isSuspended, isFrozen, showSuspensionBanner } =
@@ -162,9 +195,8 @@ function VendorLogin() {
   return (
     <>
       <Header1 userId={vendorId} role="vendor" isFrozen={isFrozen} />
-      <Header />
+      <Header theme={theme} setTheme={setTheme} />
       <SuspensionBanner show={showSuspensionBanner} />
-
       <div
         onClick={() => {
           if (showProfileOption) setShowProfileOption(false);
@@ -259,7 +291,7 @@ function VendorLogin() {
 
           {/* Notification + profile (responsive) */}
           {isMobile ? (
-            // MOBILE: bell inside the pill bar, no absolute positioning
+            // MOBILE
             <motion.div
               style={{
                 width: "100%",
@@ -291,7 +323,7 @@ function VendorLogin() {
                   width: "100%",
                 }}
               >
-                {/* Bell on the left */}
+                {/* Bell */}
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
@@ -343,6 +375,36 @@ function VendorLogin() {
                       />
                     )}
                   </AnimatePresence>
+                </motion.div>
+
+                {/* Logout */}
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLogout();
+                  }}
+                  style={{
+                    cursor: "pointer",
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background: isLight
+                      ? "linear-gradient(135deg, rgba(239,68,68,0.1), rgba(220,38,38,0.1))"
+                      : "linear-gradient(145deg, rgba(127,29,29,0.6), rgba(153,27,27,0.6))",
+                    border: isLight
+                      ? "1px solid rgba(239,68,68,0.4)"
+                      : "1px solid rgba(185,28,28,0.6)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "18px",
+                      color: isLight ? "#b91c1c" : "#fee2e2",
+                    }}
+                  >
+                    🚪
+                  </span>
                 </motion.div>
 
                 {/* Profile text + avatar */}
@@ -432,7 +494,7 @@ function VendorLogin() {
                 </div>
               </motion.div>
 
-              {/* Dropdown (still absolute, but relative to mobile bar) */}
+              {/* Dropdown mobile */}
               <AnimatePresence>
                 {showProfileOption && (
                   <motion.div
@@ -513,32 +575,12 @@ function VendorLogin() {
                     >
                       🔐 Change MPIN
                     </button>
-                    <button
-                      onClick={handleLogout}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "8px 10px",
-                        borderRadius: 10,
-                        border: "none",
-                        background: isLight
-                          ? "rgba(248,113,113,0.1)"
-                          : "rgba(127,29,29,0.6)",
-                        color: isLight ? "#b91c1c" : "#fee2e2",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        marginTop: 4,
-                      }}
-                    >
-                      🚪 Logout
-                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
           ) : (
-            // DESKTOP / TABLET: original absolute top-right cluster
+            // DESKTOP / TABLET
             <motion.div
               style={{
                 position: "absolute",
@@ -609,6 +651,40 @@ function VendorLogin() {
                     />
                   )}
                 </AnimatePresence>
+              </motion.div>
+
+              {/* Logout Button */}
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.4, ease: easingSoft }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleLogout}
+                style={{
+                  cursor: "pointer",
+                  padding: "10px 12px",
+                  borderRadius: "16px",
+                  background: isLight
+                    ? "linear-gradient(135deg, rgba(239,68,68,0.1), rgba(220,38,38,0.1))"
+                    : "linear-gradient(145deg, rgba(127,29,29,0.6), rgba(153,27,27,0.6))",
+                  backdropFilter: "blur(16px)",
+                  border: isLight
+                    ? "1px solid rgba(239,68,68,0.4)"
+                    : "1px solid rgba(185,28,28,0.6)",
+                  boxShadow: isLight
+                    ? "0 8px 24px rgba(239,68,68,0.12)"
+                    : "0 8px 24px rgba(239,68,68,0.6)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "22px",
+                    color: isLight ? "#b91c1c" : "#fee2e2",
+                  }}
+                >
+                  🚪
+                </span>
               </motion.div>
 
               {/* Profile pill */}
@@ -795,26 +871,6 @@ function VendorLogin() {
                     >
                       🔐 Change MPIN
                     </button>
-                    <button
-                      onClick={handleLogout}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "8px 10px",
-                        borderRadius: 10,
-                        border: "none",
-                        background: isLight
-                          ? "rgba(248,113,113,0.1)"
-                          : "rgba(127,29,29,0.6)",
-                        color: isLight ? "#b91c1c" : "#fee2e2",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        marginTop: 4,
-                      }}
-                    >
-                      🚪 Logout
-                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -843,49 +899,6 @@ function VendorLogin() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* theme toggle */}
-            <div
-              style={{
-                position: "absolute",
-                top: 20,
-                right: 24,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "4px 8px",
-                borderRadius: 999,
-                border: "1px solid rgba(148,163,184,0.6)",
-                background: isLight ? "#f9fafb" : "rgba(15,23,42,0.9)",
-                fontSize: 11,
-                zIndex: 5,
-              }}
-            >
-              <span style={{ color: "#6b7280" }}>Mode</span>
-              <button
-                type="button"
-                onClick={() =>
-                  setTheme((prev) => (prev === "light" ? "dark" : "light"))
-                }
-                style={{
-                  border: "none",
-                  borderRadius: 999,
-                  padding: "4px 12px",
-                  cursor: "pointer",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  background: isLight
-                    ? "linear-gradient(120deg,#020617,#0f172a)"
-                    : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
-                  color: isLight ? "#e5e7eb" : "#0f172a",
-                }}
-              >
-                {isLight ? "Dark" : "Light"}
-              </button>
-            </div>
-
             {/* top accent */}
             <motion.div
               style={{
@@ -1145,6 +1158,281 @@ function VendorLogin() {
               <span>💸</span>
               <span>Refund Amount</span>
             </motion.button>
+          </motion.div>
+
+          {/* VENDOR ACTIONS CARD (Transactions full width, 4 smaller 2x2 grid) */}
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.32, duration: 0.5, ease: easingSoft }}
+            style={{
+              width: "100%",
+              maxWidth: 650,
+              borderRadius: 24,
+              padding: "18px 20px 20px",
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              ...(isLight
+                ? {
+                    background:
+                      "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(239,246,255,0.98))",
+                    border: "1px solid rgba(209,213,219,0.9)",
+                    boxShadow:
+                      "0 14px 30px rgba(15,23,42,0.18), 0 0 0 1px rgba(148,163,184,0.3)",
+                  }
+                : {
+                    background:
+                      "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(15,23,42,1))",
+                    border: "1px solid rgba(30,64,175,0.85)",
+                    boxShadow:
+                      "0 16px 40px rgba(15,23,42,0.85), 0 0 0 1px rgba(30,64,175,0.7)",
+                  }),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: textMain,
+                }}
+              >
+                Quick actions
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: textSub,
+                }}
+              >
+                Transactions, Redeem & Complaints
+              </span>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.38, duration: 0.45, ease: easingSoft }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              {/* Row 1: Transactions full width */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                }}
+              >
+                <motion.button
+                  onClick={() =>
+                    navigate("/vendor-transaction", {
+                      state: { userId: vendorId, role: "vendor" },
+                    })
+                  }
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: "0 14px 32px rgba(59,130,246,0.5)",
+                  }}
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    padding: "16px 20px",
+                    borderRadius: 20,
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    background:
+                      "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
+                    backgroundSize: "220% 220%",
+                    color: "#f9fafb",
+                    boxShadow:
+                      "0 12px 28px rgba(59,130,246,0.4), 0 0 0 1px rgba(59,130,246,0.3)",
+                    minHeight: "56px",
+                  }}
+                  animate={{
+                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>💳</span>
+                  <span>Transactions</span>
+                </motion.button>
+              </div>
+
+              {/* Row 2: 4 small buttons in 2x2 grid on all devices */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, 1fr)", // 2 columns even on phone
+                  gap: 14,
+                }}
+              >
+                {/* Redeem Button */}
+                <motion.button
+                  onClick={() => navigate("/redeem", { state: { vendorId } })}
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: "0 14px 32px rgba(34,197,94,0.5)",
+                  }}
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    padding: "16px 20px",
+                    borderRadius: 20,
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    background:
+                      "linear-gradient(120deg,#22c55e,#16a34a,#0f766e)",
+                    color: "#ecfdf5",
+                    boxShadow:
+                      "0 12px 28px rgba(34,197,94,0.5), 0 0 0 1px rgba(21,128,61,0.5)",
+                    minHeight: "56px",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>💸</span>
+                  <span>Redeem</span>
+                </motion.button>
+
+                {/* Redeem History Button */}
+                <motion.button
+                  onClick={() =>
+                    navigate("/redeem-history", {
+                      state: { vendorId, role: "vendor" },
+                    })
+                  }
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: "0 14px 32px rgba(168,85,247,0.5)",
+                  }}
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    padding: "16px 20px",
+                    borderRadius: 20,
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    background:
+                      "linear-gradient(120deg,#a855f7,#9333ea,#7c3aed)",
+                    color: "#faf5ff",
+                    boxShadow:
+                      "0 12px 28px rgba(168,85,247,0.4), 0 0 0 1px rgba(168,85,247,0.3)",
+                    minHeight: "56px",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>📜</span>
+                  <span>Redeem History</span>
+                </motion.button>
+
+                {/* View Complaints Button */}
+                <motion.button
+                  onClick={() =>
+                    navigate("/complaint-history", {
+                      state: { vendorId, role: "vendor" },
+                    })
+                  }
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: "0 14px 32px rgba(251,146,60,0.5)",
+                  }}
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    padding: "16px 20px",
+                    borderRadius: 20,
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    background:
+                      "linear-gradient(120deg,#fb923c,#f97316,#ea580c)",
+                    color: "#fff7ed",
+                    boxShadow:
+                      "0 12px 28px rgba(251,146,60,0.4), 0 0 0 1px rgba(251,146,60,0.3)",
+                    minHeight: "56px",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>📋</span>
+                  <span>View Complaints</span>
+                </motion.button>
+
+                {/* Raise Complaint Button */}
+                <motion.button
+                  onClick={() =>
+                    navigate("/raise-complaint", {
+                      state: { vendorId, role: "vendor" },
+                    })
+                  }
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: "0 14px 32px rgba(239,68,68,0.5)",
+                  }}
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    padding: "16px 20px",
+                    borderRadius: 20,
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    background:
+                      "linear-gradient(120deg,#ef4444,#dc2626,#b91c1c)",
+                    color: "#fef2f2",
+                    boxShadow:
+                      "0 12px 28px rgba(239,68,68,0.4), 0 0 0 1px rgba(239,68,68,0.3)",
+                    minHeight: "56px",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>✍️</span>
+                  <span>Raise a Complaint</span>
+                </motion.button>
+              </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       </div>

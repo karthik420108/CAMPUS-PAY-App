@@ -4,6 +4,7 @@ import axios from "axios";
 import Header1 from "./Header1";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import Header from "./Header3"
 
 function GenerateBill() {
   const { state } = useLocation();
@@ -12,7 +13,40 @@ function GenerateBill() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
   const isLight = theme === "light";
   const [isFrozen, setIsFrozen] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
@@ -150,6 +184,29 @@ if (blockingMessage) {
   return (
     <>
       <Header1 userId={userId} role="student" isFrozen={isFrozen}/>
+        <Header theme={theme} setTheme={setTheme} /> 
+      {/* Back Button */}
+      <motion.button
+        onClick={() => navigate(-1)}
+        whileHover={{ scale: 1.02, boxShadow: "0 0 18px rgba(59,130,246,0.5)" }}
+        whileTap={{ scale: 0.98 }}
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: "20px",
+          padding: "8px 14px",
+          borderRadius: "14px",
+          border: "none",
+          background: "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
+          color: "#f9fafb",
+          fontWeight: 600,
+          cursor: "pointer",
+          fontSize: "14px",
+          zIndex: 10,
+        }}
+      >
+        ← Back
+      </motion.button>
 
       <div style={pageStyle}>
         <motion.div

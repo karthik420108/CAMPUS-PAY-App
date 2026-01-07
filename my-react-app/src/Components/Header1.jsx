@@ -74,74 +74,77 @@ const Header1 = ({ isOp, userId, isFrozen , role}) => {
 
   return (
     <>
-      {/* Sidebar */}
-      <div className={`sidebar ${isOpen ? "open" : ""}`}>
-        <ul>
-          <li onClick={SHome}>🏠 Home</li>
+      {/* Sidebar - Only show for non-student and non-vendor roles */}
+      {role !== "student" && role !== "vendor" && (
+        <div className={`sidebar ${isOpen ? "open" : ""}`}>
+          <ul>
+            <li onClick={SHome}>🏠 Home</li>
 
-          <li
-            onClick={() => {
-              if (role == "student"){
-                navigate("/History", { state: { userId , role} });
-              }
-              else {
-              navigate("/vendor-transaction", {state : {userId , role}});
-              }
-            }}
-            
-          > 
-            📊 Transaction History
-          </li>
-          {role == "vendor" && (
-            <li 
-              className={isFrozen ? "disabled" : ""}
+            <li
               onClick={() => {
-                if (!isFrozen) {
-                  navigate("/redeem", { state: { vendorId : userId } });
+                if (role == "student"){
+                  navigate("/History", { state: { userId , role} });
+                }
+                else {
+                navigate("/vendor-transaction", {state : {userId , role}});
                 }
               }}
-            >
-              Redeem
+              
+            > 
+              📊 Transaction History
             </li>
-          )}
-          {role == "vendor" && (
-            <li 
-              className={isFrozen ? "disabled" : ""}
-              onClick={() => {
-                if (!isFrozen) {
-                  navigate("/redeem-history", { state: { vendorId: userId, role } });
-                }
-              }}
-            >
-              Redeem History
+            {role == "vendor" && (
+              <li 
+                className={isFrozen ? "disabled" : ""}
+                onClick={() => {
+                  if (!isFrozen) {
+                    navigate("/redeem", { state: { vendorId : userId } });
+                  }
+                }}
+              >
+                Redeem
+              </li>
+            )}
+            {role == "vendor" && (
+              <li 
+                className={isFrozen ? "disabled" : ""}
+                onClick={() => {
+                  if (!isFrozen) {
+                    navigate("/redeem-history", { state: { vendorId: userId, role } });
+                  }
+                }}
+              >
+                Redeem History
+              </li>
+            )}
+            <li onClick={() => navigate("/complaint-history", { state: { userId , role , isFrozen} })}>
+              💼 View Complaint History
             </li>
-          )}
-          <li onClick={() => navigate("/complaint-history", { state: { userId , role , isFrozen} })}>
-            💼 View Complaint History
-          </li>
 
-          {role == "student" &&<li onClick={() => navigate("/generate-bill", { state: { userId , isFrozen} })}>
-            📄 Generate Bill
-          </li>}
+            {role == "student" &&<li onClick={() => navigate("/generate-bill", { state: { userId , isFrozen} })}>
+              📄 Generate Bill
+            </li>}
 
-          <li onClick={() => navigate("/raise-complaint", { state: { userId , role , isFrozen } })}>
-            ❓ Raise a Complaint
-          </li>
-          <li onClick={() => navigate("/")}>
-            Logout
-          </li>
-        </ul>
-      </div>
+            <li onClick={() => navigate("/raise-complaint", { state: { userId , role , isFrozen } })}>
+              ❓ Raise a Complaint
+            </li>
+            <li onClick={() => navigate("/")}>
+              Logout
+            </li>
+          </ul>
+        </div>
+      )}
 
-      {/* Floating Hamburger */}
-      <div className="hamburger" onClick={toggleSidebar}>
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
+      {/* Floating Hamburger - Only show for non-student and non-vendor roles */}
+      {role !== "student" && role !== "vendor" && (
+        <div className="hamburger" onClick={toggleSidebar}>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      )}
     </>
   );
 };
 
 export default Header1;
-

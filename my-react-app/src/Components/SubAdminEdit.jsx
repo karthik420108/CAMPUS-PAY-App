@@ -197,7 +197,9 @@ function SubAdminEdit() {
 
   if (!currentSubAdminId) return null;
 
-  const firstLetter = profile.name ? profile.name.charAt(0).toUpperCase() : null;
+  const firstLetter = profile.name
+    ? profile.name.charAt(0).toUpperCase()
+    : null;
 
   return (
     <SubAdminStatusChecker subAdminId={currentSubAdminId}>
@@ -262,7 +264,9 @@ function SubAdminEdit() {
               padding: "4px 6px",
               borderRadius: 999,
               border: `1px solid ${
-                isLight ? "rgba(148,163,184,0.6)" : "rgba(148,163,184,0.4)"
+                isLight
+                  ? "rgba(148,163,184,0.6)"
+                  : "rgba(148,163,184,0.4)"
               }`,
               background: isLight ? "#f9fafb" : "rgba(15,23,42,0.8)",
               zIndex: 10,
@@ -360,7 +364,14 @@ function SubAdminEdit() {
                 marginBottom: "30px",
               }}
             >
-              <div style={{ position: "relative", marginBottom: "16px" }}>
+              <div
+                style={{
+                  position: "relative",
+                  marginBottom:
+                    profile.imageUrl || imagePreview ? "8px" : "16px",
+                  display: "inline-block",
+                }}
+              >
                 {imagePreview ? (
                   <img
                     src={imagePreview}
@@ -371,9 +382,12 @@ function SubAdminEdit() {
                       borderRadius: "50%",
                       objectFit: "cover",
                       border: `4px solid ${
-                        isLight ? "rgba(255,255,255,0.8)" : "rgba(30,41,59,0.8)"
+                        isLight
+                          ? "rgba(255,255,255,0.8)"
+                          : "rgba(30,41,59,0.8)"
                       }`,
                       boxShadow: "0 8px 16px rgba(0,0,0,0.1)",
+                      display: "block",
                     }}
                   />
                 ) : (
@@ -389,7 +403,9 @@ function SubAdminEdit() {
                       fontSize: "48px",
                       color: textSub,
                       border: `4px solid ${
-                        isLight ? "rgba(255,255,255,0.8)" : "rgba(30,41,59,0.8)"
+                        isLight
+                          ? "rgba(255,255,255,0.8)"
+                          : "rgba(30,41,59,0.8)"
                       }`,
                       userSelect: "none",
                     }}
@@ -397,11 +413,13 @@ function SubAdminEdit() {
                     {firstLetter || "👤"}
                   </div>
                 )}
+
+                {/* Camera icon attached to avatar */}
                 <label
                   style={{
                     position: "absolute",
-                    bottom: 0,
-                    right: 0,
+                    bottom: "4px",
+                    right: "4px",
                     backgroundColor: "#10b981",
                     color: "white",
                     borderRadius: "50%",
@@ -423,31 +441,37 @@ function SubAdminEdit() {
                     style={{ display: "none" }}
                   />
                 </label>
-                {(profile.imageUrl || imagePreview) && (
-                  <button
-                    type="button"
-                    onClick={handleRemovePhoto}
-                    disabled={loading}
-                    style={{
-                      marginLeft: 12,
-                      marginTop: 8,
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: "#ef4444",
-                      color: "white",
-                      cursor: loading ? "not-allowed" : "pointer",
-                      fontSize: 12,
-                    }}
-                  >
-                    Remove photo
-                  </button>
-                )}
               </div>
+
+              {(profile.imageUrl || imagePreview) && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  disabled={loading}
+                  style={{
+                    marginTop: 8,
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#ef4444",
+                    color: "white",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  Remove photo
+                </button>
+              )}
             </div>
 
             {/* Inputs */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "24px",
+              }}
+            >
               <div>
                 <label
                   style={{
@@ -471,7 +495,9 @@ function SubAdminEdit() {
                     width: "100%",
                     padding: "12px",
                     borderRadius: "12px",
-                    border: `1px solid ${isLight ? "#cbd5e1" : "#475569"}`,
+                    border: `1px solid ${
+                      isLight ? "#cbd5e1" : "#475569"
+                    }`,
                     background: isLight ? "#fff" : "#0f172a",
                     color: textMain,
                     fontSize: "15px",
@@ -503,7 +529,9 @@ function SubAdminEdit() {
                     width: "100%",
                     padding: "12px",
                     borderRadius: "12px",
-                    border: `1px solid ${isLight ? "#e5e7eb" : "#374151"}`,
+                    border: `1px solid ${
+                      isLight ? "#e5e7eb" : "#374151"
+                    }`,
                     background: isLight ? "#f1f5f9" : "#1e293b",
                     color: textSub,
                     fontSize: "15px",
@@ -621,7 +649,9 @@ function SubAdminEdit() {
                   maxWidth: "450px",
                   textAlign: "center",
                   border: `1px solid ${
-                    isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"
+                    isLight
+                      ? "rgba(0,0,0,0.1)"
+                      : "rgba(255,255,255,0.1)"
                   }`,
                 }}
               >

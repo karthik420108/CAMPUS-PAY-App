@@ -20,7 +20,42 @@ export default function RedeemForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [totalAmount, setTotalAmount] = useState(0);
-  const [darkMode, setDarkMode] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+  
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  const isLight = theme === "light";
   
   // Use vendor status hook for real-time monitoring
   const { showSuspensionBanner } = useVendorStatus(userId);
@@ -94,7 +129,6 @@ export default function RedeemForm() {
   };
 
   const easingSoft = [0.16, 1, 0.3, 1];
-  const isLight = !darkMode;
 
   // ✨ EXACT RaiseComplaint THEME STYLES
   const pageStyle = isLight
@@ -159,7 +193,7 @@ export default function RedeemForm() {
   return (
     <>
       <Header1 role="vendor" userId={userId} />
-      <Header/>
+      <Header theme={theme} setTheme={setTheme} />
       <SuspensionBanner show={showSuspensionBanner} />
 
       <motion.div
@@ -237,49 +271,6 @@ export default function RedeemForm() {
             ...cardStyle,
           }}
         >
-          {/* ✨ EXACT THEME TOGGLE POSITION & STYLE FROM RaiseComplaint */}
-          <div
-            style={{
-              position: "absolute",
-              top: 16,
-              right: 20,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "4px 6px",
-              borderRadius: 999,
-              border: "1px solid rgba(148,163,184,0.6)",
-              background: isLight ? "#f9fafb" : "rgba(15,23,42,0.9)",
-              fontSize: 11,
-              zIndex: 5,
-            }}
-          >
-            <span style={{ color: "#6b7280" }}>Mode</span>
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setDarkMode(!darkMode)}
-              style={{
-                border: "none",
-                borderRadius: 999,
-                padding: "3px 10px",
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                background: isLight
-                  ? "linear-gradient(120deg,#020617,#0f172a)"
-                  : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
-                color: isLight ? "#e5e7eb" : "#0f172a",
-              }}
-            >
-              {darkMode ? "Dark" : "Light"}
-            </motion.button>
-          </div>
-
           {/* ✨ Top Accent */}
           <motion.div
             style={{

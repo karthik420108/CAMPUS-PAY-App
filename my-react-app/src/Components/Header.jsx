@@ -208,28 +208,32 @@ function Header({ title, userRole, userName }) {
     }
   };
 
+  const shouldShowSidebar = userRole !== "vendor";
+
   return (
     <>
       {/* Header */}
       <header style={styles.header}>
         <div style={styles.headerContent}>
-          {/* Hamburger Menu */}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={styles.hamburgerBtn}
-            onMouseEnter={(e) => e.target.style.backgroundColor = "#f3f4f6"}
-            onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
-          >
-            {sidebarOpen ? (
-              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
+          {/* Hamburger Menu - Hidden for Vendor */}
+          {shouldShowSidebar && (
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={styles.hamburgerBtn}
+              onMouseEnter={(e) => e.target.style.backgroundColor = "#f3f4f6"}
+              onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+            >
+              {sidebarOpen ? (
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          )}
 
           {/* Header Title */}
           <h1 style={styles.title}>{title || "Dashboard"}</h1>
@@ -246,42 +250,44 @@ function Header({ title, userRole, userName }) {
         </div>
       </header>
 
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
+      {/* Sidebar Overlay - Hidden for Vendor */}
+      {shouldShowSidebar && sidebarOpen && (
         <div style={styles.overlay} onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
-      <div style={styles.sidebar}>
-        <div style={styles.sidebarHeader}>
-          <h2 style={styles.sidebarTitle}>Menu</h2>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            style={styles.closeBtn}
-          >
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        
-        <nav style={styles.nav}>
-          <div>
-            {navigationItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={item.action}
-                style={styles.navItem}
-                onMouseEnter={(e) => Object.assign(e.target.style, styles.navItemHover)}
-                onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#374151" })}
-              >
-                <span style={styles.navIcon}>{item.icon}</span>
-                {item.label}
-              </button>
-            ))}
+      {/* Sidebar - Hidden for Vendor */}
+      {shouldShowSidebar && (
+        <div style={styles.sidebar}>
+          <div style={styles.sidebarHeader}>
+            <h2 style={styles.sidebarTitle}>Menu</h2>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={styles.closeBtn}
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-        </nav>
-      </div>
+          
+          <nav style={styles.nav}>
+            <div>
+              {navigationItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={item.action}
+                  style={styles.navItem}
+                  onMouseEnter={(e) => Object.assign(e.target.style, styles.navItemHover)}
+                  onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#374151" })}
+                >
+                  <span style={styles.navIcon}>{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+        </div>
+      )}
     </>
   );
 }

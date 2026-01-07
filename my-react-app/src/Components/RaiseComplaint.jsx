@@ -28,7 +28,40 @@ function RaiseComplaint() {
   const [admins, setAdmins] = useState([]);
   const [selectedAdmins, setSelectedAdmins] = useState([]);
 
-  const [theme, setTheme] = useState("light"); // "light" | "dark"
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   if (!userId) {
     navigate("/");
@@ -260,7 +293,30 @@ function RaiseComplaint() {
     <>
       <Header1 userId={userId} role = {role} isFrozen={isFrozen} isOp={setSidebarOpen}/>
       <SuspensionBanner show={showSuspensionBanner} />
-      <Header/>
+
+      {/* Back Button */}
+      <motion.button
+        onClick={() => navigate(-1)}
+        whileHover={{ scale: 1.02, boxShadow: "0 0 18px rgba(59,130,246,0.5)" }}
+        whileTap={{ scale: 0.98 }}
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: "20px",
+          padding: "8px 14px",
+          borderRadius: "14px",
+          border: "none",
+          background: "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
+          color: "#f9fafb",
+          fontWeight: 600,
+          cursor: "pointer",
+          fontSize: "14px",
+          zIndex: 10,
+        }}
+      >
+        ← Back
+      </motion.button>
+      <Header theme={theme} setTheme={setTheme} />
       <motion.div
         style={{
           minHeight: "100vh",
@@ -333,49 +389,6 @@ function RaiseComplaint() {
             ...cardStyle,
           }}
         >
-          {/* theme toggle button */}
-          <div
-            style={{
-              position: "absolute",
-              top: 14,
-              right: 18,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "3px 5px",
-              borderRadius: 999,
-              border: "1px solid rgba(148,163,184,0.6)",
-              background: isLight ? "#f9fafb" : "rgba(15,23,42,0.9)",
-              fontSize: 11,
-              zIndex: 5,
-            }}
-          >
-            <span style={{ color: "#6b7280" }}>Mode</span>
-            <button
-              type="button"
-              onClick={() =>
-                setTheme((prev) => (prev === "light" ? "dark" : "light"))
-              }
-              style={{
-                border: "none",
-                borderRadius: 999,
-                padding: "3px 10px",
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                background: isLight
-                  ? "linear-gradient(120deg,#020617,#0f172a)"
-                  : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
-                color: isLight ? "#e5e7eb" : "#0f172a",
-              }}
-            >
-              {isLight ? "Dark" : "Light"}
-            </button>
-          </div>
-
           {/* top accent */}
           <motion.div
             style={{

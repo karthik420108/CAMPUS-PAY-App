@@ -55,14 +55,42 @@ function Login() {
   const [toDate, setToDate] = useState("");
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
 
-  // Theme with persistence
+  // Theme with persistence - sync with global theme
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("appTheme") || "light";
   });
 
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
   useEffect(() => {
     localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
   const today = dayjs().format("YYYY-MM-DD");
@@ -155,6 +183,36 @@ function Login() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showEditProfile]);
+
+  // Handle click outside for settings popup
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showSettingsPopup && !event.target.closest('.settings-popup') && !event.target.closest('[data-settings-trigger]')) {
+        setShowSettingsPopup(false);
+      }
+    };
+    if (showSettingsPopup) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSettingsPopup]);
+
+  // Handle scanner event from bottom navigation
+  useEffect(() => {
+    const handleOpenScanner = () => {
+      if (frozen) return;
+      // Find and click the original scan button
+      const scanCard = document.querySelector('.scan-card');
+      if (scanCard && !scanCard.classList.contains('disabled')) {
+        scanCard.click();
+      }
+    };
+
+    window.addEventListener('openScanner', handleOpenScanner);
+    return () => window.removeEventListener('openScanner', handleOpenScanner);
+  }, [frozen]);
 
   const safeSetMode = (value) => {
     if (isFrozen) return;
@@ -265,7 +323,7 @@ function Login() {
   return (
     <>
       <Header1 role="student" userId={userId} isFrozen={isFrozen} />
-      <Header></Header>
+      <Header theme={theme} setTheme={setTheme} />
 
       {/* Suspension Banner */}
       {suspended && (
@@ -402,6 +460,42 @@ function Login() {
               )}
             </AnimatePresence>
           </motion.div>
+
+          {/* 🚪 LOGOUT BUTTON - Only for students */}
+          <motion.div
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.98 }}
+  style={{
+    position: "relative",
+    cursor: "pointer",
+    padding: "12px 16px",
+    borderRadius: "16px",
+    background: isLight
+      ? "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))"
+      : "linear-gradient(145deg, rgba(15,23,42,0.9), rgba(30,41,59,0.9))",
+    backdropFilter: "blur(16px)",
+    border: `1px solid ${
+      isLight ? "rgba(148,163,184,0.4)" : "rgba(75,85,99,0.6)"
+    }`,
+    boxShadow: `0 8px 24px ${
+      isLight ? "rgba(15,23,42,0.12)" : "rgba(15,23,42,0.6)"
+    }`,
+  }}
+  onClick={() => navigate("/")}
+>
+  <span style={{ fontSize: "24px", color: "#ef4444" }}>🚪</span>
+  <span
+    style={{
+      marginLeft: "8px",
+      fontSize: "14px",
+      fontWeight: 600,
+      color: isLight ? "#b91c1c" : "#fecaca",
+    }}
+  >
+    Logout..
+  </span>
+</motion.div>
+
         </motion.div>
 
         {/* MAIN CONTENT */}
@@ -425,51 +519,6 @@ function Login() {
             ...cardStyle,
           }}
         >
-          {/* THEME TOGGLE */}
-          <div
-            style={{
-              position: "absolute",
-              top: 20,
-              right: 28,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "4px 8px",
-              borderRadius: 999,
-              border: "1px solid rgba(148,163,184,0.6)",
-              background: isLight ? "#f9fafb" : "rgba(15,23,42,0.9)",
-              fontSize: 11,
-              zIndex: 5,
-            }}
-          >
-            <span style={{ color: "#6b7280" }}>Mode</span>
-            <motion.button
-              type="button"
-              onClick={() =>
-                setTheme((prev) => (prev === "light" ? "dark" : "light"))
-              }
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                border: "none",
-                borderRadius: 999,
-                padding: "3px 10px",
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                background: isLight
-                  ? "linear-gradient(120deg,#020617,#0f172a)"
-                  : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
-                color: isLight ? "#e5e7eb" : "#0f172a",
-              }}
-            >
-              {isLight ? "🌙" : "☀️"}
-            </motion.button>
-          </div>
-
           <motion.div
             style={{
               position: "absolute",
@@ -840,6 +889,125 @@ function Login() {
 
           <ScanPay userId={userId} f={frozen} />
 
+          {/* 📱 MOBILE-STYLE DASHBOARD ACTIONS */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.4, ease: easingSoft }}
+            style={{
+              background: isLight
+                ? "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.98))"
+                : "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(17,24,39,0.98))",
+              padding: "24px",
+              borderRadius: "20px",
+              border: `1px solid ${
+                isLight ? "rgba(209,213,219,0.7)" : "rgba(51,65,85,0.9)"
+              }`,
+              boxShadow: isLight
+                ? "0 8px 32px rgba(15,23,42,0.12), 0 0 0 1px rgba(148,163,184,0.1)"
+                : "0 8px 32px rgba(15,23,42,0.4), 0 0 0 1px rgba(75,85,99,0.3)",
+              marginBottom: "24px",
+            }}
+          >
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "16px",
+            }}>
+              {/* 💳 TRANSACTIONS */}
+              <motion.div
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate("/History", { state: { userId, role: "student" } })}
+                style={{
+                  background: isLight
+                    ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
+                    : "linear-gradient(145deg, #2563eb, #1e40af)",
+                  padding: "20px",
+                  borderRadius: "16px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 4px 12px rgba(59,130,246,0.3)",
+                }}
+              >
+                <span style={{ fontSize: "28px" }}>💳</span>
+                <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Transactions</span>
+              </motion.div>
+
+              {/* 📝 COMPLAINTS */}
+              <motion.div
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate("/complaint-history", { state: { userId, role: "student", isFrozen } })}
+                style={{
+                  background: isLight
+                    ? "linear-gradient(135deg, #8b5cf6, #7c3aed)"
+                    : "linear-gradient(145deg, #7c3aed, #6d28d9)",
+                  padding: "20px",
+                  borderRadius: "16px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 4px 12px rgba(139,92,246,0.3)",
+                }}
+              >
+                <span style={{ fontSize: "28px" }}>📝</span>
+                <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Complaints</span>
+              </motion.div>
+
+              {/* 📄 GENERATE BILL */}
+              <motion.div
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate("/generate-bill", { state: { userId, isFrozen } })}
+                style={{
+                  background: isLight
+                    ? "linear-gradient(135deg, #10b981, #059669)"
+                    : "linear-gradient(145deg, #059669, #047857)",
+                  padding: "20px",
+                  borderRadius: "16px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 4px 12px rgba(16,185,129,0.3)",
+                }}
+              >
+                <span style={{ fontSize: "28px" }}>📄</span>
+                <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Generate Bill</span>
+              </motion.div>
+
+              {/* ❓ RAISE COMPLAINT */}
+              <motion.div
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate("/raise-complaint", { state: { userId, role: "student", isFrozen } })}
+                style={{
+                  background: isLight
+                    ? "linear-gradient(135deg, #f59e0b, #d97706)"
+                    : "linear-gradient(145deg, #d97706, #b45309)",
+                  padding: "20px",
+                  borderRadius: "16px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 4px 12px rgba(245,158,11,0.3)",
+                }}
+              >
+                <span style={{ fontSize: "28px" }}>❓</span>
+                <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff" }}>Raise Complaint</span>
+              </motion.div>
+            </div>
+          </motion.div>
+
           {/* CHART */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -1134,6 +1302,307 @@ function Login() {
             </motion.div>
           </motion.div>
         </motion.div>
+
+        The three buttons are now centered in the bar (left, middle, right), with only minimal position-related style changes and everything else untouched.
+​
+
+jsx
+{/* 📱 BOTTOM NAVIGATION BAR - PhonePe/GPay Style */}
+        <motion.div
+          initial={{ y: 100, opacity: 10 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.5, ease: easingSoft }}
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: isLight
+              ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.99))"
+              : "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(17,24,39,0.99))",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            borderTop: `1px solid ${
+              isLight ? "rgba(209,213,219,0.8)" : "rgba(51,65,85,0.8)"
+            }`,
+            boxShadow: isLight
+              ? "0 -4px 24px rgba(15,23,42,0.12), 0 0 0 1px rgba(148,163,184,0.1)"
+              : "0 -4px 24px rgba(15,23,42,0.4), 0 0 0 1px rgba(75,85,99,0.3)",
+            zIndex: 1000,
+            padding: "12px 20px 20px",
+          }}
+        >
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            maxWidth: "480px",
+            margin: "0 auto",
+            position: "relative",
+            height: "70px",
+            gap: "45px",
+          }}>
+            
+            {/* TRANSACTIONS BUTTON - LEFT */}
+            <motion.div
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate("/History", { state: { userId, role: "student" } })}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+              
+                alignItems: "center",
+                gap: "4px",
+                cursor: "pointer",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = isLight ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.2)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "transparent";
+              }}
+            >
+              <span style={{ fontSize: "24px" }}>💳</span>
+              <span style={{ 
+                fontSize: "11px", 
+                fontWeight: "600", 
+                color: isLight ? "#374151" : "#d1d5db" 
+              }}>Transactions</span>
+            </motion.div>
+
+
+            {/* 📷 SCAN & PAY BUTTON - CENTER (PhonePe Style) */}
+            <motion.div
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => {
+                if (frozen) return;
+                // Trigger scan functionality
+                const scanEvent = new CustomEvent('openScanner');
+                window.dispatchEvent(scanEvent);
+              }}
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "70px",
+                height: "70px",
+                borderRadius: "50%",
+                background: frozen
+                  ? "linear-gradient(135deg, #9ca3af, #6b7280)"
+                  : "linear-gradient(135deg, #4f46e5, #6366f1, #8b5cf6)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "2px",
+                cursor: frozen ? "not-allowed" : "pointer",
+                boxShadow: frozen
+                  ? "0 4px 12px rgba(107,114,128,0.3)"
+                  : "0 8px 24px rgba(79,70,229,0.4), 0 0 0 3px rgba(255,255,255,0.3)",
+                border: frozen ? "none" : "2px solid rgba(255,255,255,0.8)",
+                opacity: frozen ? 0.6 : 1,
+                zIndex: 1001,
+              }}
+            >
+              <span style={{ fontSize: "28px", color: "#fff" }}>📷</span>
+              <span style={{ 
+                fontSize: "8px", 
+                fontWeight: "700", 
+                color: "#fff",
+                textAlign: "center",
+                lineHeight: "1"
+              }}>Scan</span>
+            </motion.div>
+
+
+            {/* ⚙️ SETTINGS BUTTON - RIGHT */}
+            <motion.div
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowSettingsPopup(!showSettingsPopup)}
+              data-settings-trigger
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "4px",
+                cursor: "pointer",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                transition: "all 0.2s ease",
+                position: "relative",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = isLight ? "rgba(139,92,246,0.1)" : "rgba(139,92,246,0.2)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "transparent";
+              }}
+            >
+              <span style={{ fontSize: "24px" }}>⚙️</span>
+              <span style={{ 
+                fontSize: "11px", 
+                fontWeight: "600", 
+                color: isLight ? "#374151" : "#d1d5db" 
+              }}>Settings</span>
+            </motion.div>
+          </div>
+        </motion.div>
+
+
+        {/* ⚙️ SETTINGS POPUP */}
+        <AnimatePresence>
+          {showSettingsPopup && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2, ease: easingSoft }}
+              className="settings-popup"
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: isLight
+                  ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.99))"
+                  : "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(17,24,39,0.99))",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+                borderRadius: "16px",
+                border: `1px solid ${
+                  isLight ? "rgba(209,213,219,0.8)" : "rgba(51,65,85,0.8)"
+                }`,
+                boxShadow: isLight
+                  ? "0 8px 32px rgba(15,23,42,0.12), 0 0 0 1px rgba(148,163,184,0.1)"
+                  : "0 8px 32px rgba(15,23,42,0.4), 0 0 0 1px rgba(75,85,99,0.3)",
+                padding: "8px",
+                zIndex: 1001,
+                minWidth: "180px",
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                {/* 👁️ View Profile */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    navigate("/viewv", {
+                      state: {
+                        vendorId: userId,
+                        role: "student",
+                      },
+                    });
+                    setShowSettingsPopup(false);
+                  }}
+                  style={{
+                    padding: "12px 16px",
+                    border: "none",
+                    borderRadius: "12px",
+                    background: "transparent",
+                    color: isLight ? "#374151" : "#d1d5db",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = isLight ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "transparent";
+                  }}
+                >
+                  👁️ View Profile
+                </motion.button>
+
+
+                {/* ✏️ Edit Profile */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    navigate("/edit-profile", { state: { userId } });
+                    setShowSettingsPopup(false);
+                  }}
+                  style={{
+                    padding: "12px 16px",
+                    border: "none",
+                    borderRadius: "12px",
+                    background: "transparent",
+                    color: isLight ? "#374151" : "#d1d5db",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = isLight ? "rgba(16,185,129,0.1)" : "rgba(16,185,129,0.2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "transparent";
+                  }}
+                >
+                  ✏️ Edit Profile
+                </motion.button>
+
+
+                {/* 🔐 Change MPIN */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    navigate("/change-mpin", { state: { userId } });
+                    setShowSettingsPopup(false);
+                  }}
+                  style={{
+                    padding: "12px 16px",
+                    border: "none",
+                    borderRadius: "12px",
+                    background: "transparent",
+                    color: isLight ? "#374151" : "#d1d5db",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = isLight ? "rgba(139,92,246,0.1)" : "rgba(139,92,246,0.2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "transparent";
+                  }}
+                >
+                  🔐 Change MPIN
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+
+        {/* 📷 SCANNER OVERLAY - Hidden */}
+        <div id="bottom-nav-scanner" style={{ display: "none" }}>
+          <ScanPay userId={userId} f={frozen} />
+        </div>
       </motion.div>
     </>
   );

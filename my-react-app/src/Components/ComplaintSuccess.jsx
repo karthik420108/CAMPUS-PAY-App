@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import Header from "./Header3"
@@ -7,7 +7,40 @@ function ComplaintSuccess() {
   const navigate = useNavigate();
   const { complaintId } = location.state || {};
 
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   if (!complaintId) {
     navigate("/");
@@ -61,6 +94,8 @@ function ComplaintSuccess() {
   const easingSoft = [0.16, 1, 0.3, 1];
 
   return (
+    <>
+      <Header theme={theme} setTheme={setTheme} />
 
     
     <motion.div
@@ -185,7 +220,7 @@ function ComplaintSuccess() {
             transition: "all 0.2s ease",
           }}
         >
-          < Header/>
+          
           <span style={{ fontSize: 16 }}>←</span>
           <span>Back</span>
         </motion.button>
@@ -309,7 +344,8 @@ function ComplaintSuccess() {
         </motion.div>
       </motion.div>
     </motion.div>
-  );
+    </>
+);
 }
 
 export default ComplaintSuccess;

@@ -11,7 +11,40 @@ export default function RedeemHistoryPage() {
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState("light"); // light or dark
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("appTheme") || "light";
+  });
+
+  // Listen for theme changes from header
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "appTheme") {
+        setTheme(e.newValue || "light");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also check periodically for immediate updates
+    const checkTheme = () => {
+      const currentTheme = localStorage.getItem("appTheme");
+      if (currentTheme !== theme) {
+        setTheme(currentTheme || "light");
+      }
+    };
+    
+    const interval = setInterval(checkTheme, 100);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const isLight = theme === "light";
 
@@ -128,57 +161,11 @@ export default function RedeemHistoryPage() {
         transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <Header/>
+      <Header theme={theme} setTheme={setTheme} />
       <Header1 role="vendor" userId={userId} />
       
 
-      {/* Theme Toggle */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          marginBottom: 16,
-          position: "relative",
-          zIndex: 2,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "3px 5px",
-            borderRadius: 999,
-            border: "1px solid rgba(148,163,184,0.6)",
-            background: isLight ? "#f9fafb" : "rgba(15,23,42,0.9)",
-            fontSize: 11,
-          }}
-        >
-          <span style={{ color: "#6b7280" }}>Mode</span>
-          <button
-            type="button"
-            onClick={() => setTheme(isLight ? "dark" : "light")}
-            style={{
-              border: "none",
-              borderRadius: 999,
-              padding: "3px 10px",
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              background: isLight
-                ? "linear-gradient(120deg,#020617,#0f172a)"
-                : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
-              color: isLight ? "#e5e7eb" : "#0f172a",
-            }}
-          >
-            {isLight ? "Dark" : "Light"}
-          </button>
-        </div>
-      </div>
-
+      
       {/* Card */}
       <div
         style={{
