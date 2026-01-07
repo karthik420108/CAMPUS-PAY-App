@@ -3,12 +3,14 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function AdminVendorKYC() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   // Theme state
   const [theme, setTheme] = useState("light");
@@ -94,10 +96,18 @@ function AdminVendorKYC() {
       await axios.post(`http://localhost:5000/admin/vendor/${vendorId}/kyc`, { status });
       const response = await axios.get("http://localhost:5000/admin/vendors");
       setVendors(response.data);
-      alert(`Vendor KYC ${status} successfully!`);
+      showAlert({
+        type: "success",
+        title: "KYC Updated",
+        message: `Vendor KYC ${status} successfully!`
+      });
     } catch (err) {
       console.error("Error updating KYC:", err);
-      alert("Failed to update KYC status");
+      showAlert({
+        type: "error",
+        title: "KYC Update Failed",
+        message: "Failed to update KYC status"
+      });
     }
   };
 

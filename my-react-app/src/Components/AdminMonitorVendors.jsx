@@ -3,10 +3,12 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react"; // Added for animations
 import Header from "./Header.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function AdminMonitorVendors() {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   // --- Original Logic State ---
   const [vendors, setVendors] = useState([]);
@@ -73,7 +75,11 @@ function AdminMonitorVendors() {
         fetchVendorDetails(vendorId);
       }
     } catch (err) {
-      alert("Failed to update vendor status");
+      showAlert({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update vendor status"
+      });
     }
   };
 
@@ -94,7 +100,11 @@ function AdminMonitorVendors() {
       );
       fetchVendors();
     } catch (err) {
-      alert("Failed to update vendor suspend status");
+      showAlert({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update vendor suspend status"
+      });
     }
   };
 

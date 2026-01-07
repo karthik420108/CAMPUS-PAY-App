@@ -2,11 +2,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import axios from "axios";
+import { useAlert } from "../context/AlertContext";
 
 function Refund() {
   const { state } = useLocation();
   const { vendorId } = state || {};
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   const [step, setStep] = useState(1);
   const [gmail, setGmail] = useState("");
@@ -234,7 +236,11 @@ function Refund() {
       });
       navigate("/forgot-mpin", { state: { userId: vendorId, role: "vendor" } });
     } catch (err) {
-      alert("Failed to send OTP");
+      showAlert({
+        type: "error",
+        title: "OTP Failed",
+        message: "Failed to send OTP"
+      });
       console.error(err);
     }
   };

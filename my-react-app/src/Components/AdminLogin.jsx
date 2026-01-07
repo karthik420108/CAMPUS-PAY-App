@@ -153,7 +153,7 @@ function AdminLogin() {
       <div
         style={{
           position: "fixed",
-          top: 120,
+          top: 100,
           right: 160,
           display: "flex",
           alignItems: "center",

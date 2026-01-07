@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import Header1 from "./Header1";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
-import Header from "./Header3"
+import Header from "./Header3";
+import { useAlert } from "../context/AlertContext";
 
 export default function RedeemForm() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const { vendorId: userId } = state || {};
+  const { showAlert } = useAlert();
 
   const [amount, setAmount] = useState("");
   const [mpin, setMpin] = useState("");
@@ -83,7 +85,11 @@ export default function RedeemForm() {
       });
       navigate("/forgot-mpin", { state: { userId, role: "vendor" } });
     } catch {
-      alert("Failed to send OTP");
+      showAlert({
+        type: "error",
+        title: "OTP Failed",
+        message: "Failed to send OTP"
+      });
     }
   };
 

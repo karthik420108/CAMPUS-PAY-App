@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function AdminRedeemRequests() {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   // --- Original Logic State ---
   const [redeems, setRedeems] = useState([]);
@@ -47,7 +49,11 @@ function AdminRedeemRequests() {
       // remove item from UI after action
       setRedeems((prev) => prev.filter((r) => r._id !== redeemId));
     } catch (err) {
-      alert("Failed to update status");
+      showAlert({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update status"
+      });
     }
   };
 

@@ -3,11 +3,13 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header.jsx";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function SubAdminNotifications({ state }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     fetchNotifications();
@@ -47,7 +49,11 @@ function SubAdminNotifications({ state }) {
       }
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
-      alert("Failed to load notifications");
+      showAlert({
+        type: "error",
+        title: "Loading Failed",
+        message: "Failed to load notifications"
+      });
     } finally {
       setLoading(false);
     }

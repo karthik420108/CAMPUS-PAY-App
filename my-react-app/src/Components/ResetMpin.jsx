@@ -4,11 +4,13 @@ import axios from "axios";
 import { motion } from "motion/react";
 import Header from "./Header3.jsx";
 import Footer from "./Footer.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function ResetMpin() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const { userId, role } = state || {};
+  const { showAlert } = useAlert();
 
   const [mpin, setMpin] = useState("");
   const [err, setErr] = useState("");
@@ -31,7 +33,11 @@ function ResetMpin() {
         mpin,
         role,
       });
-      alert("MPIN reset successfully");
+      showAlert({
+        type: "success",
+        title: "MPIN Reset",
+        message: "MPIN reset successfully"
+      });
       if (role === "vendor") navigate("/redeem", { state: { vendorId: userId } });
       else navigate("/");
     } catch {

@@ -3,11 +3,13 @@ import Footer from "./Footer.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useAlert } from "../context/AlertContext";
 
 function ForgotMpinOtp() {
   const navigate = useNavigate();
   const location = useLocation();
   const { userId, role } = location.state || {};
+  const { showAlert } = useAlert();
 
   const [Err, setErr] = useState("");
   const [otp, setOtp] = useState(new Array(6).fill(""));
@@ -49,9 +51,17 @@ function ForgotMpinOtp() {
   const handleResend = async () => {
     try {
       await axios.post("http://localhost:5000/resend-mpin-otp", { userId, role });
-      alert("OTP resent to institute email");
+      showAlert({
+        type: "success",
+        title: "OTP Sent",
+        message: "OTP resent to institute email"
+      });
     } catch {
-      alert("Failed to resend OTP");
+      showAlert({
+        type: "error",
+        title: "Resend Failed",
+        message: "Failed to resend OTP"
+      });
     }
   };
 

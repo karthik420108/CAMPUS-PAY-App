@@ -3,10 +3,12 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function AdminMonitorStudents() {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -72,7 +74,11 @@ function AdminMonitorStudents() {
         fetchStudentDetails(studentId);
       }
     } catch (err) {
-      alert("Failed to update student status");
+      showAlert({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update student status"
+      });
     }
   };
 
@@ -91,13 +97,21 @@ function AdminMonitorStudents() {
         fetchStudentDetails(studentId);
       }
     } catch (err) {
-      alert("Failed to update student suspend status");
+      showAlert({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update student suspend status"
+      });
     }
   };
 
   const handleKycApproval = async (status) => {
     if (status === "rejected" && !rejectionReason.trim()) {
-      alert("Please provide a rejection reason");
+      showAlert({
+        type: "warning",
+        title: "Missing Reason",
+        message: "Please provide a rejection reason"
+      });
       return;
     }
     try {
@@ -108,9 +122,17 @@ function AdminMonitorStudents() {
       await fetchStudentDetails(selectedStudent.student._id);
       setShowKycModal(false);
       setRejectionReason("");
-      alert(`Student KYC ${status} successfully`);
+      showAlert({
+        type: "success",
+        title: "KYC Updated",
+        message: `Student KYC ${status} successfully`
+      });
     } catch (err) {
-      alert("Failed to update KYC status");
+      showAlert({
+        type: "error",
+        title: "KYC Update Failed",
+        message: "Failed to update KYC status"
+      });
     }
   };
 

@@ -7,11 +7,13 @@ import { GoogleLogin } from "@react-oauth/google";
 import { motion, AnimatePresence } from "motion/react";
 import bgVideo from "./Campus_Pay_Seamless_Student_Transactions.mp4"; // Import video
 import Header3 from "./Header3.jsx";
+import { useAlert } from "../context/AlertContext";
 function Start() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState("light");
+  const { showAlert } = useAlert();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,7 +62,11 @@ function Start() {
         else if (msg.toLowerCase().includes("password")) setError("Password is incorrect");
         else if (err.response.data.isSuspended) {
           // Show suspension message in a popup
-          alert(err.response.data.error);
+          showAlert({
+            type: "error",
+            title: "Account Suspended",
+            message: err.response.data.error
+          });
           setError("Account suspended");
         }
         else setError("Login failed");
@@ -125,7 +131,11 @@ function Start() {
         const msg = err.response.data.error;
         if (err.response.data.isSuspended) {
           // Show suspension message in a popup
-          alert(err.response.data.error);
+          showAlert({
+            type: "error",
+            title: "Account Suspended",
+            message: err.response.data.error
+          });
           setError("Account suspended");
         } else {
           setError("Google login failed");

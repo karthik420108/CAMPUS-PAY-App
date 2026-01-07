@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
 import Header3 from "./Header3";
+import { useAlert } from "../context/AlertContext";
 // Footer is removed from the layout to maintain the consistent centered-card look
 
 function Upin({
@@ -20,6 +21,7 @@ function Upin({
   const navigate = useNavigate();
   const location = useLocation();
   const { kycData } = location.state || {};
+  const { showAlert } = useAlert();
 
   const pinRef = useRef([]);
   const confirmPinRef = useRef([]);
@@ -110,9 +112,11 @@ function Upin({
           },
         });
       } else if (role === "vendor") {
-        alert(
-          "Registration Successful! Waiting for Admin Approval. You can login once approved."
-        );
+        showAlert({
+          type: "success",
+          title: "Registration Successful",
+          message: "Registration Successful! Waiting for Admin Approval. You can login once approved."
+        });
         navigate("/");
       }
     } catch (err) {

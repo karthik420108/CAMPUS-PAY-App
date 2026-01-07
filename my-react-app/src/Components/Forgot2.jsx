@@ -5,12 +5,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
+import { useAlert } from "../context/AlertContext";
 
 function Forgot2() {
   const navigate = useNavigate();
   const [Err, setErr] = useState("");
   const location = useLocation();
   const { Email, PEmail, role } = location.state || {};
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     if (!Email || (role === "student" && !PEmail)) navigate("/");
@@ -76,9 +78,17 @@ function Forgot2() {
         email,
         type: "f-pass",
       });
-      alert(`OTP resent to ${email}`);
+      showAlert({
+        type: "success",
+        title: "OTP Sent",
+        message: `OTP resent to ${email}`
+      });
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to resend OTP");
+      showAlert({
+        type: "error",
+        title: "Resend Failed",
+        message: err.response?.data?.message || "Failed to resend OTP"
+      });
     }
   };
 

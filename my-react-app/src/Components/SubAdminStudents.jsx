@@ -3,9 +3,11 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function SubAdminStudents({ state }) {
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   // --- Original Logic State ---
   const [students, setStudents] = useState([]);
@@ -32,7 +34,11 @@ function SubAdminStudents({ state }) {
       setStudents(res.data);
     } catch (err) {
       console.error("Failed to fetch students:", err);
-      alert("Failed to load students");
+      showAlert({
+        type: "error",
+        title: "Loading Failed",
+        message: "Failed to load students"
+      });
     } finally {
       setLoading(false);
     }
@@ -65,14 +71,26 @@ function SubAdminStudents({ state }) {
       );
 
       console.log("Unfreeze response:", response.data);
-      alert(response.data.message || "Student unfrozen successfully!");
+      showAlert({
+        type: "success",
+        title: "Student Unfrozen",
+        message: response.data.message || "Student unfrozen successfully!"
+      });
       fetchStudents();
     } catch (err) {
       console.error("Failed to unfreeze student:", err);
       if (err.response?.data?.message) {
-        alert(err.response.data.message);
+        showAlert({
+          type: "error",
+          title: "Unfreeze Failed",
+          message: err.response.data.message
+        });
       } else {
-        alert("Failed to unfreeze student");
+        showAlert({
+          type: "error",
+          title: "Unfreeze Failed",
+          message: "Failed to unfreeze student"
+        });
       }
     }
   };
@@ -83,11 +101,19 @@ function SubAdminStudents({ state }) {
         `http://localhost:5000/subadmin/student/${studentId}/kyc`,
         { status }
       );
-      alert(`KYC ${status === "verified" ? "verified" : "rejected"}!`);
+      showAlert({
+        type: "success",
+        title: "KYC Updated",
+        message: `KYC ${status === "verified" ? "verified" : "rejected"}!`
+      });
       fetchStudents();
     } catch (err) {
       console.error("Failed to update KYC:", err);
-      alert("Failed to update KYC status");
+      showAlert({
+        type: "error",
+        title: "KYC Update Failed",
+        message: "Failed to update KYC status"
+      });
     }
   };
 

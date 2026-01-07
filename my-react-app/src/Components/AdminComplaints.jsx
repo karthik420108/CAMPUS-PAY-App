@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function AdminComplaints() {
   const [complaints, setComplaints] = useState([]);
@@ -15,6 +16,7 @@ function AdminComplaints() {
   const [isSearching, setIsSearching] = useState(false);
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   const isLight = theme === "light";
   const easingSoft = [0.16, 1, 0.3, 1];
@@ -79,7 +81,11 @@ function AdminComplaints() {
 
   const handleResponse = async (complaintId) => {
     if (!responseText.trim()) {
-      alert("Please enter a response message");
+      showAlert({
+        type: "warning",
+        title: "Missing Response",
+        message: "Please enter a response message"
+      });
       return;
     }
 
@@ -99,10 +105,18 @@ function AdminComplaints() {
       
       setRespondingTo(null);
       setResponseText("");
-      alert("Response sent successfully!");
+      showAlert({
+        type: "success",
+        title: "Response Sent",
+        message: "Response sent successfully!"
+      });
     } catch (err) {
       console.error("Error sending response:", err);
-      alert("Failed to send response");
+      showAlert({
+        type: "error",
+        title: "Send Failed",
+        message: "Failed to send response"
+      });
     }
   };
 

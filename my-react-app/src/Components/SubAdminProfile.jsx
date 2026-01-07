@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function SubAdminProfile({ state }) {
   // --- Original Logic State ---
@@ -15,6 +16,7 @@ function SubAdminProfile({ state }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   // --- Theme State ---
   const [theme, setTheme] = useState("light");
@@ -28,7 +30,11 @@ function SubAdminProfile({ state }) {
       const subAdminId =
         state?.subAdminId || localStorage.getItem("subAdminId");
       if (!subAdminId) {
-        alert("SubAdmin ID not found. Please log in again.");
+        showAlert({
+          type: "error",
+          title: "Authentication Error",
+          message: "SubAdmin ID not found. Please log in again."
+        });
         navigate("/");
         return;
       }
@@ -38,7 +44,11 @@ function SubAdminProfile({ state }) {
       setProfile(res.data);
     } catch (err) {
       console.error("Failed to fetch profile:", err);
-      alert("Failed to load profile");
+      showAlert({
+        type: "error",
+        title: "Loading Failed",
+        message: "Failed to load profile"
+      });
     } finally {
       setLoading(false);
     }
@@ -61,7 +71,11 @@ function SubAdminProfile({ state }) {
       setProfile({ ...profile, imageUrl: res.data.url });
     } catch (err) {
       console.error("Failed to upload image:", err);
-      alert("Failed to upload image");
+      showAlert({
+        type: "error",
+        title: "Upload Failed",
+        message: "Failed to upload image"
+      });
     } finally {
       setUploading(false);
     }
@@ -75,11 +89,19 @@ function SubAdminProfile({ state }) {
         `http://localhost:5000/subadmin/${subAdminId}/profile`,
         profile
       );
-      alert("Profile updated successfully!");
+      showAlert({
+        type: "success",
+        title: "Profile Updated",
+        message: "Profile updated successfully!"
+      });
       setIsEditing(false);
     } catch (err) {
       console.error("Failed to update profile:", err);
-      alert("Failed to update profile");
+      showAlert({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update profile"
+      });
     }
   };
 

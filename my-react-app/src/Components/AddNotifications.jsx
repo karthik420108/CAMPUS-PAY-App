@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function AdminNotifications() {
   const [role, setRole] = useState("ALL");
@@ -9,6 +10,7 @@ function AdminNotifications() {
   const [message, setMessage] = useState("");
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { showAlert } = useAlert();
 
   // Theme state for styling
   const [theme, setTheme] = useState("light");
@@ -43,7 +45,11 @@ function AdminNotifications() {
       setRole("ALL");
       fetchNotifications();
     } catch {
-      alert("Failed to add notification");
+      showAlert({
+        type: "error",
+        title: "Add Failed",
+        message: "Failed to add notification"
+      });
     } finally {
       setLoading(false);
     }

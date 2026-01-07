@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function MonitorSubadmins() {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   // --- Original Logic State ---
   const [subAdmins, setSubAdmins] = useState([]);
@@ -35,7 +37,11 @@ function MonitorSubadmins() {
       setSubAdmins(res.data);
     } catch (err) {
       console.error("Failed to fetch subadmins:", err);
-      alert("Failed to load subadmins");
+      showAlert({
+        type: "error",
+        title: "Loading Failed",
+        message: "Failed to load subadmins"
+      });
     } finally {
       setLoading(false);
     }
@@ -50,13 +56,21 @@ function MonitorSubadmins() {
         password: newSubAdmin.password,
       });
 
-      alert("SubAdmin added successfully!");
+      showAlert({
+        type: "success",
+        title: "SubAdmin Added",
+        message: "SubAdmin added successfully!"
+      });
       setNewSubAdmin({ name: "", email: "", password: "" });
       setShowAddForm(false);
       fetchSubAdmins(); // Refresh the list
     } catch (err) {
       console.error("Failed to add subadmin:", err);
-      alert(err.response?.data?.message || "Failed to add subadmin");
+      showAlert({
+        type: "error",
+        title: "Add Failed",
+        message: err.response?.data?.message || "Failed to add subadmin"
+      });
     }
   };
 
@@ -67,11 +81,19 @@ function MonitorSubadmins() {
 
     try {
       await axios.delete(`http://localhost:5000/subadmin/${subAdminId}`);
-      alert("SubAdmin removed successfully!");
+      showAlert({
+        type: "success",
+        title: "SubAdmin Removed",
+        message: "SubAdmin removed successfully!"
+      });
       fetchSubAdmins(); // Refresh the list
     } catch (err) {
       console.error("Failed to delete subadmin:", err);
-      alert(err.response?.data?.message || "Failed to remove subadmin");
+      showAlert({
+        type: "error",
+        title: "Remove Failed",
+        message: err.response?.data?.message || "Failed to remove subadmin"
+      });
     }
   };
 

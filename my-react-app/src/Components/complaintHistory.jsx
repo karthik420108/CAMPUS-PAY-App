@@ -3,7 +3,7 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
-
+import Header from "./Header3"
 function ComplaintHistory() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -11,7 +11,7 @@ function ComplaintHistory() {
 
   const [complaints, setComplaints] = useState([]);
   const [openCard, setOpenCard] = useState(null);
-  const [activeTab, setActiveTab] = useState("active");
+  const [activeTab, setActiveTab] = useState("active"); // Defaults to "active"
   const [complaintSearch, setComplaintSearch] = useState("");
   const [theme, setTheme] = useState("light");
   const [loading, setLoading] = useState(true);
@@ -27,22 +27,19 @@ function ComplaintHistory() {
 
     const fetchUserData = async () => {
       try {
-        const userRes = await axios.get(
-          `http://localhost:5000/user/${userId}`
-        );
+        const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
         const { isFrozen, isSuspended } = userRes.data;
 
         setIsFrozen(isFrozen);
         setIsSuspended(isSuspended);
 
+        
         if (isSuspended) {
           setBlockingMessage(
             "Your account is suspended. Redirecting to homepage..."
           );
-          setTimeout(
-            () => navigate("/", { state: { userId } }),
-            2500
-          );
+          setTimeout(() => navigate("/", { state: { userId } }), 2500);
+          return;
         }
       } catch (err) {
         console.error(err);
@@ -50,6 +47,10 @@ function ComplaintHistory() {
     };
 
     fetchUserData();
+
+    // Optional: real-time polling every 5s
+    const interval = setInterval(fetchUserData, 5000);
+    return () => clearInterval(interval);
   }, [userId, navigate]);
 
   if (blockingMessage) {
@@ -75,30 +76,66 @@ function ComplaintHistory() {
     return null;
   }
 
-  // ONE‑TIME FETCH, NO POLLING
-  useEffect(() => {
-    if (!userId) return;
+useEffect(() => {
+  if (!userId) return;
 
-    const fetchComplaints = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get(
-          `http://localhost:5000/complaints/user/${userId}`
-        );
-        const complaintsData = res.data.complaints || [];
-        setComplaints(complaintsData);
-      } catch (error) {
-        console.error("❌ Failed to fetch complaints:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchComplaints = async () => {
+    try {
+      setLoading(true);
 
-    fetchComplaints();
-  }, [userId]);
+      const res = await axios.get(
+        `http://localhost:5000/complaints/user/${userId}`
+      );
+
+      const complaintsData = res.data.complaints || [];
+      console.log(`📄 Fetched ${complaintsData.length} complaints for user ${userId}:`);
+
+      complaintsData.forEach((complaint, index) => {
+        console.log(`\nComplaint #${index + 1} (ID: ${complaint.complaintId}):`);
+        console.log(`  - Description: ${complaint.description}`);
+        console.log(`  - Role: ${complaint.role}`);
+        console.log(`  - Screenshot: ${complaint.screenshot || "None"}`);
+
+        if (complaint.assignedAdmins && complaint.assignedAdmins.length > 0) {
+          console.log(`  - Assigned Admins (${complaint.assignedAdmins.length}):`);
+          complaint.assignedAdmins.forEach((admin, i) => {
+            if (typeof admin === "object" && admin._id) {
+              console.log(`      ${i + 1}. ${admin.name || "(no name)"} [ID: ${admin._id}]`);
+            } else {
+              console.log(`      ${i + 1}. Admin ID: ${admin}`);
+            }
+          });
+        } else {
+          console.log("  - Assigned Admins: None");
+        }
+
+        console.log(`  - Status: ${complaint.status || "Pending"}`);
+        console.log(`  - Created At: ${complaint.createdAt}`);
+      });
+
+      setComplaints(complaintsData);
+    } catch (error) {
+      console.error("❌ Failed to fetch complaints:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  fetchComplaints();
+
+  // Poll every 5 seconds
+  const interval = setInterval(fetchComplaints, 5000);
+
+  // Cleanup on unmount
+  return () => clearInterval(interval);
+}, [userId]);
+
+
 
   const isLight = theme === "light";
 
+  // ---------- EXACT ENUM MATCHING ----------
   const activeComplaints = complaints.filter(
     (c) => (c.status || "").toLowerCase() === "active"
   );
@@ -133,6 +170,7 @@ function ComplaintHistory() {
     if (!stillVisible) setOpenCard(null);
   }, [openCard, visibleComplaints]);
 
+  // ---------- THEME-DEPENDENT STYLES (exact copy from RaiseComplaint) ----------
   const pageStyle = isLight
     ? {
         background:
@@ -259,7 +297,7 @@ function ComplaintHistory() {
           transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
         />
 
-        {/* main card */}
+        {/* main card container */}
         <motion.div
           initial={{ opacity: 0, y: 32, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -280,6 +318,56 @@ function ComplaintHistory() {
             ...cardStyle,
           }}
         >
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              left: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 10px",
+              borderRadius: 14,
+              border: "1px solid rgba(148,163,184,0.6)",
+              background: isLight ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.7)",
+              zIndex: 6,
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
+          >
+            <input
+              value={complaintSearch}
+              onChange={(e) => setComplaintSearch(e.target.value)}
+              placeholder="Search Complaint ID"
+              style={{
+                width: 210,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: textMain,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            />
+            {complaintSearch.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => setComplaintSearch("")}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1,
+                  color: textSub,
+                  padding: 0,
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+
           {/* theme toggle */}
           <div
             style={{
@@ -371,7 +459,6 @@ function ComplaintHistory() {
             </h2>
           </motion.div>
 
-          {/* divider */}
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
@@ -385,65 +472,6 @@ function ComplaintHistory() {
               margin: "0 4px 8px",
             }}
           />
-
-          {/* SEARCH BAR BELOW TITLE */}
-          <div
-            style={{
-              marginTop: 12,
-              marginBottom: 8,
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 12px",
-                borderRadius: 999,
-                border: "1px solid rgba(148,163,184,0.6)",
-                background: isLight
-                  ? "rgba(255,255,255,0.9)"
-                  : "rgba(15,23,42,0.9)",
-                minWidth: 260,
-                maxWidth: 360,
-                width: "100%",
-              }}
-            >
-              <input
-                value={complaintSearch}
-                onChange={(e) => setComplaintSearch(e.target.value)}
-                placeholder="Search by Complaint ID"
-                style={{
-                  flex: 1,
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  color: textMain,
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              />
-              {complaintSearch.trim() !== "" && (
-                <button
-                  type="button"
-                  onClick={() => setComplaintSearch("")}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    cursor: "pointer",
-                    fontSize: 14,
-                    lineHeight: 1,
-                    color: textSub,
-                    padding: 0,
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          </div>
 
           {/* tabs */}
           <motion.div
@@ -573,14 +601,12 @@ function ComplaintHistory() {
             </motion.div>
           )}
 
-          {/* complaint cards */}
+          {/* ✅ ALL FUNCTIONALITY RESTORED */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {visibleComplaints.map((c, index) => {
               const isOpen = openCard === c._id;
               const statusColor =
-                c.status?.toLowerCase() === "resolved"
-                  ? "#22c55e"
-                  : "#3b82f6";
+                c.status?.toLowerCase() === "resolved" ? "#22c55e" : "#3b82f6";
 
               return (
                 <motion.div
@@ -598,9 +624,7 @@ function ComplaintHistory() {
                     boxShadow:
                       "0 24px 60px rgba(15,23,42,0.20), 0 0 0 1px rgba(148,163,184,0.35)",
                   }}
-                  onClick={() =>
-                    setOpenCard(isOpen ? null : c._id)
-                  }
+                  onClick={() => setOpenCard(isOpen ? null : c._id)}
                   style={{
                     borderRadius: 20,
                     overflow: "hidden",
@@ -699,30 +723,17 @@ function ComplaintHistory() {
                     }}
                   />
 
-                  {/* details */}
+                  {/* ✅ COLLAPSIBLE DETAILS - ALL FIELDS RESTORED */}
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
-                        initial={{
-                          opacity: 0,
-                          y: -6,
-                          filter: "blur(4px)",
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          filter: "blur(0px)",
-                        }}
-                        exit={{
-                          opacity: 0,
-                          y: -6,
-                          filter: "blur(4px)",
-                        }}
+                        initial={{ opacity: 0, y: -6, filter: "blur(4px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -6, filter: "blur(4px)" }}
                         transition={easingSoft}
                         style={{
                           padding: "12px 18px 16px",
-                          borderTop:
-                            "1px solid rgba(226,232,240,0.9)",
+                          borderTop: "1px solid rgba(226,232,240,0.9)",
                           display: "flex",
                           flexDirection: "column",
                           gap: 8,
@@ -730,7 +741,7 @@ function ComplaintHistory() {
                           color: textMain,
                         }}
                       >
-                        {/* description */}
+                        {/* ✅ DESCRIPTION */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
                           <span
                             style={{
@@ -744,43 +755,33 @@ function ComplaintHistory() {
                           {c.description || "—"}
                         </p>
 
-                        {/* assigned admins (not for vendor role) */}
-                        {role !== "vendor" && (
-                          <p
+                        {/* ✅ ADMINS */}
+                       { role != "vendor" && <p style={{ margin: 0, lineHeight: 1.5 }}>
+                          <span
                             style={{
-                              margin: 0,
-                              lineHeight: 1.5,
+                              fontWeight: 600,
+                              color: textMain,
+                              marginRight: 6,
                             }}
                           >
-                            <span
-                              style={{
-                                fontWeight: 600,
-                                color: textMain,
-                                marginRight: 6,
-                              }}
-                            >
-                              Assigned Admins:
-                            </span>
-                            {c.assignedAdmins &&
-                            c.assignedAdmins.length > 0
-                              ? c.assignedAdmins
-                                  .map((a) => {
-                                    if (a.type === "Admin") {
-                                      return a.email;
-                                    } else if (
-                                      a.type === "SubAdmin"
-                                    ) {
-                                      return a.name || a.email;
-                                    }
-                                    return a.email || a.name;
-                                  })
-                                  .filter(Boolean)
-                                  .join(", ")
-                              : "—"}
-                          </p>
-                        )}
+                            Assigned Admins:
+                          </span>
+                          {c.assignedAdmins && c.assignedAdmins.length > 0
+                            ? c.assignedAdmins
+                                .map((a) => {
+                                  if (a.type === "Admin") {
+                                    return a.email;
+                                  } else if (a.type === "SubAdmin") {
+                                    return a.name || a.email;
+                                  }
+                                  return a.email || a.name;
+                                })
+                                .filter(Boolean)
+                                .join(", ")
+                            : "—"}
+                        </p>}
 
-                        {/* date */}
+                        {/* ✅ DATE */}
                         <p style={{ margin: 0, lineHeight: 1.5 }}>
                           <span
                             style={{
@@ -792,41 +793,28 @@ function ComplaintHistory() {
                             Date:
                           </span>
                           {c.createdAt
-                            ? new Date(
-                                c.createdAt
-                              ).toLocaleString()
+                            ? new Date(c.createdAt).toLocaleString()
                             : "—"}
                         </p>
 
-                        {/* admin response */}
+                        {/* ✅ ADMIN RESPONSE */}
                         {c.response && (
                           <div
                             style={{
                               margin: "8px 0",
                               padding: "10px",
-                              backgroundColor: isLight
-                                ? "#f0fdf4"
-                                : "#14532d",
+                              backgroundColor: isLight ? "#f0fdf4" : "#14532d",
                               borderRadius: "8px",
                               border: `1px solid ${
-                                isLight
-                                  ? "#bbf7d0"
-                                  : "#22c55e"
+                                isLight ? "#bbf7d0" : "#22c55e"
                               }`,
                             }}
                           >
-                            <p
-                              style={{
-                                margin: 0,
-                                lineHeight: 1.5,
-                              }}
-                            >
+                            <p style={{ margin: 0, lineHeight: 1.5 }}>
                               <span
                                 style={{
                                   fontWeight: 600,
-                                  color: isLight
-                                    ? "#166534"
-                                    : "#86efac",
+                                  color: isLight ? "#166534" : "#86efac",
                                   marginRight: 6,
                                   display: "block",
                                   marginBottom: 4,
@@ -837,9 +825,7 @@ function ComplaintHistory() {
                               <span
                                 style={{
                                   fontStyle: "italic",
-                                  color: isLight
-                                    ? "#15803d"
-                                    : "#bbf7d0",
+                                  color: isLight ? "#15803d" : "#bbf7d0",
                                 }}
                               >
                                 {c.response}
@@ -848,7 +834,7 @@ function ComplaintHistory() {
                           </div>
                         )}
 
-                        {/* screenshot */}
+                        {/* ✅ SCREENSHOT */}
                         {c.screenshot && (
                           <div style={{ marginTop: 8 }}>
                             <motion.button
@@ -872,8 +858,7 @@ function ComplaintHistory() {
                                 background:
                                   "linear-gradient(120deg,#86efac,#22c55e)",
                                 color: "#020617",
-                                boxShadow:
-                                  "0 10px 24px rgba(22,163,74,0.35)",
+                                boxShadow: "0 10px 24px rgba(22,163,74,0.35)",
                               }}
                             >
                               📸 View Screenshot

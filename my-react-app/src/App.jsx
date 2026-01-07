@@ -1,5 +1,7 @@
 import React from "react";
 import "./App.css";
+import { AlertProvider } from "./context/AlertContext";
+import AlertModal from "./components/Alert/AlertModal";
 import Start from "./Components/Start.jsx";
 import SignUp1 from "./Components/Signup1.jsx";
 import Signup2 from "./Components/Signup2.jsx";
@@ -79,8 +81,10 @@ function App() {
   const [Ifsc , setIfsc] = useState("");
 
   return (
-    <>
-      <Routes>
+    <AlertProvider>
+      <>
+        <AlertModal />
+        <Routes>
         <Route path = "/rrequests" element = {<AdminRedeemRequests/>}/>
         <Route path="/" element={<Start />} />
         <Route path="/admin" element={<AdminLogin />} />
@@ -221,7 +225,8 @@ function App() {
         <Route path="/vendor-edit-profile" element={<VendorEditProfile />} />
         <Route path = "/refund" element={<Refund/>}></Route>
       </Routes>
-    </>
+      </>
+    </AlertProvider>
   );
 }
 

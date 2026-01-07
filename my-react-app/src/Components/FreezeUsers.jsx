@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function FreezeUsers() {
   const [users, setUsers] = useState([]);
@@ -10,6 +11,7 @@ function FreezeUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   // --- Theme State ---
   const [theme, setTheme] = useState("light");
@@ -44,12 +46,18 @@ function FreezeUsers() {
       const response = await axios.get("http://localhost:5000/users");
       setUsers(response.data);
 
-      alert(
-        `User ${!currentFreezeStatus ? "frozen" : "unfrozen"} successfully!`
-      );
+      showAlert({
+        type: "success",
+        title: "Status Updated",
+        message: `User ${!currentFreezeStatus ? "frozen" : "unfrozen"} successfully!`
+      });
     } catch (err) {
       console.error("Error updating freeze status:", err);
-      alert("Failed to update freeze status");
+      showAlert({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update freeze status"
+      });
     }
   };
 
@@ -67,7 +75,11 @@ function FreezeUsers() {
       const unfrozenUsers = users.filter((user) => !user.isFrozen);
 
       if (unfrozenUsers.length === 0) {
-        alert("All users are already frozen!");
+        showAlert({
+          type: "info",
+          title: "All Users Frozen",
+          message: "All users are already frozen!"
+        });
         return;
       }
 
@@ -84,10 +96,18 @@ function FreezeUsers() {
       const response = await axios.get("http://localhost:5000/users");
       setUsers(response.data);
 
-      alert(`Successfully frozen ${unfrozenUsers.length} users!`);
+      showAlert({
+        type: "success",
+        title: "Bulk Freeze Complete",
+        message: `Successfully frozen ${unfrozenUsers.length} users!`
+      });
     } catch (err) {
       console.error("Error freezing all users:", err);
-      alert("Failed to freeze all users");
+      showAlert({
+        type: "error",
+        title: "Bulk Action Failed",
+        message: "Failed to freeze all users"
+      });
     }
   };
 
@@ -105,7 +125,11 @@ function FreezeUsers() {
       const frozenUsers = users.filter((user) => user.isFrozen);
 
       if (frozenUsers.length === 0) {
-        alert("All users are already active!");
+        showAlert({
+          type: "info",
+          title: "All Users Active",
+          message: "All users are already active!"
+        });
         return;
       }
 
@@ -122,10 +146,18 @@ function FreezeUsers() {
       const response = await axios.get("http://localhost:5000/users");
       setUsers(response.data);
 
-      alert(`Successfully unfrozen ${frozenUsers.length} users!`);
+      showAlert({
+        type: "success",
+        title: "Bulk Unfreeze Complete",
+        message: `Successfully unfrozen ${frozenUsers.length} users!`
+      });
     } catch (err) {
       console.error("Error unfreezing all users:", err);
-      alert("Failed to unfreeze all users");
+      showAlert({
+        type: "error",
+        title: "Bulk Action Failed",
+        message: "Failed to unfreeze all users"
+      });
     }
   };
 

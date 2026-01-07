@@ -3,9 +3,11 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
+import { useAlert } from "../context/AlertContext";
 
 function SubAdminComplaints({ state }) {
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   // --- Original Logic State ---
   const [complaints, setComplaints] = useState([]);
@@ -31,7 +33,11 @@ function SubAdminComplaints({ state }) {
 
       if (!subAdminId) {
         console.error("No subAdminId found in state or localStorage");
-        alert("SubAdmin ID not found. Please log in again.");
+        showAlert({
+          type: "error",
+          title: "Authentication Error",
+          message: "SubAdmin ID not found. Please log in again."
+        });
         return;
       }
 
@@ -43,7 +49,11 @@ function SubAdminComplaints({ state }) {
       setComplaints(res.data);
     } catch (err) {
       console.error("Failed to fetch complaints:", err);
-      alert("Failed to load complaints");
+      showAlert({
+        type: "error",
+        title: "Loading Failed",
+        message: "Failed to load complaints"
+      });
     } finally {
       setLoading(false);
     }
@@ -57,7 +67,11 @@ function SubAdminComplaints({ state }) {
 
       if (!subAdminId) {
         console.error("No subAdminId found in state or localStorage");
-        alert("SubAdmin ID not found. Please log in again.");
+        showAlert({
+          type: "error",
+          title: "Authentication Error",
+          message: "SubAdmin ID not found. Please log in again."
+        });
         return;
       }
 
@@ -69,7 +83,11 @@ function SubAdminComplaints({ state }) {
       setForwardedComplaints(res.data);
     } catch (err) {
       console.error("Failed to fetch forwarded complaints:", err);
-      alert("Failed to load forwarded complaints");
+      showAlert({
+        type: "error",
+        title: "Loading Failed",
+        message: "Failed to load forwarded complaints"
+      });
     }
   }, [state?.subAdminId]);
 
@@ -96,7 +114,11 @@ function SubAdminComplaints({ state }) {
 
   const handleSubmitResponse = async () => {
     if (!responseModal.response.trim()) {
-      alert("Please enter a response");
+      showAlert({
+        type: "warning",
+        title: "Missing Response",
+        message: "Please enter a response"
+      });
       return;
     }
 
@@ -105,7 +127,11 @@ function SubAdminComplaints({ state }) {
         `http://localhost:5000/subadmin/complaint/${responseModal.complaintId}/respond`,
         { response: responseModal.response.trim() }
       );
-      alert("Response sent successfully!");
+      showAlert({
+        type: "success",
+        title: "Response Sent",
+        message: "Response sent successfully!"
+      });
       setResponseModal({
         isOpen: false,
         complaintId: null,
@@ -114,7 +140,11 @@ function SubAdminComplaints({ state }) {
       fetchComplaints();
     } catch (err) {
       console.error("Failed to send response:", err);
-      alert("Failed to send response");
+      showAlert({
+        type: "error",
+        title: "Send Failed",
+        message: "Failed to send response"
+      });
     }
   };
 
@@ -133,7 +163,11 @@ function SubAdminComplaints({ state }) {
 
       if (!subAdminId) {
         console.error("No subAdminId found for forwarding");
-        alert("SubAdmin ID not found. Please log in again.");
+        showAlert({
+          type: "error",
+          title: "Authentication Error",
+          message: "SubAdmin ID not found. Please log in again."
+        });
         return;
       }
 
@@ -143,14 +177,19 @@ function SubAdminComplaints({ state }) {
         `http://localhost:5000/subadmin/complaint/${complaintId}/forward`,
         { subAdminId: subAdminId } // Pass the SubAdmin ID for tracking
       );
-      alert("Complaint forwarded to admin!");
+      showAlert({
+        type: "success",
+        title: "Complaint Forwarded",
+        message: "Complaint forwarded to admin!"
+      });
       fetchComplaints();
     } catch (err) {
       console.error("Failed to forward complaint:", err);
-      alert(
-        "Failed to forward complaint: " +
-          (err.response?.data?.message || err.message)
-      );
+      showAlert({
+        type: "error",
+        title: "Forward Failed",
+        message: "Failed to forward complaint: " + (err.response?.data?.message || err.message)
+      });
     }
   };
 

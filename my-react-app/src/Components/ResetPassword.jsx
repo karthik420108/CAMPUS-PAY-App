@@ -4,11 +4,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
+import { useAlert } from "../context/AlertContext";
 
 function ResetPassword() {
   const navigate = useNavigate();
   const location = useLocation();
   const { email, role } = location.state || {};
+  const { showAlert } = useAlert();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,7 +46,11 @@ function ResetPassword() {
         role,
       });
 
-      alert("Password reset successful");
+      showAlert({
+        type: "success",
+        title: "Password Reset",
+        message: "Password reset successful"
+      });
       navigate("/login");
     } catch (error) {
       setErr(error.response?.data?.message || "Failed to reset password");
