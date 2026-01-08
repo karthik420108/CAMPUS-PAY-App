@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
 
+
 function Notifications() {
   const { state } = useLocation();
   const { Id } = state || {};
@@ -137,6 +138,7 @@ function Notifications() {
   }
 
   return (
+    
     <motion.div
       style={{
         minHeight: "100vh",
@@ -146,6 +148,8 @@ function Notifications() {
         ...pageStyle,
       }}
     >
+    
+
       {/* Gradient Back Button */}
       <motion.button
         onClick={() => navigate(-1)}

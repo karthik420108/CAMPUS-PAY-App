@@ -12,8 +12,8 @@ const fs = require("fs");
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "marketiiitdm@gmail.com",
-    pass: "dsxwyzansufwuxtu",
+    user: "campuspay0@gmail.com",
+    pass: "jlvhymspuqdqhqxb",
   },
 });
 
@@ -889,14 +889,14 @@ app.post("/send-otp", async (req, res) => {
     await transporter.sendMail({
       to: Email,
       subject: "Campus Pay OTP Verification - Student",
-      html: `<h2>Your OTP is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
+      html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
     });
 
     // Send OTP to parent
     if (role == "student") {
       await transporter.sendMail({
         to: PEmail,
-        subject: "OTP Verification - Parent",
+        subject: "OTP Verification - Personal",
         html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
       });
     }
@@ -922,7 +922,7 @@ app.post("/verify-both-otp", (req, res) => {
   }
 
   if (role === "student" && (!parentEmail || !parentOtp)) {
-    return res.status(400).json({ message: "Parent OTP required" });
+    return res.status(400).json({ message: "Personalt OTP required" });
   }
 
   // ---------------- FETCH OTP RECORDS ----------------
@@ -938,7 +938,7 @@ app.post("/verify-both-otp", (req, res) => {
   if (role === "student" && !parentRecord) {
     return res
       .status(400)
-      .json({ message: "Parent OTP not found. Request a new one." });
+      .json({ message: "Personal OTP not found. Request a new one." });
   }
 
   const now = Date.now();
@@ -951,7 +951,7 @@ app.post("/verify-both-otp", (req, res) => {
 
   if (role === "student" && now > parentRecord.expiresAt) {
     delete otpStore[parentEmail];
-    return res.status(400).json({ message: "Parent OTP expired" });
+    return res.status(400).json({ message: "Personal OTP expired" });
   }
 
   // ---------------- OTP MATCH CHECK ----------------
@@ -960,7 +960,7 @@ app.post("/verify-both-otp", (req, res) => {
   }
 
   if (role === "student" && parseInt(parentOtp) !== parentRecord.otp) {
-    return res.status(400).json({ message: "Invalid Parent OTP" });
+    return res.status(400).json({ message: "Invalid Personal OTP" });
   }
 
   // ---------------- CLEANUP ----------------
@@ -1185,7 +1185,7 @@ app.post("/forgot-otp", async (req, res) => {
         await transporter.sendMail({
           to: email,
           subject: "SubAdmin OTP - Password Reset",
-          html: `<h2>Your OTP is ${subAdminOtp}</h2><p>Valid for 5 minutes</p>`,
+          html: `<h2>Your OTP password reset  is ${subAdminOtp}</h2><p>Valid for 5 minutes</p>`,
         });
 
         return res.status(200).json({
@@ -1215,7 +1215,7 @@ app.post("/forgot-otp", async (req, res) => {
         await transporter.sendMail({
           to: email,
           subject: "Admin OTP - Password Reset",
-          html: `<h2>Your OTP is ${adminOtp}</h2><p>Valid for 5 minutes</p>`,
+          html: `<h2>Your OTP for password reset is ${adminOtp}</h2><p>Valid for 5 minutes</p>`,
         });
 
         return res.status(200).json({
@@ -2751,7 +2751,7 @@ app.post("/send-mpin-otp", async (req, res) => {
       mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
 
       await transporter.sendMail({
-        from: process.env.MAIL_USER || "marketiiitdm@gmail.com",
+        from: process.env.MAIL_USER || "campuspay0@gmail.com",
         to: user.Email,
         subject: "MPIN Reset OTP",
         html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
@@ -2768,7 +2768,7 @@ app.post("/send-mpin-otp", async (req, res) => {
     mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
 
     await transporter.sendMail({
-      from: process.env.MAIL_USER || "marketiiitdm@gmail.com",
+      from: process.env.MAIL_USER || "campuspay0@gmail.com",
       to: user.collegeEmail,
       subject: "MPIN Reset OTP",
       html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
@@ -2811,7 +2811,7 @@ app.post("/resend-mpin-otp", async (req, res) => {
 
     // Send OTP email
     await transporter.sendMail({
-      from: process.env.MAIL_USER || "marketiiitdm@gmail.com",
+      from: process.env.MAIL_USER || "campuspay0@gmail.com",
       to: userEmail,
       subject: "Resend MPIN OTP",
       html: `
@@ -3291,31 +3291,65 @@ app.post("/transaction/verify-qr", async (req, res) => {
     if (!txn) {
       return res
         .status(404)
-        .json({ error: "Invalid QR / Transaction not found" });
+        .json({ error: "Invalid QR code - Transaction not found" });
     }
 
-    // 2️⃣ Status check
-    if (txn.status !== "PENDING") {
+    // 2️⃣ Status check - prevent duplicate payments
+    if (txn.status === "SUCCESS") {
       return res.status(400).json({
-        error: `Transaction already ${txn.status}`,
+        error: "Payment already done for this QR code",
+        status: txn.status
+      });
+    }
+
+    if (txn.status === "FAILED") {
+      return res.status(400).json({
+        error: "Payment failed for this QR code",
+        status: txn.status
+      });
+    }
+
+    if (txn.status === "BLOCKED") {
+      return res.status(400).json({
+        error: "Payment blocked for this QR code",
+        status: txn.status
+      });
+    }
+
+    if (txn.status === "EXPIRED") {
+      return res.status(400).json({
+        error: "QR code has expired",
+        status: txn.status
+      });
+    }
+
+    if (txn.status === "REFUND") {
+      return res.status(400).json({
+        error: "Payment refunded for this QR code",
+        status: txn.status
       });
     }
 
     // 3️⃣ Expiry check
     if (txn.expiresAt && txn.expiresAt < new Date()) {
+      // Update status to expired
       txn.status = "EXPIRED";
       await txn.save();
 
-      return res.status(400).json({ error: "QR expired" });
+      return res.status(400).json({ 
+        error: "QR code has expired",
+        status: "EXPIRED"
+      });
     }
 
-    // 4️⃣ Valid QR
+    // 4️⃣ Valid QR - only allow PENDING status
     res.json({
       valid: true,
       txid: txn.txid,
       vendorId: txn.vendorId,
       amount: txn.amount,
       expiresAt: txn.expiresAt,
+      status: txn.status
     });
   } catch (err) {
     console.error("Verify QR error:", err);

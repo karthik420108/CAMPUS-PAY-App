@@ -78,7 +78,7 @@ const handleSubmit = async (e) => {
 
   // ❌ Same email check (EXISTING – untouched)
   if (role === "student" && email === pmail) {
-    setError("Institute Email and Parent Email cannot be the same.");
+    setError("Institute Email and Personl Email cannot be the same.");
     setLoading(false);
     return;
   }
@@ -321,7 +321,7 @@ const handleSubmit = async (e) => {
             <input
               type="email"
               name="parentEmail"
-              placeholder="Parent Email"
+              placeholder="Personal Email"
               required
               style={{
                 padding: "11px 14px",

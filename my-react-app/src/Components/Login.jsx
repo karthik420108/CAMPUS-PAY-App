@@ -7,8 +7,10 @@ import axios from "axios";
 import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import ScanPay from "./ScanPay";
+import SettingsOverlay from "./SettingsOverlay";
 import { motion, AnimatePresence } from "motion/react";
 import Header from "./Header3"
+import "./BottomNav.css"
 
 dayjs.extend(isSameOrBefore);
 
@@ -184,26 +186,24 @@ function Login() {
     };
   }, [showEditProfile]);
 
-  // Handle click outside for settings popup
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showSettingsPopup && !event.target.closest('.settings-popup') && !event.target.closest('[data-settings-trigger]')) {
-        setShowSettingsPopup(false);
-      }
-    };
-    if (showSettingsPopup) {
-      document.addEventListener("mousedown", handleClickOutside);
+  const handleSettingsNavigation = (path, state) => {
+    if (path === "/viewv") {
+      navigate("/viewv", {
+        state: {
+          vendorId: userId,
+          role: state.role,
+        },
+      });
+    } else {
+      navigate(path, { state: { userId } });
     }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showSettingsPopup]);
+  };
 
   // Handle scanner event from bottom navigation
   useEffect(() => {
     const handleOpenScanner = () => {
       if (frozen) return;
-      // Find and click the original scan button
+      // Find and click the scan button
       const scanCard = document.querySelector('.scan-card');
       if (scanCard && !scanCard.classList.contains('disabled')) {
         scanCard.click();
@@ -1307,302 +1307,62 @@ function Login() {
 ​
 
 jsx
-{/* 📱 BOTTOM NAVIGATION BAR - PhonePe/GPay Style */}
-        <motion.div
-          initial={{ y: 100, opacity: 10 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5, ease: easingSoft }}
-          style={{
-            position: "fixed",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            background: isLight
-              ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.99))"
-              : "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(17,24,39,0.99))",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderTop: `1px solid ${
-              isLight ? "rgba(209,213,219,0.8)" : "rgba(51,65,85,0.8)"
-            }`,
-            boxShadow: isLight
-              ? "0 -4px 24px rgba(15,23,42,0.12), 0 0 0 1px rgba(148,163,184,0.1)"
-              : "0 -4px 24px rgba(15,23,42,0.4), 0 0 0 1px rgba(75,85,99,0.3)",
-            zIndex: 1000,
-            padding: "12px 20px 20px",
-          }}
-        >
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            maxWidth: "480px",
-            margin: "0 auto",
-            position: "relative",
-            height: "70px",
-            gap: "45px",
-          }}>
+{/* 📱 BOTTOM NAVIGATION BAR - Modern PhonePe Style */}
+        <div className="bottom-nav-bar" data-theme={theme}>
+          <div className="nav-container">
             
             {/* TRANSACTIONS BUTTON - LEFT */}
-            <motion.div
-              whileHover={{ scale: 1.05, y: -2 }}
+            <motion.button
+              className={`nav-button transactions ${frozen ? 'frozen' : ''}`}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/History", { state: { userId, role: "student" } })}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-              
-                alignItems: "center",
-                gap: "4px",
-                cursor: "pointer",
-                padding: "8px 16px",
-                borderRadius: "12px",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = isLight ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "transparent";
-              }}
             >
-              <span style={{ fontSize: "24px" }}>💳</span>
-              <span style={{ 
-                fontSize: "11px", 
-                fontWeight: "600", 
-                color: isLight ? "#374151" : "#d1d5db" 
-              }}>Transactions</span>
-            </motion.div>
+              <div className="nav-icon">💳</div>
+              <div className="nav-label">Transactions</div>
+            </motion.button>
 
+            {/* SCAN BUTTON - CENTER (PhonePe Style) */}
+            <div className="scan-button-outer">
+              <motion.button
+                className={`scan-button ${frozen ? 'frozen' : ''}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => {
+                  if (frozen) return;
+                  // Trigger scan functionality
+                  const scanEvent = new CustomEvent('openScanner');
+                  window.dispatchEvent(scanEvent);
+                }}
+              >
+                <div className="scan-icon-animated">📷</div>
+                <div className="scan-text">Scan</div>
+              </motion.button>
+            </div>
 
-            {/* 📷 SCAN & PAY BUTTON - CENTER (PhonePe Style) */}
-            <motion.div
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => {
-                if (frozen) return;
-                // Trigger scan functionality
-                const scanEvent = new CustomEvent('openScanner');
-                window.dispatchEvent(scanEvent);
-              }}
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: "70px",
-                height: "70px",
-                borderRadius: "50%",
-                background: frozen
-                  ? "linear-gradient(135deg, #9ca3af, #6b7280)"
-                  : "linear-gradient(135deg, #4f46e5, #6366f1, #8b5cf6)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "2px",
-                cursor: frozen ? "not-allowed" : "pointer",
-                boxShadow: frozen
-                  ? "0 4px 12px rgba(107,114,128,0.3)"
-                  : "0 8px 24px rgba(79,70,229,0.4), 0 0 0 3px rgba(255,255,255,0.3)",
-                border: frozen ? "none" : "2px solid rgba(255,255,255,0.8)",
-                opacity: frozen ? 0.6 : 1,
-                zIndex: 1001,
-              }}
-            >
-              <span style={{ fontSize: "28px", color: "#fff" }}>📷</span>
-              <span style={{ 
-                fontSize: "8px", 
-                fontWeight: "700", 
-                color: "#fff",
-                textAlign: "center",
-                lineHeight: "1"
-              }}>Scan</span>
-            </motion.div>
-
-
-            {/* ⚙️ SETTINGS BUTTON - RIGHT */}
-            <motion.div
-              whileHover={{ scale: 1.05, y: -2 }}
+            {/* SETTINGS BUTTON - RIGHT */}
+            <motion.button
+              className={`nav-button settings ${frozen ? 'frozen' : ''}`}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowSettingsPopup(!showSettingsPopup)}
-              data-settings-trigger
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "4px",
-                cursor: "pointer",
-                padding: "8px 16px",
-                borderRadius: "12px",
-                transition: "all 0.2s ease",
-                position: "relative",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = isLight ? "rgba(139,92,246,0.1)" : "rgba(139,92,246,0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "transparent";
-              }}
+              onClick={() => setShowSettingsPopup(true)}
             >
-              <span style={{ fontSize: "24px" }}>⚙️</span>
-              <span style={{ 
-                fontSize: "11px", 
-                fontWeight: "600", 
-                color: isLight ? "#374151" : "#d1d5db" 
-              }}>Settings</span>
-            </motion.div>
+              <div className="nav-icon">⚙️</div>
+              <div className="nav-label">Settings</div>
+            </motion.button>
           </div>
-        </motion.div>
-
-
-        {/* ⚙️ SETTINGS POPUP */}
-        <AnimatePresence>
-          {showSettingsPopup && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2, ease: easingSoft }}
-              className="settings-popup"
-              style={{
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                background: isLight
-                  ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.99))"
-                  : "linear-gradient(145deg, rgba(15,23,42,0.98), rgba(17,24,39,0.99))",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                borderRadius: "16px",
-                border: `1px solid ${
-                  isLight ? "rgba(209,213,219,0.8)" : "rgba(51,65,85,0.8)"
-                }`,
-                boxShadow: isLight
-                  ? "0 8px 32px rgba(15,23,42,0.12), 0 0 0 1px rgba(148,163,184,0.1)"
-                  : "0 8px 32px rgba(15,23,42,0.4), 0 0 0 1px rgba(75,85,99,0.3)",
-                padding: "8px",
-                zIndex: 1001,
-                minWidth: "180px",
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                {/* 👁️ View Profile */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    navigate("/viewv", {
-                      state: {
-                        vendorId: userId,
-                        role: "student",
-                      },
-                    });
-                    setShowSettingsPopup(false);
-                  }}
-                  style={{
-                    padding: "12px 16px",
-                    border: "none",
-                    borderRadius: "12px",
-                    background: "transparent",
-                    color: isLight ? "#374151" : "#d1d5db",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    textAlign: "left",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = isLight ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.2)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = "transparent";
-                  }}
-                >
-                  👁️ View Profile
-                </motion.button>
-
-
-                {/* ✏️ Edit Profile */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    navigate("/edit-profile", { state: { userId } });
-                    setShowSettingsPopup(false);
-                  }}
-                  style={{
-                    padding: "12px 16px",
-                    border: "none",
-                    borderRadius: "12px",
-                    background: "transparent",
-                    color: isLight ? "#374151" : "#d1d5db",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    textAlign: "left",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = isLight ? "rgba(16,185,129,0.1)" : "rgba(16,185,129,0.2)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = "transparent";
-                  }}
-                >
-                  ✏️ Edit Profile
-                </motion.button>
-
-
-                {/* 🔐 Change MPIN */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    navigate("/change-mpin", { state: { userId } });
-                    setShowSettingsPopup(false);
-                  }}
-                  style={{
-                    padding: "12px 16px",
-                    border: "none",
-                    borderRadius: "12px",
-                    background: "transparent",
-                    color: isLight ? "#374151" : "#d1d5db",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    textAlign: "left",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = isLight ? "rgba(139,92,246,0.1)" : "rgba(139,92,246,0.2)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = "transparent";
-                  }}
-                >
-                  🔐 Change MPIN
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-
-        {/* 📷 SCANNER OVERLAY - Hidden */}
-        <div id="bottom-nav-scanner" style={{ display: "none" }}>
-          <ScanPay userId={userId} f={frozen} />
         </div>
+
+
+        {/* ⚙️ NEW SETTINGS OVERLAY */}
+        <SettingsOverlay
+          isOpen={showSettingsPopup}
+          onClose={() => setShowSettingsPopup(false)}
+          theme={theme}
+          onNavigate={handleSettingsNavigation}
+        />
+
+
       </motion.div>
     </>
   );

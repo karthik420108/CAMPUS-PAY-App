@@ -7,7 +7,10 @@ import Header from "./Header3"
 function ComplaintHistory() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userId, role } = location.state || {};
+  const { userId, vendorId, role } = location.state || {};
+
+  // Support both userId (for students) and vendorId (for vendors)
+  const id = userId || vendorId;
 
   const [complaints, setComplaints] = useState([]);
   const [openCard, setOpenCard] = useState(null);
@@ -53,14 +56,14 @@ function ComplaintHistory() {
   const [blockingMessage, setBlockingMessage] = useState("");
 
   useEffect(() => {
-    if (!userId) {
+    if (!id) {
       navigate("/");
       return;
     }
 
     const fetchUserData = async () => {
       try {
-        const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
+        const userRes = await axios.get(`http://localhost:5000/user/${id}`);
         const { isFrozen, isSuspended } = userRes.data;
 
         setIsFrozen(isFrozen);
@@ -71,7 +74,7 @@ function ComplaintHistory() {
           setBlockingMessage(
             "Your account is suspended. Redirecting to homepage..."
           );
-          setTimeout(() => navigate("/", { state: { userId } }), 2500);
+          setTimeout(() => navigate("/", { state: { id } }), 2500);
           return;
         }
       } catch (err) {
@@ -84,7 +87,7 @@ function ComplaintHistory() {
     // Optional: real-time polling every 5s
     const interval = setInterval(fetchUserData, 5000);
     return () => clearInterval(interval);
-  }, [userId, navigate]);
+  }, [id, navigate]);
 
   if (blockingMessage) {
     return (
@@ -104,24 +107,24 @@ function ComplaintHistory() {
     );
   }
 
-  if (!userId) {
+  if (!id) {
     navigate("/");
     return null;
   }
 
 useEffect(() => {
-  if (!userId) return;
+  if (!id) return;
 
   const fetchComplaints = async () => {
     try {
       setLoading(true);
 
       const res = await axios.get(
-        `http://localhost:5000/complaints/user/${userId}`
+        `http://localhost:5000/complaints/user/${id}`
       );
 
       const complaintsData = res.data.complaints || [];
-      console.log(`📄 Fetched ${complaintsData.length} complaints for user ${userId}:`);
+      console.log(`📄 Fetched ${complaintsData.length} complaints for user ${id}:`);
 
       complaintsData.forEach((complaint, index) => {
         console.log(`\nComplaint #${index + 1} (ID: ${complaint.complaintId}):`);
@@ -162,7 +165,7 @@ useEffect(() => {
 
   // Cleanup on unmount
   return () => clearInterval(interval);
-}, [userId]);
+}, [id]);
 
 
 
@@ -275,7 +278,7 @@ useEffect(() => {
 
   return (
     <>
-      <Header1 userId={userId} role={role} isFrozen={isFrozen} />
+      <Header1 userId={id} role={role} isFrozen={isFrozen} />
       <Header theme={theme} setTheme={setTheme} />
 
       {/* Back Button */}

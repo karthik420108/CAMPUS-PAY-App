@@ -10,7 +10,10 @@ import Header from "./Header3"
 function RaiseComplaint() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userId , role } = location.state || {};
+  const { userId, vendorId, role } = location.state || {};
+
+  // Support both userId (for students) and vendorId (for vendors)
+  const id = userId || vendorId;
 
   const [description, setDescription] = useState("");
   const [screenshot, setScreenshot] = useState(null);
@@ -22,7 +25,7 @@ function RaiseComplaint() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Use vendor status hook for real-time monitoring (only for vendors)
-  const { showSuspensionBanner } = role === "vendor" ? useVendorStatus(userId) : { showSuspensionBanner: false };
+  const { showSuspensionBanner } = role === "vendor" ? useVendorStatus(id) : { showSuspensionBanner: false };
 
 
   const [admins, setAdmins] = useState([]);
@@ -63,7 +66,7 @@ function RaiseComplaint() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  if (!userId) {
+  if (!id) {
     navigate("/");
     return null;
   }
@@ -126,7 +129,7 @@ function RaiseComplaint() {
       }
 
       const complaintData = {
-        userId,
+        userId: id,
         description,
         screenshot: screenshotLink,
         admins: adminsToAssign,
@@ -152,14 +155,14 @@ function RaiseComplaint() {
 
   if(role != "vendor"){
     useEffect(() => {
-  if (!userId) {
+  if (!id) {
     navigate("/");
     return;
   }
 
   const fetchUserData = async () => {
     try {
-      const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
+      const userRes = await axios.get(`http://localhost:5000/user/${id}`);
       const { isFrozen, isSuspended } = userRes.data;
 
       setIsFrozen(isFrozen);
@@ -167,7 +170,7 @@ function RaiseComplaint() {
 
       if (isSuspended) {
         setBlockingMessage("Your account is suspended. Redirecting to homepage...");
-        setTimeout(() => navigate("/", { state: { userId } }), 2500);
+        setTimeout(() => navigate("/", { state: { id } }), 2500);
         return;
       }
 
@@ -175,7 +178,7 @@ function RaiseComplaint() {
       // No blocking for frozen users
 
       // Fetch transactions only if not blocked
-      const txnRes = await axios.get(`http://localhost:5000/transactions/${userId}`);
+      const txnRes = await axios.get(`http://localhost:5000/transactions/${id}`);
       setTransactions(txnRes.data);
 
     } catch (err) {
@@ -189,7 +192,7 @@ function RaiseComplaint() {
   const interval = setInterval(fetchUserData, 5000);
   return () => clearInterval(interval);
 
-}, [userId, navigate]);
+}, [id, navigate]);
 
 
 
@@ -291,7 +294,7 @@ function RaiseComplaint() {
 
   return (
     <>
-      <Header1 userId={userId} role = {role} isFrozen={isFrozen} isOp={setSidebarOpen}/>
+      <Header1 userId={id} role={role} isFrozen={isFrozen} isOp={setSidebarOpen}/>
       <SuspensionBanner show={showSuspensionBanner} />
 
       {/* Back Button */}

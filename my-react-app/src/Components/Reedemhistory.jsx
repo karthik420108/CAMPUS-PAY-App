@@ -1,13 +1,28 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import Header1 from "./Header1";
 import Header from "./Header3"
 
 export default function RedeemHistoryPage() {
   const locationState = useLocation()?.state;
+  const navigate = useNavigate();
   const userId = locationState?.vendorId;
+  
+  // Debug logging
+  console.log("ReedemHistory - locationState:", locationState);
+  console.log("ReedemHistory - userId:", userId);
+  console.log("ReedemHistory - navigate function:", typeof navigate);
+  
+  // Fallback if no vendorId in state
+  useEffect(() => {
+    if (!userId) {
+      console.log("ReedemHistory - No userId found, redirecting to vendor dashboard");
+      navigate("/vlogin");
+      return;
+    }
+  }, [userId, navigate]);
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,15 +65,20 @@ export default function RedeemHistoryPage() {
 
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!userId) return;
+      if (!userId) {
+        console.log("ReedemHistory - No userId, skipping fetch");
+        return;
+      }
       setLoading(true);
       try {
+        console.log("ReedemHistory - Fetching history for userId:", userId);
         const res = await axios.get(
           `http://localhost:5000/redeem/history/${userId}`
         );
+        console.log("ReedemHistory - API response:", res.data);
         setHistory(res.data || []);
       } catch (err) {
-        console.error("Error fetching redeem history:", err);
+        console.error("ReedemHistory - Error fetching redeem history:", err);
       } finally {
         setLoading(false);
       }
@@ -163,6 +183,33 @@ export default function RedeemHistoryPage() {
 
       <Header theme={theme} setTheme={setTheme} />
       <Header1 role="vendor" userId={userId} />
+      
+      {/* Back Button */}
+      <motion.button
+        onClick={() => {
+          console.log("ReedemHistory - Back button clicked, userId:", userId);
+          console.log("ReedemHistory - Navigating to /vlogin with state:", { vendorId: userId });
+          navigate("/vlogin", { state: { vendorId: userId } });
+        }}
+        whileHover={{ scale: 1.02, boxShadow: "0 0 18px rgba(59,130,246,0.5)" }}
+        whileTap={{ scale: 0.98 }}
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: "20px",
+          padding: "8px 14px",
+          borderRadius: "14px",
+          border: "none",
+          background: "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
+          color: "#f9fafb",
+          fontWeight: 600,
+          cursor: "pointer",
+          fontSize: "14px",
+          zIndex: 10,
+        }}
+      >
+        ← Back
+      </motion.button>
       
 
       

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "motion/react";
-
+import Header from "./Header3"
 function ViewvProfile() {
   const { state } = useLocation();
   const { vendorId, role } = state || {};
@@ -107,7 +107,7 @@ function ViewvProfile() {
 
   return (
     <>
-      
+      <Header theme={theme} setTheme={setTheme} />
 
       <motion.div
         style={{
