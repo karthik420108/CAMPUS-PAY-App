@@ -1,6 +1,6 @@
 import Header from "./Header3.jsx";
 import Footer from "./Footer.jsx";
-import "./signup2.css";
+import "./Signup2.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
