@@ -62,10 +62,15 @@ function EnterMpin() {
 
   async function forgotMpin() {
     try {
-      await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), { userId });
+      const role = vendorId ? "vendor" : "student";
+      await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), { 
+        userId: userId || vendorId, 
+        role 
+      });
       showAlertOverlay("OTP sent to institute email", "success");
-      setTimeout(() => navigate("/forgot-mpin", { state: { userId } }), 1500);
-    } catch {
+      setTimeout(() => navigate("/forgot-mpin", { state: { userId: userId || vendorId, role } }), 1500);
+    } catch (error) {
+      console.error("Error sending MPIN OTP:", error);
       showAlertOverlay("Failed to send OTP", "error");
     }
   }

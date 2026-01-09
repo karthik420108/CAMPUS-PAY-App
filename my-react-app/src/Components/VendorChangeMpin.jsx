@@ -223,11 +223,16 @@ function VendorChangeMpin() {
 
   // Navigate to forgot MPIN
   const handleForgotMpin = async () => {
-       await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), {
+    try {
+      await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), {
         userId : vendorId ,
         role: "vendor",
       });
-      navigate("/forgot-mpin", { state: { userId : vendorId, role: "vendor" , type : "s"} })
+      navigate("/forgot-mpin", { state: { userId : vendorId, role: "vendor" , type : "s"} });
+    } catch (error) {
+      console.error("Error sending MPIN OTP:", error);
+      alert("Failed to send OTP. Please try again.");
+    }
   };
 
   return (

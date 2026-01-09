@@ -56,7 +56,9 @@ const API_CONFIG = {
   
   // Helper method to get full URL for any endpoint
   getUrl: function(endpoint) {
-    return `${this.BASE_URL}${endpoint}`;
+    const fullUrl = `${this.BASE_URL}${endpoint}`;
+    console.log('🔗 API URL:', fullUrl, 'BASE_URL:', this.BASE_URL);
+    return fullUrl;
   },
   
   // Helper method to get URL with parameters

@@ -2865,7 +2865,7 @@ app.post("/resend-mpin-otp", async (req, res) => {
 
 // ------------------- VERIFY MPIN OTP -------------------
 app.post("/verify-mpin-otp", (req, res) => {
-  const { userId, otp } = req.body;
+  const { userId, otp, role } = req.body;
 
   const record = mpinOtpStore[userId];
   if (!record) return res.status(400).json({ message: "Invalid OTP" });

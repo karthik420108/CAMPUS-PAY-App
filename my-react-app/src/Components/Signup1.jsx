@@ -111,7 +111,8 @@ const handleSubmit = async (e) => {
       role,
     });
     navigate("/signup2");
-  } catch {
+  } catch (error) {
+    console.error("Error sending OTP:", error);
     setError("Institute Email already Registered");
     setLoading(false);
   }

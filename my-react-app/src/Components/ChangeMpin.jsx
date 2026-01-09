@@ -284,11 +284,16 @@ function ChangeMpin() {
   };
 
   const handleForgotMpin = async () => {
-    await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), {
+    try {
+      await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), {
         userId,
         role: "student",
       });
-      navigate("/forgot-mpin", { state: { userId, role: "student" , type : "u" } })
+      navigate("/forgot-mpin", { state: { userId, role: "student" , type : "u" } });
+    } catch (error) {
+      console.error("Error sending MPIN OTP:", error);
+      alert("Failed to send OTP. Please try again.");
+    }
   };
 
   return (
