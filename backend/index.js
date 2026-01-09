@@ -35,9 +35,9 @@ const getFileUrl = (filePath) => {
 
 // CORS Configuration
 app.use(cors({
-  origin: CONFIG.CORS.FRONTEND_URL,
-  credentials: true
+  origin: "*"
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
