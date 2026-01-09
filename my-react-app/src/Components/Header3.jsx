@@ -5,23 +5,25 @@ function Header({ theme: externalTheme, setTheme: externalSetTheme }) {
     return localStorage.getItem("appTheme") || "light";
   });
 
-  // Use external theme if provided, otherwise use local state
   const currentTheme = externalTheme || theme;
   const currentSetTheme = externalSetTheme || setTheme;
 
-  // Inject keyframes once
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
       @keyframes headerGradientMove {
-        0% {
-          background-position: 0% 50%;
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes titleSlideIn {
+        0% { 
+          transform: scale(0.8) translateY(20px); 
+          opacity: 0; 
         }
-        50% {
-          background-position: 100% 50%;
-        }
-        100% {
-          background-position: 0% 50%;
+        100% { 
+          transform: scale(1) translateY(0); 
+          opacity: 1; 
         }
       }
     `;
@@ -32,12 +34,10 @@ function Header({ theme: externalTheme, setTheme: externalSetTheme }) {
     };
   }, []);
 
-  // Scroll to top when header mounts
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Persist theme and expose it globally for all pages
   useEffect(() => {
     localStorage.setItem("appTheme", currentTheme);
     document.documentElement.setAttribute("data-theme", currentTheme);
@@ -46,13 +46,12 @@ function Header({ theme: externalTheme, setTheme: externalSetTheme }) {
   const isLight = currentTheme === "light";
 
   const headerStyle = {
-    background:
-      "linear-gradient(120deg, #1d4ed8, #3b82f6, #0ea5e9, #22c55e, #0f766e)",
+    background: "linear-gradient(120deg, #1d4ed8, #3b82f6, #0ea5e9, #22c55e, #0f766e)",
     backgroundSize: "400% 400%",
     animation: "headerGradientMove 10s ease-in-out infinite",
     color: "#f9fafb",
-    padding: "14px 24px",
-    fontSize: "20px",
+    padding: "12px 20px",
+    fontSize: "18px",
     fontWeight: 700,
     textAlign: "center",
     borderRadius: "0px",
@@ -61,10 +60,23 @@ function Header({ theme: externalTheme, setTheme: externalSetTheme }) {
     textTransform: "uppercase",
     textShadow: "0 2px 8px rgba(15,23,42,0.6)",
     position: "relative",
-    overflow: "hidden",
+    overflow: "visible", // Changed to visible
+    minHeight: "52px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    gap: "2rem",
+  };
+
+  const titleStyle = {
+    fontSize: "18px",
+    fontWeight: 700,
+    letterSpacing: "0.18em",
+    flexShrink: 0,
+    animation: "titleSlideIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s forwards",
+    opacity: 1, // Fixed: was 0, now 1
+    zIndex: 1,
+    position: "relative",
   };
 
   const topGlowStyle = {
@@ -73,10 +85,10 @@ function Header({ theme: externalTheme, setTheme: externalSetTheme }) {
     left: "-20%",
     width: "40%",
     height: "100%",
-    background:
-      "radial-gradient(circle at top, rgba(239,246,255,0.55), transparent 65%)",
+    background: "radial-gradient(circle at top, rgba(239,246,255,0.55), transparent 65%)",
     opacity: 0.9,
     pointerEvents: "none",
+    zIndex: 0,
   };
 
   const bottomLineStyle = {
@@ -85,36 +97,38 @@ function Header({ theme: externalTheme, setTheme: externalSetTheme }) {
     right: "0",
     bottom: 0,
     height: "2px",
-    background:
-      "linear-gradient(90deg, rgba(191,219,254,0), rgba(191,219,254,0.9), rgba(45,212,191,0))",
+    background: "linear-gradient(90deg, rgba(191,219,254,0), rgba(191,219,254,0.9), rgba(45,212,191,0))",
+    zIndex: 0,
   };
 
   const toggleWrapperStyle = {
     position: "absolute",
-    right: 16,
     top: "50%",
+    right: "16px",
     transform: "translateY(-50%)",
     display: "flex",
     alignItems: "center",
-    gap: 6,
-    padding: "4px 8px",
+    gap: 4,
+    padding: "3px 6px",
     borderRadius: 999,
     border: "1px solid rgba(15,23,42,0.35)",
     background: "rgba(15,23,42,0.2)",
-    fontSize: 11,
+    fontSize: "10px",
     backdropFilter: "blur(8px)",
+    whiteSpace: "nowrap",
+    zIndex: 2,
   };
 
   const toggleButtonStyle = {
     border: "none",
     borderRadius: 999,
-    padding: "3px 10px",
+    padding: "2px 8px",
     cursor: "pointer",
-    fontSize: 11,
+    fontSize: "10px",
     fontWeight: 600,
     display: "flex",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
     background: isLight
       ? "linear-gradient(120deg,#020617,#0f172a)"
       : "linear-gradient(120deg,#e5f2ff,#dbeafe)",
@@ -124,9 +138,10 @@ function Header({ theme: externalTheme, setTheme: externalSetTheme }) {
   return (
     <header style={headerStyle}>
       <div style={topGlowStyle} />
-      Campus Pay
+      {/* Campus Pay - NOW VISIBLE & CENTERED */}
+      <div style={titleStyle}>Campus Pay</div>
       <div style={bottomLineStyle} />
-      {/* Theme toggle in header – controls global theme */}
+      {/* Theme toggle - TOP RIGHT */}
       <div style={toggleWrapperStyle}>
         <span style={{ color: "#e5e7eb" }}>Mode</span>
         <button

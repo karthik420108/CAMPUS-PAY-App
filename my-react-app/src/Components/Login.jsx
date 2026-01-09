@@ -1300,59 +1300,145 @@ function Login() {
           </motion.div>
         </motion.div>
 
-        The three buttons are now centered in the bar (left, middle, right), with only minimal position-related style changes and everything else untouched.
-​
 
-jsx
-{/* 📱 BOTTOM NAVIGATION BAR - Modern PhonePe Style */}
-        <div className="bottom-nav-bar" data-theme={theme}>
-          <div className="nav-container">
-            
-            {/* TRANSACTIONS BUTTON - LEFT */}
-            <motion.button
-              className={`nav-button transactions ${frozen ? 'frozen' : ''}`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/History", { state: { userId, role: "student" } })}
-            >
-              <div className="nav-icon">💳</div>
-              <div className="nav-label">Transactions</div>
-            </motion.button>
 
-            {/* SCAN BUTTON - CENTER (PhonePe Style) */}
-            <div className="scan-button-outer">
-              <motion.button
-                className={`scan-button ${frozen ? 'frozen' : ''}`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.92 }}
-                onClick={() => {
-                  if (frozen) return;
-                  // Navigate to dedicated scanner page
-                  navigate("/scanner", { 
-                    state: { 
-                      userId: userId, 
-                      frozen: frozen 
-                    } 
-                  });
-                }}
-              >
-                <div className="scan-icon-animated">📷</div>
-                <div className="scan-text">Scan</div>
-              </motion.button>
-            </div>
+<div 
+  className="bottom-nav-bar" 
+  data-theme={theme}
+  style={{
+    position: 'fixed',
+    bottom: 0,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '320px',        // Consistent with splash card (320px)
+    height: '48px',        // Half header (52px→48px), matches app content rhythm
+    padding: '8px 16px',   // Matches splash/app padding pattern
+    margin: '0 auto',
+    zIndex: 1000,
+    background: 'linear-gradient(120deg, #1d4ed8, #3b82f6, #0ea5e9, #22c55e, #0f766e)',
+    backgroundSize: '400% 400%',
+    animation: 'headerGradientMove 10s ease-in-out infinite',
+    boxShadow: '0 -8px 32px rgba(15,23,42,0.5)',  // Matches header shadow scale
+    borderRadius: '24px 24px 0 0',                 // Matches splash card radius
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}
+>
+  <div className="nav-container" style={{
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'space-evenly', 
+    width: '100%',
+    height: '32px',    // Consistent internal rhythm
+    gap: '12px'
+  }}>
+    
+    {/* TRANSACTIONS - Matches header text scale */}
+    <motion.button
+      className={`nav-button transactions ${frozen ? 'frozen' : ''}`}
+      style={{ 
+        padding: '4px 6px',
+        height: '32px',
+        minWidth: '56px',    // Consistent button sizing
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '2px',
+        color: '#f9fafb',
+        fontSize: '12px',    // Half header 18px→12px
+        fontWeight: 700,
+        background: 'transparent',
+        border: 'none',
+        borderRadius: '12px',
+        cursor: frozen ? 'not-allowed' : 'pointer',
+        letterSpacing: '0.1em'
+      }}
+      whileHover={{ scale: frozen ? 1 : 1.05 }}
+      whileTap={{ scale: frozen ? 1 : 0.95 }}
+      onClick={() => navigate("/History", { state: { userId, role: "student" } })}
+    >
+      <div style={{ fontSize: '20px', lineHeight: 1 }}>💳</div>
+      <div style={{ fontSize: '9px' }}>Trans</div>
+    </motion.button>
 
-            {/* SETTINGS BUTTON - RIGHT */}
-            <motion.button
-              className={`nav-button settings ${frozen ? 'frozen' : ''}`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowSettingsPopup(true)}
-            >
-              <div className="nav-icon">⚙️</div>
-              <div className="nav-label">Settings</div>
-            </motion.button>
-          </div>
-        </div>
+    {/* SCAN - Elevated like splash loading ring */}
+    <motion.button
+      className={`scan-button ${frozen ? 'frozen' : ''}`}
+      style={{ 
+        padding: '8px 16px',
+        height: '36px',     // Slightly taller (focus state)
+        borderRadius: '20px',
+        minWidth: '64px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '2px',
+        background: 'rgba(255,255,255,0.2)',
+        backdropFilter: 'blur(16px)',  // Matches header toggle blur
+        border: '1px solid rgba(255,255,255,0.4)',
+        boxShadow: '0 8px 24px rgba(59,130,246,0.4)',  // Matches splash glow
+        color: '#f9fafb',
+        fontWeight: 800,
+        fontSize: '12px',
+        cursor: frozen ? 'not-allowed' : 'pointer',
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase'
+      }}
+      whileHover={{ 
+        scale: frozen ? 1 : 1.06,
+        boxShadow: frozen ? '0 8px 24px rgba(59,130,246,0.4)' : '0 12px 32px rgba(59,130,246,0.6)'
+      }}
+      whileTap={{ scale: frozen ? 1 : 0.94 }}
+      onClick={() => {
+        if (frozen) return;
+        navigate("/scanner", { 
+          state: { userId: userId, frozen: frozen } 
+        });
+      }}
+    >
+      <div style={{ fontSize: '22px', lineHeight: 1 }}>📷</div>
+      <div style={{ fontSize: '9px' }}>Scan</div>
+    </motion.button>
+
+    {/* SETTINGS - Matches header toggle style */}
+    <motion.button
+      className={`nav-button settings ${frozen ? 'frozen' : ''}`}
+      style={{ 
+        padding: '4px 6px',
+        height: '32px',
+        minWidth: '56px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '2px',
+        color: '#f9fafb',
+        fontSize: '12px',
+        fontWeight: 700,
+        background: 'transparent',
+        border: 'none',
+        borderRadius: '12px',
+        cursor: frozen ? 'not-allowed' : 'pointer',
+        letterSpacing: '0.1em'
+      }}
+      whileHover={{ scale: frozen ? 1 : 1.05 }}
+      whileTap={{ scale: frozen ? 1 : 0.95 }}
+      onClick={() => setShowSettingsPopup(true)}
+    >
+      <div style={{ fontSize: '20px', lineHeight: 1 }}>⚙️</div>
+      <div style={{ fontSize: '9px' }}>Set</div>
+    </motion.button>
+  </div>
+</div>
+
+{/* Essential content spacing */}
+<div style={{ paddingBottom: '60px', width: '100%' }}>
+  {/* Your page content */}
+</div>
+
 
 
         {/* ⚙️ NEW SETTINGS OVERLAY */}
