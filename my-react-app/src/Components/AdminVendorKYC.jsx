@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function AdminVendorKYC() {
   const [vendors, setVendors] = useState([]);
@@ -79,7 +80,7 @@ function AdminVendorKYC() {
 
     const fetchVendors = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/admin/vendors");
+        const response = await axios.get(API_CONFIG.getUrl("/admin/vendors"));
         setVendors(response.data);
         setLoading(false);
       } catch (err) {
@@ -93,8 +94,8 @@ function AdminVendorKYC() {
 
   const handleKYCUpdate = async (vendorId, status) => {
     try {
-      await axios.post(`http://localhost:5000/admin/vendor/${vendorId}/kyc`, { status });
-      const response = await axios.get("http://localhost:5000/admin/vendors");
+      await axios.post(API_CONFIG.getUrl(`/admin/vendor/${vendorId}/kyc`), { status });
+      const response = await axios.get(API_CONFIG.getUrl("/admin/vendors"));
       setVendors(response.data);
       showAlert({
         type: "success",

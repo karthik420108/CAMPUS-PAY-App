@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function MonitorSubadmins() {
   const { state } = useLocation();
@@ -33,7 +34,7 @@ function MonitorSubadmins() {
 
   const fetchSubAdmins = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/subadmins");
+      const res = await axios.get(API_CONFIG.getUrl("/subadmins"));
       setSubAdmins(res.data);
     } catch (err) {
       console.error("Failed to fetch subadmins:", err);
@@ -50,7 +51,7 @@ function MonitorSubadmins() {
   const handleAddSubAdmin = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/subadmin/add", {
+      await axios.post(API_CONFIG.getUrl("/subadmin/add"), {
         name: newSubAdmin.name,
         email: newSubAdmin.email,
         password: newSubAdmin.password,
@@ -80,7 +81,7 @@ function MonitorSubadmins() {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/subadmin/${subAdminId}`);
+      await axios.delete(API_CONFIG.getUrl(`/subadmin/${subAdminId}`));
       showAlert({
         type: "success",
         title: "SubAdmin Removed",

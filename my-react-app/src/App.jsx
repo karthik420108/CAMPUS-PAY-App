@@ -62,6 +62,7 @@ import SubAdminEdit from "./Components/SubAdminEdit.jsx";
 import SubAdminNotificationSystem from "./Components/SubAdminNotificationSystem.jsx";
 import ScreenshotViewer from "./Components/ScreenshotViewer.jsx";
 import ViewKyc from "./Components/ViewKyc.jsx";
+import ScannerPage from "./Components/ScannerPage.jsx";
 
 
 function App() {
@@ -224,6 +225,7 @@ function App() {
         <Route path="/reset" element={<ResetPassword />} />
         <Route path="/vendor-edit-profile" element={<VendorEditProfile />} />
         <Route path = "/refund" element={<Refund/>}></Route>
+        <Route path="/scanner" element={<ScannerPage />} />
       </Routes>
       </>
     </AlertProvider>

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function AdminNotifications() {
   const [role, setRole] = useState("ALL");
@@ -22,7 +23,7 @@ function AdminNotifications() {
 
   const fetchNotifications = async () => {
     try {
-        const res = await axios.get("http://localhost:5000/admin/notifications");
+        const res = await axios.get(API_CONFIG.getUrl("/admin/notifications"));
         // Reverse array to show newest first, if backend doesn't already
         setNotifications(res.data.reverse());
     } catch (err) {
@@ -36,7 +37,7 @@ function AdminNotifications() {
 
     try {
       await axios.post(
-        "http://localhost:5000/admin/notification/add",
+        API_CONFIG.getUrl("/admin/notification/add"),
         { role, title, message }
       );
 

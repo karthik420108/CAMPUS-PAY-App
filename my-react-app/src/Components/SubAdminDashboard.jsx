@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
-import Header from "./Header3"
+import Header from "./Header3";
+import API_CONFIG from "../config/api";
 
 function SubAdminDashboard() {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ function SubAdminDashboard() {
     if (!subAdminId) return;
     const fetchProfile = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/subadmin/${subAdminId}/profile`);
+        const res = await axios.get(API_CONFIG.getUrl(`/subadmin/${subAdminId}/profile`));
         setProfile(res.data);
       } catch (err) {
         console.error("Failed to load subadmin profile", err);
@@ -57,7 +58,7 @@ function SubAdminDashboard() {
   useEffect(() => {
     if (!subAdminId) return;
     const fetchNotifications = () => {
-      axios.get(`http://localhost:5000/notifications/${subAdminId}`, { params: { role: "SUBADMIN" } })
+      axios.get(API_CONFIG.getUrl(`/notifications/${subAdminId}`), { params: { role: "SUBADMIN" } })
         .then((res) => {
           setHasUnread(res.data.some((n) => !n.read));
         })

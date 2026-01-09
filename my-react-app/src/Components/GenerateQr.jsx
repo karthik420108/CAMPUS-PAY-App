@@ -5,6 +5,7 @@ import axios from "axios";
 import Header from "./Header3";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
+import API_CONFIG from "../config/api";
 
 function GenerateQR() {
   const { state } = useLocation();
@@ -151,7 +152,7 @@ function GenerateQR() {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/vendor/create-qr", {
+      const res = await axios.post(API_CONFIG.getUrl("/vendor/create-qr"), {
         vendorId,
         amount,
       });
@@ -182,7 +183,7 @@ function GenerateQR() {
       pollRef.current = setInterval(async () => {
         if (!res.data.qrId) return;
         try {
-          const statusRes = await axios.get(`http://localhost:5000/vendor/qr-status/${res.data.qrId}`);
+          const statusRes = await axios.get(API_CONFIG.getUrl(`/vendor/qr-status/${res.data.qrId}`));
           const status = statusRes.data.status;
 
           if (status === "SUCCESS") {
@@ -211,7 +212,7 @@ function GenerateQR() {
   const cancelCurrentQR = async (currentQrId, resetAmount = true) => {
     if (!currentQrId) return;
     try {
-      await axios.post(`http://localhost:5000/vendor/cancel-qr/${currentQrId}`, { qrId: currentQrId });
+      await axios.post(API_CONFIG.getUrl(`/vendor/cancel-qr/${currentQrId}`), { qrId: currentQrId });
       resetQR(resetAmount);
     } catch (err) {
       console.error("Cancel QR error:", err);
@@ -221,7 +222,7 @@ function GenerateQR() {
   const expireQR = async (currentQrId) => {
     if (!currentQrId) return;
     try {
-      await axios.post("http://localhost:5000/vendor/expire-qr", { qrId: currentQrId });
+      await axios.post(API_CONFIG.getUrl("/vendor/expire-qr"), { qrId: currentQrId });
     } catch (err) {
       console.error("Expire QR error:", err);
     } finally {

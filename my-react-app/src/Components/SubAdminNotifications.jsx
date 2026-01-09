@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "./Header.jsx";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function SubAdminNotifications({ state }) {
   const [notifications, setNotifications] = useState([]);
@@ -22,7 +23,7 @@ function SubAdminNotifications({ state }) {
 
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/notifications/${state?.subAdminId}`, {
+      const res = await axios.get(API_CONFIG.getUrl(`/notifications/${state?.subAdminId}`), {
         params: { role: "SUBADMIN" },
       });
       
@@ -33,7 +34,7 @@ function SubAdminNotifications({ state }) {
       const unreadNotifications = notifications.filter(n => !n.read);
       if (unreadNotifications.length > 0 && state?.subAdminId) {
         const markPromises = unreadNotifications.map(notification => 
-          axios.post(`http://localhost:5000/notifications/${notification._id}/read`, {
+          axios.post(API_CONFIG.getUrl(`/notifications/${notification._id}/read`), {
             userId: state.subAdminId,
             role: "SUBADMIN",
           }).catch(err => console.error("Error marking notification as read:", err))

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
 import bgVideo from "./Campus_Pay_Seamless_Student_Transactions.mp4";
+import API_CONFIG from "../config/api";
 
 function Signup1({ setEmail, setPEmail, setPass, Email, PEmail, Pass, role }) {
   const navigate = useNavigate();
@@ -104,7 +105,7 @@ const handleSubmit = async (e) => {
   setPass(password);
 
   try {
-    await axios.post("http://localhost:5000/send-otp", {
+    await axios.post(API_CONFIG.getUrl("/send-otp"), {
       Email: email,
       PEmail: pmail,
       role,

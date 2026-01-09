@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import API_CONFIG from "../config/api";
 
 const SuspensionBanner = ({ show }) => {
   if (!show) return null;

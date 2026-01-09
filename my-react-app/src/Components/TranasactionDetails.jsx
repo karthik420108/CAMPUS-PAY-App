@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import axios from "axios";
+import API_CONFIG from "../config/api";
 
 function TransactionDetails() {
   const { state } = useLocation();
@@ -34,7 +35,7 @@ function TransactionDetails() {
       if (!txid) return navigate(-1);
 
       try {
-        const res = await axios.post("http://localhost:5000/vn", { txid });
+        const res = await axios.post(API_CONFIG.getUrl("/vn"), { txid });
         setvendorName(res.data);
       } catch (err) {
         console.error(err);

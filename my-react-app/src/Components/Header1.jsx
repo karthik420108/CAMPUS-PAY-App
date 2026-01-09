@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./Header1.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import API_CONFIG from "../config/api";
 
 const Header1 = ({ isOp, userId, isFrozen , role}) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,7 +17,7 @@ const Header1 = ({ isOp, userId, isFrozen , role}) => {
     try {
       // ✅ correct route
       if(role == "student"){
-      const res = await axios.post(`http://localhost:5000/info/${userId}`);
+      const res = await axios.post(API_CONFIG.getUrl(`/info/${userId}`));
 
       const {
         username,
@@ -29,7 +30,7 @@ const Header1 = ({ isOp, userId, isFrozen , role}) => {
 
       // ✅ institute balance (prefer GET, but keeping yours)
       const res2 = await axios.post(
-        "http://localhost:5000/institute-balance"
+        API_CONFIG.getUrl("/institute-balance")
       );
 
       navigate("/login", {
@@ -46,7 +47,7 @@ const Header1 = ({ isOp, userId, isFrozen , role}) => {
     }
     else if(role == "subadmin"){
       // Get subadmin profile info
-      const res = await axios.post(`http://localhost:5000/subadmin-info/${userId}`);
+      const res = await axios.post(API_CONFIG.getUrl(`/subadmin-info/${userId}`));
       
       const {
         username,

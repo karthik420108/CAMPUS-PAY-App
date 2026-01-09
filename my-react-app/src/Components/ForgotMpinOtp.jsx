@@ -4,11 +4,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function ForgotMpinOtp() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userId, role } = location.state || {};
+  const { userId, role , type } = location.state || {};
   const { showAlert } = useAlert();
 
   const [Err, setErr] = useState("");
@@ -74,8 +75,8 @@ function ForgotMpinOtp() {
     }
 
     try {
-      await axios.post("http://localhost:5000/verify-mpin-otp", { userId, role, otp: otpValue });
-      navigate("/reset-mpin", { state: { userId, role } });
+      await axios.post(API_CONFIG.getUrl("/verify-mpin-otp"), { userId, role, otp: otpValue });
+      navigate("/reset-mpin", { state: { userId, role , type } });
     } catch (error) {
       setErr(error.response?.data?.message || "OTP verification failed");
     }
@@ -83,7 +84,7 @@ function ForgotMpinOtp() {
 
   const handleResend = async () => {
     try {
-      await axios.post("http://localhost:5000/resend-mpin-otp", { userId, role });
+      await axios.post(API_CONFIG.getUrl("/resend-mpin-otp"), { userId, role });
       showAlert({
         type: "success",
         title: "OTP Sent",

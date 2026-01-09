@@ -3,6 +3,7 @@ import Footer from './Footer.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import API_CONFIG from "../config/api";
 
 function Signup2({ Email, PEmail, Pass, role }) {
   const navigate = useNavigate();
@@ -75,7 +76,7 @@ function Signup2({ Email, PEmail, Pass, role }) {
     }
 
     try {
-      await axios.post("http://localhost:5000/verify-both-otp", {
+      await axios.post(API_CONFIG.getUrl("/verify-both-otp"), {
         studentEmail: Email,
         parentEmail: PEmail,
         studentOtp: studentOtpValue,
@@ -97,7 +98,7 @@ function Signup2({ Email, PEmail, Pass, role }) {
   const handleResend = async (email, type) => {
     setResendLoading(prev => ({ ...prev, [type]: true }));
     try {
-      await axios.post("http://localhost:5000/resend-otp", { email });
+      await axios.post(API_CONFIG.getUrl("/resend-otp"), { email });
       setAlertMessage(`OTP resent to ${email}`);
       setAlertType("success");
       setShowAlert(true);

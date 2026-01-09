@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import API_CONFIG from "../config/api";
 
 function SubAdminStatusChecker({ subAdminId, children }) {
   const [showDeletedOverlay, setShowDeletedOverlay] = useState(false);
@@ -13,7 +14,7 @@ function SubAdminStatusChecker({ subAdminId, children }) {
     const checkSubAdminExists = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5000/subadmin/check/${subAdminId}`
+          API_CONFIG.getUrl(`/subadmin/check/${subAdminId}`)
         );
         
         if (response.data.exists === false || response.data.status === "deleted") {

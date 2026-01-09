@@ -8,22 +8,36 @@ const nodemailer = require("nodemailer");
 const { OAuth2Client } = require("google-auth-library");
 const { nanoid } = require("nanoid");
 const fs = require("fs");
+const CONFIG = require('./config');
+const fileUploadService = require('./services/fileUpload');
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: CONFIG.EMAIL.SERVICE,
   auth: {
-    user: "campuspay0@gmail.com",
-    pass: "jlvhymspuqdqhqxb",
+    user: CONFIG.EMAIL.USER,
+    pass: CONFIG.EMAIL.PASS,
   },
 });
 
 const app = express();
 
 // ===== CONFIG =====
-const MONGO_URI = "mongodb+srv://root:123@campuspay.i8ucsny.mongodb.net/";
-const INSTITUTE_TOTAL_BALANCE = 100000;
+const MONGO_URI = CONFIG.MONGO_URI;
+const INSTITUTE_TOTAL_BALANCE = CONFIG.APP.INSTITUTE_TOTAL_BALANCE;
 
-app.use(cors());
+// Helper function to generate file URLs
+const getFileUrl = (filePath) => {
+  const baseUrl = CONFIG.NODE_ENV === 'production' 
+    ? process.env.DEPLOYED_BASE_URL || 'https://your-deployed-backend-url.com'
+    : `http://localhost:${CONFIG.PORT}`;
+  return `${baseUrl}/uploads/${filePath}`;
+};
+
+// CORS Configuration
+app.use(cors({
+  origin: CONFIG.CORS.FRONTEND_URL,
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -37,7 +51,7 @@ const storage = multer.diskStorage({
       return cb(new Error("Role missing"), null);
     }
 
-    const uploadPath = `./uploads/${role}`;
+    const uploadPath = path.join(CONFIG.UPLOAD.DIR, role);
 
     fs.mkdirSync(uploadPath, { recursive: true });
 
@@ -562,45 +576,43 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Upload image
-app.post("/upload", upload.single("profileImage"), (req, res) => {
-  const { role } = req.body;
+// Upload image with local storage
+app.post("/upload", fileUploadService.getUploadMiddleware('profileImage'), async (req, res) => {
+  try {
+    const { role } = req.body;
 
-  if (!req.file) {
-    return res.status(400).json({ error: "File not uploaded" });
+    if (!req.file) {
+      return res.status(400).json({ error: "File not uploaded" });
+    }
+
+    // Use local storage
+    const fileUrl = await fileUploadService.processFileUpload(req, res);
+
+    console.log("Role in profile upload:", role);
+    console.log("File uploaded to:", fileUrl);
+
+    res.json({ url: fileUrl });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ error: "File upload failed" });
   }
-
-  const fileUrl = `http://localhost:5000/uploads/${role}/${req.file.filename}`;
-
-  console.log("Role in profile upload:", role);
-  console.log(fileUrl);
-
-  res.json({ url: fileUrl });
 });
 
-// Upload subadmin profile picture
-const subAdminStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = `./uploads/subAdminPics`;
-    fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    cb(null, uuidv4() + path.extname(file.originalname));
-  },
-});
+// Upload subadmin profile picture with local storage
+app.post("/upload/subadmin", fileUploadService.getUploadMiddleware('profileImage'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "File not uploaded" });
+    }
 
-const subAdminUpload = multer({ storage: subAdminStorage });
+    const fileUrl = await fileUploadService.processFileUpload(req, res);
 
-app.post("/upload/subadmin", subAdminUpload.single("profileImage"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "File not uploaded" });
+    console.log("SubAdmin profile uploaded to:", fileUrl);
+    res.json({ url: fileUrl });
+  } catch (error) {
+    console.error("SubAdmin upload error:", error);
+    res.status(500).json({ error: "File upload failed" });
   }
-
-  const fileUrl = `http://localhost:5000/uploads/subAdminPics/${req.file.filename}`;
-  console.log("SubAdmin profile upload:", fileUrl);
-
-  res.json({ url: fileUrl });
 });
 
 app.post("/login", async (req, res) => {
@@ -1412,14 +1424,25 @@ app.post("/vendor-name", async (req, res) => {
   }
 });
 
-app.post("/c-screenshot", upload.single("screenshot"), async (req, res) => {
-  const { role } = req.body;
-  const imageUrl = `http://localhost:5000/uploads/${role}/${req.file.filename}`;
+// Screenshot upload with local storage
+app.post("/c-screenshot", fileUploadService.getUploadMiddleware('screenshot'), async (req, res) => {
+  try {
+    const { role } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: "File not uploaded" });
+    }
 
-  res.json({
-    success: true,
-    imageUrl,
-  });
+    const imageUrl = await fileUploadService.processFileUpload(req, res);
+
+    res.json({
+      success: true,
+      imageUrl,
+    });
+  } catch (error) {
+    console.error("Screenshot upload error:", error);
+    res.status(500).json({ error: "Screenshot upload failed" });
+  }
 });
 
 app.get("/admins", async (req, res) => {
@@ -2486,16 +2509,20 @@ app.get("/admin/dashboard", async (req, res) => {
   }
 });
 
-// Upload KYC
-app.post("/upload-kyc", upload.single("kycImage"), async (req, res) => {
+// Upload KYC with local storage
+app.post("/upload-kyc", fileUploadService.getUploadMiddleware('kycImage'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
+    
     const { role } = req.body;
-    console.log("Role in profile upload:", role);
+    console.log("Role in KYC upload:", role);
+    
+    const imageUrl = await fileUploadService.processFileUpload(req, res);
+    
     const kycData = {
-      imageUrl: `http://localhost:5000/uploads/${role}/${req.file.filename}`,
+      imageUrl: imageUrl,
       status: "pending",
       submittedAt: new Date(),
     };
@@ -2505,8 +2532,8 @@ app.post("/upload-kyc", upload.single("kycImage"), async (req, res) => {
       message: "KYC submitted, verification within 48 hours",
       kycData,
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("KYC upload error:", error);
     res.status(500).json({ error: "KYC upload failed" });
   }
 });
@@ -3180,14 +3207,15 @@ try {
 }
 });
 
-app.post("/update-profile", upload.single("photo"), async (req, res) => {
-try {
-  const { userId, firstName, lastName, role } = req.body;
+// Update profile with local storage
+app.post("/update-profile", fileUploadService.getUploadMiddleware('photo'), async (req, res) => {
+  try {
+    const { userId, firstName, lastName, role } = req.body;
     
-
     if (!userId || !firstName || !lastName || !role) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+    
     console.log("Role in update profile:", role);
     const updateData = {
       firstName,
@@ -3196,7 +3224,14 @@ try {
 
     // If user uploaded a new photo
     if (req.file) {
-      updateData.ImageUrl = `http://localhost:5000/uploads/${role}/${req.file.filename}`;
+      try {
+        const imageUrl = await fileUploadService.processFileUpload(req, res);
+        updateData.ImageUrl = imageUrl;
+        console.log("Image uploaded successfully:", imageUrl);
+      } catch (uploadError) {
+        console.error("Image upload failed:", uploadError.message);
+        return res.status(500).json({ error: "Image upload failed" });
+      }
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
@@ -3213,8 +3248,8 @@ try {
       lastName: updatedUser.lastName,
       imageUrl: updatedUser.ImageUrl,
     });
-  } catch (err) {
-    console.error("Update profile error:", err);
+  } catch (error) {
+    console.error("Update profile error:", error);
     res.status(500).json({ error: "Profile update failed" });
   }
 });
@@ -3357,9 +3392,10 @@ app.post("/transaction/verify-qr", async (req, res) => {
   }
 });
 
+// Vendor profile update with local storage
 app.put(
   "/vendor/update-profile/:vendorId",
-  upload.single("profileImage"),
+  fileUploadService.getUploadMiddleware('profileImage'),
   async (req, res) => {
     try {
       console.log("BODY:", req.body);
@@ -3377,7 +3413,8 @@ app.put(
       }
 
       if (req.file) {
-        vendor.ImageUrl = `http://localhost:5000/uploads/vendorpics/${req.file.filename}`;
+        const imageUrl = await fileUploadService.processFileUpload(req, res);
+        vendor.ImageUrl = imageUrl;
       }
 
       await vendor.save();
@@ -3386,8 +3423,8 @@ app.put(
         message: "Profile updated successfully",
         vendor,
       });
-    } catch (err) {
-      console.error("Vendor update error:", err);
+    } catch (error) {
+      console.error("Vendor update error:", error);
       res.status(500).json({ error: "Profile update failed" });
     }
   }
@@ -4582,7 +4619,10 @@ app.get("/admin-actions/:userId/:role", async (req, res) => {
   }
 });
 
-const PORT = 5000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Backend running on http://0.0.0.0:${PORT}`);
+const PORT = CONFIG.PORT;
+app.listen(PORT, () => {
+  console.log(`🚀 Campus Pay Backend Server running on port ${PORT}`);
+  console.log(`📝 Environment: ${CONFIG.NODE_ENV}`);
+  console.log(`🔗 API Base URL: ${CONFIG.NODE_ENV === 'production' ? process.env.DEPLOYED_BASE_URL || 'https://your-deployed-backend-url.com' : `http://localhost:${PORT}`}`);
+  console.log(`📁 File Storage: Local storage enabled`);
 });

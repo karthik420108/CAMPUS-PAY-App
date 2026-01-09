@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function Forgot2() {
   const navigate = useNavigate();
@@ -92,7 +93,7 @@ function Forgot2() {
     }
 
     try {
-      await axios.post("http://localhost:5000/verify-both-otp", {
+      await axios.post(API_CONFIG.getUrl("/verify-both-otp"), {
         studentEmail: Email,
         parentEmail: PEmail,
         studentOtp: studentOtpValue,
@@ -107,7 +108,7 @@ function Forgot2() {
 
   const handleResend = async (email) => {
     try {
-      await axios.post("http://localhost:5000/resend-otp", {
+      await axios.post(API_CONFIG.getUrl("/resend-otp"), {
         email,
         type: "f-pass",
       });

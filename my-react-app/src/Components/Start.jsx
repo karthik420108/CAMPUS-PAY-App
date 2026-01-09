@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from "motion/react";
 import bgVideo from "./Campus_Pay_Seamless_Student_Transactions.mp4"; // Import video
 import Header3 from "./Header3.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
+
 function Start() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
@@ -25,7 +27,7 @@ function Start() {
     const password = e.target.password.value;
 
     try {
-      const res = await axios.post("http://localhost:5000/login", { email, password });
+      const res = await axios.post(API_CONFIG.getUrl("/login"), { email, password });
       const { username, userId, email: userEmail, userCreatedAt, isFrozen, imageUrl, walletBalance, role, vendorId, SubAdminName, subAdminId } = res.data;
 
       if (role === "vendor") {
@@ -41,7 +43,7 @@ function Start() {
         return;
       }
 
-      const res2 = await axios.post("http://localhost:5000/institute-balance");
+      const res2 = await axios.post(API_CONFIG.getUrl("/institute-balance"));
       navigate("/login", {
         state: {
           username,
@@ -82,7 +84,7 @@ function Start() {
     setError("");
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:5000/google-login", {
+      const res = await axios.post(API_CONFIG.getUrl("/google-login"), {
         credential: credentialResponse.credential,
       });
       if (!res.data.exists) {
@@ -90,7 +92,7 @@ function Start() {
         return;
       }
       console.log(res)
-      const res2 = await axios.post("http://localhost:5000/institute-balance");
+      const res2 = await axios.post(API_CONFIG.getUrl("/institute-balance"));
       if (res.data.role === "student") {
         navigate("/login", {
           state: {

@@ -6,6 +6,7 @@ import Header1 from "./Header1"
 import { useLocation, useNavigate } from "react-router-dom";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
+import API_CONFIG from "../config/api";
 
 function VendorTransactions() {
   const [transactions, setTransactions] = useState([]);
@@ -59,7 +60,7 @@ function VendorTransactions() {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/transactions/vendor/${vendorId}`);
+        const res = await axios.get(API_CONFIG.getUrl(`/transactions/vendor/${vendorId}`));
         console.log('Vendor transactions response:', res.data);
         console.log('First transaction:', res.data.transactions[0]);
         setTransactions(res.data.transactions);

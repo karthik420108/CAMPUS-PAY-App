@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "motion/react";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function ResetPassword() {
   const navigate = useNavigate();
@@ -73,7 +74,7 @@ function ResetPassword() {
     try {
       setLoading(true);
 
-      await axios.post("http://localhost:5000/reset-password", {
+      await axios.post(API_CONFIG.getUrl("/reset-password"), {
         email,
         password,
         role,

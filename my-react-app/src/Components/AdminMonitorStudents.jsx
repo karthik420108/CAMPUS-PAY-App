@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function AdminMonitorStudents() {
   const { state } = useLocation();
@@ -32,7 +33,7 @@ function AdminMonitorStudents() {
 
   const fetchStudents = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/admin/monitor/students");
+      const res = await axios.get(API_CONFIG.getUrl("/admin/monitor/students"));
       console.log("Fetched students data:", res.data);
       setStudents(res.data);
     } catch (err) {
@@ -49,7 +50,7 @@ function AdminMonitorStudents() {
 
   const fetchStudentDetails = async (studentId) => {
     try {
-      const res = await axios.get(`http://localhost:5000/admin/monitor/student/${studentId}`);
+      const res = await axios.get(API_CONFIG.getUrl(`/admin/monitor/student/${studentId}`));
       console.log("Fetched student details:", res.data);
       setSelectedStudent(res.data);
       setShowDetails(true);
@@ -82,7 +83,7 @@ function AdminMonitorStudents() {
 
   const handleViewMoreTransactions = async (student) => {
     try {
-      const res = await axios.get(`http://localhost:5000/admin/monitor/student/${student._id}`);
+      const res = await axios.get(API_CONFIG.getUrl(`/admin/monitor/student/${student._id}`));
       setModalStudent(res.data);
       setShowTransactionsModal(true);
     } catch (err) {
@@ -97,7 +98,7 @@ function AdminMonitorStudents() {
 
   const handleViewMoreComplaints = async (student) => {
     try {
-      const res = await axios.get(`http://localhost:5000/admin/monitor/student/${student._id}`);
+      const res = await axios.get(API_CONFIG.getUrl(`/admin/monitor/student/${student._id}`));
       setModalStudent(res.data);
       setShowComplaintsModal(true);
     } catch (err) {
@@ -119,7 +120,7 @@ function AdminMonitorStudents() {
   const toggleFreeze = async (e, studentId, currentStatus) => {
     e.stopPropagation();
     try {
-      await axios.put(`http://localhost:5000/user/${studentId}/freeze`, { isFrozen: !currentStatus });
+      await axios.put(API_CONFIG.getUrl(`/user/${studentId}/freeze`), { isFrozen: !currentStatus });
       fetchStudents();
       if (showDetails && selectedStudent && selectedStudent.student._id === studentId) {
         fetchStudentDetails(studentId);
@@ -139,7 +140,7 @@ function AdminMonitorStudents() {
       const reason = currentStatus ? prompt("Enter reason for unsuspending:") : prompt("Enter reason for suspension:");
       if (reason === null) return;
 
-      await axios.put(`http://localhost:5000/admin/monitor/student/${studentId}/suspend`, {
+      await axios.put(API_CONFIG.getUrl(`/admin/monitor/student/${studentId}/suspend`), {
         isSuspended: !currentStatus,
         reason: reason,
       });
@@ -166,7 +167,7 @@ function AdminMonitorStudents() {
       return;
     }
     try {
-      await axios.put(`http://localhost:5000/admin/monitor/student/${selectedStudent.student._id}/kyc`, {
+      await axios.put(API_CONFIG.getUrl(`/admin/monitor/student/${selectedStudent.student._id}/kyc`), {
         status: status,
         rejectionReason: status === "rejected" ? rejectionReason : "",
       });

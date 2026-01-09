@@ -5,9 +5,11 @@ import Header1 from "./Header1";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header3"
+import API_CONFIG from "../config/api";
 
 function GenerateBill() {
   const { state } = useLocation();
+
   const { userId} = state || {};
   const navigate = useNavigate();
 
@@ -57,7 +59,7 @@ function GenerateBill() {
     if (!userId) return;
 
     axios
-      .get(`http://localhost:5000/generate-bill/${userId}`)
+      .get(API_CONFIG.getUrl(`/generate-bill/${userId}`))
       .then((res) => {
         setData(res.data);
         setLoading(false);
@@ -77,7 +79,7 @@ function GenerateBill() {
 
   const fetchUserData = async () => {
     try {
-      const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
+      const userRes = await axios.get(API_CONFIG.getUrl(`/user/${userId}`));
       const { isFrozen, isSuspended } = userRes.data;
 
       setIsFrozen(isFrozen);
@@ -92,7 +94,7 @@ function GenerateBill() {
       }
 
       // Fetch transactions only if not blocked
-      const txnRes = await axios.get(`http://localhost:5000/transactions/${userId}`);
+      const txnRes = await axios.get(API_CONFIG.getUrl(`/transactions/${userId}`));
       setTransactions(txnRes.data);
 
     } catch (err) {

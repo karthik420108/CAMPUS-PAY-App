@@ -6,6 +6,7 @@ import Header1 from "./Header1";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
 import Header from "./Header3"
+import API_CONFIG from "../config/api";
 
 function RaiseComplaint() {
   const navigate = useNavigate();
@@ -75,7 +76,7 @@ function RaiseComplaint() {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/admins");
+        const res = await axios.get(API_CONFIG.getUrl("/admins"));
         setAdmins(res.data);
       } catch (err) {
         console.error(err);
@@ -121,7 +122,7 @@ function RaiseComplaint() {
         formData.append("screenshot", screenshot);
 
         const imgRes = await axios.post(
-          "http://localhost:5000/c-screenshot",
+          API_CONFIG.getUrl("/c-screenshot"),
           formData,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
@@ -137,7 +138,7 @@ function RaiseComplaint() {
       };
 
       const res = await axios.post(
-        "http://localhost:5000/complaints",
+        API_CONFIG.getUrl("/complaints"),
         complaintData
       );
 
@@ -162,7 +163,7 @@ function RaiseComplaint() {
 
   const fetchUserData = async () => {
     try {
-      const userRes = await axios.get(`http://localhost:5000/user/${id}`);
+      const userRes = await axios.get(API_CONFIG.getUrl(`/user/${id}`));
       const { isFrozen, isSuspended } = userRes.data;
 
       setIsFrozen(isFrozen);
@@ -178,7 +179,7 @@ function RaiseComplaint() {
       // No blocking for frozen users
 
       // Fetch transactions only if not blocked
-      const txnRes = await axios.get(`http://localhost:5000/transactions/${id}`);
+      const txnRes = await axios.get(API_CONFIG.getUrl(`/transactions/${id}`));
       setTransactions(txnRes.data);
 
     } catch (err) {

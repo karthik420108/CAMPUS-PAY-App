@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import axios from "axios";
 import Header from "./Header3.jsx";
 import Footer from "./Footer.jsx";
+import API_CONFIG from "../config/api";
 
 function ChangeMpin() {
   const navigate = useNavigate();
@@ -211,7 +212,7 @@ function ChangeMpin() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/verify-old-mpin",
+        API_CONFIG.getUrl("/verify-old-mpin"),
         { userId, oldMpin }
       );
 
@@ -245,7 +246,7 @@ function ChangeMpin() {
     setMessage("");
 
     try {
-      const response = await axios.post("http://localhost:5000/change-mpin", {
+      const response = await axios.post(API_CONFIG.getUrl("/change-mpin"), {
         userId,
         newMpin,
       });
@@ -254,7 +255,7 @@ function ChangeMpin() {
         setSuccessMessage("MPIN changed successfully!");
 
         const userResponse = await axios.get(
-          `http://localhost:5000/user/${userId}`
+          API_CONFIG.getUrl(`/user/${userId}`)
         );
         const userData = userResponse.data;
 
@@ -282,8 +283,12 @@ function ChangeMpin() {
     }
   };
 
-  const handleForgotMpin = () => {
-    navigate("/forgot-mpin", { state: { userId, role: "student" } });
+  const handleForgotMpin = async () => {
+    await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), {
+        userId,
+        role: "student",
+      });
+      navigate("/forgot-mpin", { state: { userId, role: "student" , type : "u" } })
   };
 
   return (

@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function AdminVendorComplaints() {
  const [complaints, setComplaints] = useState([]);
@@ -30,7 +31,7 @@ function AdminVendorComplaints() {
 
     const fetchComplaints = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/admin/vendor-complaints");
+        const response = await axios.get(API_CONFIG.getUrl("/admin/vendor-complaints"));
         // Filter to show only forwarded vendor complaints
         const forwardedVendorComplaints = response.data.filter(complaint => complaint.isForwarded === true);
         setComplaints(forwardedVendorComplaints);
@@ -57,7 +58,7 @@ function AdminVendorComplaints() {
 
     setIsSearching(true);
     try {
-      const response = await axios.get(`http://localhost:5000/admin/vendor-complaints/search?query=${encodeURIComponent(searchValue.trim())}`);
+      const response = await axios.get(API_CONFIG.getUrl(`/admin/vendor-complaints/search?query=${encodeURIComponent(searchValue.trim())}`));
       console.log("Vendor search results:", response.data);
       // Filter forwarded complaints from search results
       const forwardedResults = response.data.filter(complaint => complaint.isForwarded === true);
@@ -92,12 +93,12 @@ function AdminVendorComplaints() {
     }
 
     try {
-      await axios.post(`http://localhost:5000/admin/complaint/${complaintId}/respond`, {
+      await axios.post(API_CONFIG.getUrl(`/admin/complaint/${complaintId}/respond`), {
         response: responseText
       });
       
       // Refresh complaints list
-      const response = await axios.get("http://localhost:5000/admin/vendor-complaints");
+      const response = await axios.get(API_CONFIG.getUrl("/admin/vendor-complaints"));
       const forwardedVendorComplaints = response.data.filter(complaint => complaint.isForwarded === true);
       setAllComplaints(forwardedVendorComplaints);
       setComplaints(searchTerm ? forwardedVendorComplaints.filter(complaint => 

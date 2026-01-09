@@ -5,6 +5,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import bgVideo from "./Campus_Pay_Seamless_Student_Transactions.mp4";
+import API_CONFIG from "../config/api";
 
 function Forgot() {
   const navigate = useNavigate();
@@ -120,7 +121,7 @@ function Forgot() {
     }
     try {
       const payload = role === "auto" ? { email } : { email, role };
-      const res = await axios.post("http://localhost:5000/forgot-otp", payload);
+      const res = await axios.post(API_CONFIG.getUrl("/forgot-otp"), payload);
       setMessage(res.data.message);
       setError("");
       navigate("/forgot2", {

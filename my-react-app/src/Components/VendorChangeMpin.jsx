@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import axios from "axios";
 import Header from "./Header3.jsx";
 import Footer from "./Footer.jsx";
+import API_CONFIG from "../config/api";
 
 function VendorChangeMpin() {
   const navigate = useNavigate();
@@ -148,7 +149,7 @@ function VendorChangeMpin() {
     setMessage("");
 
     try {
-      const response = await axios.post("http://localhost:5000/verify-vendor-old-mpin", {
+      const response = await axios.post(API_CONFIG.getUrl("/verify-vendor-old-mpin"), {
         vendorId,
         oldMpin
       });
@@ -184,7 +185,7 @@ function VendorChangeMpin() {
     setMessage("");
 
     try {
-      const response = await axios.post("http://localhost:5000/change-vendor-mpin", {
+      const response = await axios.post(API_CONFIG.getUrl("/change-vendor-mpin"), {
         vendorId,
         newMpin
       });
@@ -194,7 +195,7 @@ function VendorChangeMpin() {
         setSuccessMessage("MPIN changed successfully!");
         
         // Fetch updated vendor data to maintain session
-        const vendorResponse = await axios.post(`http://localhost:5000/vendor/${vendorId}`);
+        const vendorResponse = await axios.post(API_CONFIG.getUrl(`/vendor/${vendorId}`));
         const vendorData = vendorResponse.data;
         
         // Navigate back to vendor dashboard with full state
@@ -221,8 +222,12 @@ function VendorChangeMpin() {
   };
 
   // Navigate to forgot MPIN
-  const handleForgotMpin = () => {
-    navigate("/forgot-mpin", { state: { userId: vendorId, role: "vendor" } });
+  const handleForgotMpin = async () => {
+       await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), {
+        userId : vendorId ,
+        role: "vendor",
+      });
+      navigate("/forgot-mpin", { state: { userId : vendorId, role: "vendor" , type : "s"} })
   };
 
   return (

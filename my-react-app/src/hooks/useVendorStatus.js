@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_CONFIG from "../config/api";
 
 export const useVendorStatus = (vendorId) => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export const useVendorStatus = (vendorId) => {
 
     const fetchVendorStatus = () => {
       axios
-        .post(`http://localhost:5000/vendor/${vendorId}`)
+        .post(API_CONFIG.getUrl(`/vendor/${vendorId}`))
         .then((res) => {
           const vendorData = res.data;
           

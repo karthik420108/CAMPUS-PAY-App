@@ -7,6 +7,7 @@ import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
 import Header from "./Header3";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 export default function RedeemForm() {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ export default function RedeemForm() {
 
     const fetchAmount = async () => {
       try {
-        const res = await axios.post(`http://localhost:5000/amount/${userId}`);
+        const res = await axios.post(API_CONFIG.getUrl(`/amount/${userId}`));
         setTotalAmount(res.data.totalAmount || 0);
       } catch (err) {
         console.error(err);
@@ -97,7 +98,7 @@ export default function RedeemForm() {
 
     setLoading(true);
     try {
-      await axios.post("http://localhost:5000/redeem/request", {
+      await axios.post(API_CONFIG.getUrl("/redeem/request"), {
         userId,
         amount: Number(amount),
         mpin,
@@ -114,7 +115,7 @@ export default function RedeemForm() {
 
   const forgotMpin = async () => {
     try {
-      await axios.post("http://localhost:5000/send-mpin-otp", {
+      await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), {
         userId,
         role: "vendor",
       });

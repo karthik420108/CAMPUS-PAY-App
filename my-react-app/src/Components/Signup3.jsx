@@ -3,6 +3,7 @@ import Footer from "./Footer.jsx";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import API_CONFIG from "../config/api";
 
 const characters = [
   { id: 1, src: "/characters/boy.png", label: "Boy" },
@@ -88,7 +89,7 @@ function Signup3({
       formData.append("profileImage", uploadedFile);
       formData.append("email", Email);
 
-      const res = await axios.post("http://localhost:5000/upload", formData);
+      const res = await axios.post(API_CONFIG.getUrl("/upload"), formData);
 
       setIurl(res.data.url);
       navigate("/kyc", { state: { role } });

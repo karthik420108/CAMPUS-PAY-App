@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function SubAdminProfile({ state }) {
   // --- Original Logic State ---
@@ -39,7 +40,7 @@ function SubAdminProfile({ state }) {
         return;
       }
       const res = await axios.get(
-        `http://localhost:5000/subadmin/${subAdminId}/profile`
+        API_CONFIG.getUrl(`/subadmin/${subAdminId}/profile`)
       );
       setProfile(res.data);
     } catch (err) {
@@ -64,7 +65,7 @@ function SubAdminProfile({ state }) {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/upload/subadmin",
+        API_CONFIG.getUrl("/upload/subadmin"),
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -86,7 +87,7 @@ function SubAdminProfile({ state }) {
       const subAdminId =
         state?.subAdminId || localStorage.getItem("subAdminId");
       await axios.put(
-        `http://localhost:5000/subadmin/${subAdminId}/profile`,
+        API_CONFIG.getUrl(`/subadmin/${subAdminId}/profile`),
         profile
       );
       showAlert({

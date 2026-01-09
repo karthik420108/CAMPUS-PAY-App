@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function AdminComplaints() {
   const [complaints, setComplaints] = useState([]);
@@ -31,7 +32,7 @@ function AdminComplaints() {
 
     const fetchForwardedComplaints = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/admin/forwarded-complaints");
+        const response = await axios.get(API_CONFIG.getUrl("/admin/forwarded-complaints"));
         console.log("Fetched forwarded complaints:", response.data);
         setComplaints(response.data);
         setAllComplaints(response.data);
@@ -57,7 +58,7 @@ function AdminComplaints() {
 
     setIsSearching(true);
     try {
-      const response = await axios.get(`http://localhost:5000/admin/forwarded-complaints/search?query=${encodeURIComponent(searchValue.trim())}`);
+      const response = await axios.get(API_CONFIG.getUrl(`/admin/forwarded-complaints/search?query=${encodeURIComponent(searchValue.trim())}`));
       console.log("Search results:", response.data);
       setComplaints(response.data);
     } catch (err) {
@@ -90,12 +91,12 @@ function AdminComplaints() {
     }
 
     try {
-      await axios.post(`http://localhost:5000/admin/complaint/${complaintId}/respond`, {
+      await axios.post(API_CONFIG.getUrl(`/admin/complaint/${complaintId}/respond`), {
         response: responseText
       });
       
       // Refresh complaints list
-      const response = await axios.get("http://localhost:5000/admin/forwarded-complaints");
+      const response = await axios.get(API_CONFIG.getUrl("/admin/forwarded-complaints"));
       setAllComplaints(response.data);
       setComplaints(searchTerm ? response.data.filter(complaint => 
         complaint.complaintId.toLowerCase().includes(searchTerm.toLowerCase()) ||

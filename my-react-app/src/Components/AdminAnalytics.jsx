@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import API_CONFIG from "../config/api";
 
 function AdminAnalytics() {
   const [loading, setLoading] = useState(true);
@@ -23,11 +24,11 @@ function AdminAnalytics() {
         setLoading(true);
         // Fetch revenue analytics
         const revenueResponse = await axios.get(
-          `http://localhost:5000/admin/analytics/revenue?period=${selectedPeriod}`
+          API_CONFIG.getUrl(`/admin/analytics/revenue?period=${selectedPeriod}`)
         );
         // Fetch daily analytics
         const dailyResponse = await axios.get(
-          `http://localhost:5000/admin/analytics/daily?period=${selectedPeriod}`
+          API_CONFIG.getUrl(`/admin/analytics/daily?period=${selectedPeriod}`)
         );
         
         setRevenueData(revenueResponse.data);

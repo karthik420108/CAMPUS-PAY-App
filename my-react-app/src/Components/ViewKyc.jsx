@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import API_CONFIG from "../config/api";
 
 function ViewKyc() {
   const navigate = useNavigate();

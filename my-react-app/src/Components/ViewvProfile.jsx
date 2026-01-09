@@ -3,8 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "motion/react";
 import Header from "./Header3"
+import API_CONFIG from "../config/api";
+
 function ViewvProfile() {
   const { state } = useLocation();
+
   const { vendorId, role } = state || {};
   const navigate = useNavigate();
 
@@ -66,7 +69,7 @@ function ViewvProfile() {
 
     const fetchVendor = async () => {
       try {
-        const res = await axios.post("http://localhost:5000/vendore/profile", { vendorId });
+        const res = await axios.post(API_CONFIG.getUrl("/vendore/profile"), { vendorId });
         const vendor = res.data.vendor;
         setVendorName(vendor.vendorName);
         setImageUrl(vendor.ImageUrl);
@@ -82,7 +85,7 @@ function ViewvProfile() {
 
     const fetchStudent = async () => {
       try {
-        const res = await axios.post("http://localhost:5000/usere/profile", { vendorId });
+        const res = await axios.post(API_CONFIG.getUrl("/usere/profile"), { vendorId });
         const user = res.data.user;
         setVendorName(`${user.firstName} ${user.lastName}`);
         setEmail(user.collegeEmail);

@@ -11,6 +11,7 @@ import SettingsOverlay from "./SettingsOverlay";
 import { motion, AnimatePresence } from "motion/react";
 import Header from "./Header3"
 import "./BottomNav.css"
+import API_CONFIG from "../config/api";
 
 dayjs.extend(isSameOrBefore);
 
@@ -104,7 +105,7 @@ function Login() {
       return;
     }
     axios
-      .get(`http://localhost:5000/transactions/${userId}`)
+      .get(API_CONFIG.getUrl(`/transactions/${userId}`))
       .then((res) => setTransactions(res.data))
       .catch(console.error);
   }, [userId, navigate]);
@@ -113,7 +114,7 @@ function Login() {
 
     const fetchUserStatus = () => {
       axios
-        .get(`http://localhost:5000/user/${userId}`)
+        .get(API_CONFIG.getUrl(`/user/${userId}`))
         .then((res) => {
           const userData = res.data;
           console.log(userId);
@@ -122,6 +123,17 @@ function Login() {
           setImageUrl(userData.ImageUrl || imageUrl);
           setUsername(userData.firstName || username);
           setWallBalance(userData.walletBalance || walletBalance);
+          
+          // Fetch institute balance
+          axios
+            .post(API_CONFIG.getUrl("/institute-balance"))
+            .then((balanceRes) => {
+              setInstaBalance(balanceRes.data.balance || 0);
+            })
+            .catch((error) => {
+              console.error("Error fetching institute balance:", error);
+              setInstaBalance(0);
+            });
 
           if (userData.isSuspended) {
             setShowEditProfile(false); // close popups
@@ -152,7 +164,7 @@ function Login() {
 
     const fetchNotifications = () => {
       axios
-        .get(`http://localhost:5000/notifications/${userId}`, {
+        .get(API_CONFIG.getUrl(`/notifications/${userId}`), {
           params: { role: "student" },
         })
         .then((res) => {
@@ -198,21 +210,6 @@ function Login() {
       navigate(path, { state: { userId } });
     }
   };
-
-  // Handle scanner event from bottom navigation
-  useEffect(() => {
-    const handleOpenScanner = () => {
-      if (frozen) return;
-      // Find and click the scan button
-      const scanCard = document.querySelector('.scan-card');
-      if (scanCard && !scanCard.classList.contains('disabled')) {
-        scanCard.click();
-      }
-    };
-
-    window.addEventListener('openScanner', handleOpenScanner);
-    return () => window.removeEventListener('openScanner', handleOpenScanner);
-  }, [frozen]);
 
   const safeSetMode = (value) => {
     if (isFrozen) return;
@@ -1330,9 +1327,13 @@ jsx
                 whileTap={{ scale: 0.92 }}
                 onClick={() => {
                   if (frozen) return;
-                  // Trigger scan functionality
-                  const scanEvent = new CustomEvent('openScanner');
-                  window.dispatchEvent(scanEvent);
+                  // Navigate to dedicated scanner page
+                  navigate("/scanner", { 
+                    state: { 
+                      userId: userId, 
+                      frozen: frozen 
+                    } 
+                  });
                 }}
               >
                 <div className="scan-icon-animated">📷</div>

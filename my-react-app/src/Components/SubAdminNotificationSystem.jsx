@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
+import API_CONFIG from "../config/api";
 
 function SubAdminNotificationSystem() {
   const { state } = useLocation();
@@ -41,7 +42,7 @@ function SubAdminNotificationSystem() {
     try {
       // Fetch notifications using user-specific endpoint to get proper read status
       const res = await axios.get(
-        `http://localhost:5000/notifications/${subAdminId}`,
+        API_CONFIG.getUrl(`/notifications/${subAdminId}`),
         {
           params: {
             role: "SUBADMIN",
@@ -58,7 +59,7 @@ function SubAdminNotificationSystem() {
         const markPromises = unreadNotifications.map((notification) =>
           axios
             .post(
-              `http://localhost:5000/notifications/${notification._id}/read`,
+              API_CONFIG.getUrl(`/notifications/${notification._id}/read`),
               {
                 userId: subAdminId,
                 role: "SUBADMIN",

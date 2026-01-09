@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import Header1 from "./Header1";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
+import API_CONFIG from "../config/api";
 
 function VendorEditProfile() {
   const { state } = useLocation();
@@ -61,7 +62,7 @@ function VendorEditProfile() {
 
   useEffect(() => {
     axios
-      .post(`http://localhost:5000/vendor/${vendorId}`)
+      .post(API_CONFIG.getUrl(`/vendor/${vendorId}`))
       .then((res) => {
         setVendorName(res.data.vendorName || "");
         setImagePreview(res.data.ImageUrl || "/default-avatar.png");
@@ -92,7 +93,7 @@ function VendorEditProfile() {
       if (imageFile) formData.append("profileImage", imageFile);
 
       await axios.put(
-        `http://localhost:5000/vendor/update-profile/${vendorId}`,
+        API_CONFIG.getUrl(`/vendor/update-profile/${vendorId}`),
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );

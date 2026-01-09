@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function SubAdminComplaints({ state }) {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ function SubAdminComplaints({ state }) {
 
       console.log("Fetching complaints for subAdminId:", subAdminId);
       const res = await axios.get(
-        `http://localhost:5000/subadmin/${subAdminId}/complaints`
+        API_CONFIG.getUrl(`/subadmin/${subAdminId}/complaints`)
       );
       console.log("Complaints response:", res.data);
       setComplaints(res.data);
@@ -77,7 +78,7 @@ function SubAdminComplaints({ state }) {
 
       console.log("Fetching forwarded complaints for subAdminId:", subAdminId);
       const res = await axios.get(
-        `http://localhost:5000/subadmin/${subAdminId}/forwarded-complaints`
+        API_CONFIG.getUrl(`/subadmin/${subAdminId}/forwarded-complaints`)
       );
       console.log("Forwarded complaints response:", res.data);
       setForwardedComplaints(res.data);
@@ -124,7 +125,7 @@ function SubAdminComplaints({ state }) {
 
     try {
       await axios.post(
-        `http://localhost:5000/subadmin/complaint/${responseModal.complaintId}/respond`,
+        API_CONFIG.getUrl(`/subadmin/complaint/${responseModal.complaintId}/respond`),
         { response: responseModal.response.trim() }
       );
       showAlert({
@@ -174,7 +175,7 @@ function SubAdminComplaints({ state }) {
       console.log("Forwarding complaint with subAdminId:", subAdminId);
 
       await axios.post(
-        `http://localhost:5000/subadmin/complaint/${complaintId}/forward`,
+        API_CONFIG.getUrl(`/subadmin/complaint/${complaintId}/forward`),
         { subAdminId: subAdminId } // Pass the SubAdmin ID for tracking
       );
       showAlert({

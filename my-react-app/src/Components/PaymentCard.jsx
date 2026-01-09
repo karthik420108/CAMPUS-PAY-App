@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import API_CONFIG from "../config/api";
 
 function PaymentCard() {
   const location = useLocation();
@@ -35,7 +36,7 @@ function PaymentCard() {
       };
 
   async function func() {
-    const res = await axios.post(`http://localhost:5000/info/${userId}`);
+    const res = await axios.post(API_CONFIG.getUrl(`/info/${userId}`));
     const {
       username,
       userId: uid,
@@ -45,7 +46,7 @@ function PaymentCard() {
       userCreatedAt,
     } = res.data;
 
-    const res2 = await axios.post('http://localhost:5000/institute-balance');
+    const res2 = await axios.post(API_CONFIG.getUrl('/institute-balance'));
 
     navigate('/login', {
       state: {

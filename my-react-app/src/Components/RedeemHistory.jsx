@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Header from "./Header.jsx";
+import API_CONFIG from "../config/api";
 
 function AdminRedeemHistory() {
   const { state } = useLocation();
@@ -27,7 +28,7 @@ function AdminRedeemHistory() {
       if (endDate) params.append("endDate", endDate);
 
       const res = await axios.get(
-        `http://localhost:5000/admin/redeem-history?${params.toString()}`
+        API_CONFIG.getUrl(`/admin/redeem-history?${params.toString()}`)
       );
       setRedeems(res.data);
     } catch (err) {

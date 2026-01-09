@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "motion/react";
+import API_CONFIG from "../config/api";
 
 function Payment() {
   const location = useLocation();
@@ -30,7 +31,7 @@ function Payment() {
     if (!vendorId) return;
     const fetchVendorName = async () => {
       try {
-        const res = await axios.post("http://localhost:5000/vendor-name", { vendorId });
+        const res = await axios.post(API_CONFIG.getUrl("/vendor-name"), { vendorId });
         setVName(res.data.vName);
       } catch (err) {
         console.error("Failed to fetch vendor name:", err);

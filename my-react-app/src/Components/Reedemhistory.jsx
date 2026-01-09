@@ -4,9 +4,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import Header1 from "./Header1";
 import Header from "./Header3"
+import API_CONFIG from "../config/api";
 
 export default function RedeemHistoryPage() {
   const locationState = useLocation()?.state;
+
   const navigate = useNavigate();
   const userId = locationState?.vendorId;
   
@@ -73,7 +75,7 @@ export default function RedeemHistoryPage() {
       try {
         console.log("ReedemHistory - Fetching history for userId:", userId);
         const res = await axios.get(
-          `http://localhost:5000/redeem/history/${userId}`
+          API_CONFIG.getUrl(`/redeem/history/${userId}`)
         );
         console.log("ReedemHistory - API response:", res.data);
         setHistory(res.data || []);

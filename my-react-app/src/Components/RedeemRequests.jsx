@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function AdminRedeemRequests() {
   const { state } = useLocation();
@@ -28,7 +29,7 @@ function AdminRedeemRequests() {
   const fetchRedeems = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5000/admin/redeem-requests"
+        API_CONFIG.getUrl("/admin/redeem-requests")
       );
       setRedeems(res.data);
     } catch (err) {
@@ -41,7 +42,7 @@ function AdminRedeemRequests() {
   const updateStatus = async (redeemId, status) => {
     try {
       console.log(redeemId, status);
-      await axios.post("http://localhost:5000/admin/redeem/update-status", {
+      await axios.post(API_CONFIG.getUrl("/admin/redeem/update-status"), {
         redeemId,
         status,
       });

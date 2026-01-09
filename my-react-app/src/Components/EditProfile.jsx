@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
+import API_CONFIG from "../config/api";
 import Header from "./Header3"
+
 // Removed Header1 import to get rid of the hamburger menu
 
 function EditProfile() {
   const { state } = useLocation();
+
   const { userId, role } = state || {}; // Removed isFrozen as it was only used for Header1
   const navigate = useNavigate();
 
@@ -62,7 +65,7 @@ function EditProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/user/${userId}`);
+        const res = await axios.get(API_CONFIG.getUrl(`/user/${userId}`));
         setProfile({
           firstName: res.data.firstName || "",
           lastName: res.data.lastName || "",
@@ -78,6 +81,7 @@ function EditProfile() {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+    console.log(file);
     if (!file) return;
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
@@ -89,6 +93,7 @@ function EditProfile() {
       setError("First Name and Last Name are required");
       return;
     }
+    
     try {
       setLoading(true);
       setError("");
@@ -100,15 +105,30 @@ function EditProfile() {
       formData.append("role", role + "pics");
       if (imageFile) formData.append("photo", imageFile);
 
-      await axios.post("http://localhost:5000/update-profile", formData, {
+      const response = await axios.post(API_CONFIG.getUrl("/update-profile"), formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      // Check if there was an image upload error but text update succeeded
+      if (response.data.warning) {
+        setError(response.data.warning);
+        // Clear the selected image but keep the old one
+        setImageFile(null);
+      }
+
       navigate(-1, {
-        state: { userId, role, imageUrl: imagePreview || profile.imageUrl },
+        state: { userId, role, imageUrl: response.data.imageUrl || profile.imageUrl },
       });
-    } catch {
-      setError("Update failed. Please try again.");
+    } catch (error) {
+      console.error("Update error:", error);
+      console.error("Response data:", error.response?.data);
+      
+      if (error.response?.data) {
+        const errorMessage = error.response.data.error;
+        setError(errorMessage || "Update failed. Please try again.");
+      } else {
+        setError("Update failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

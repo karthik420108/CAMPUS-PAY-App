@@ -4,6 +4,7 @@ import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
 import Header3 from "./Header3";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 // Footer is removed from the layout to maintain the consistent centered-card look
 
 function Upin({
@@ -118,7 +119,7 @@ function Upin({
     };
 
     try {
-      const res = await axios.post("http://localhost:5000/register", userData);
+      const res = await axios.post(API_CONFIG.getUrl("/register"), userData);
 
       if (role === "student") {
         const {
@@ -130,7 +131,7 @@ function Upin({
         } = res.data;
 
         // Fetch institute balance for initial state
-        const res2 = await axios.post("http://localhost:5000/institute-balance");
+        const res2 = await axios.post(API_CONFIG.getUrl("/institute-balance"));
 
         navigate("/login", {
           state: {

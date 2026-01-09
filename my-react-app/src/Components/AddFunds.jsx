@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
+import API_CONFIG from "../config/api";
 
 export default function AddFunds() {
   const { state } = useLocation();
@@ -23,7 +24,7 @@ export default function AddFunds() {
     }
     const fb = async () => {
       try {
-        const res = await axios.post("http://localhost:5000/institute-balance");
+        const res = await axios.post(API_CONFIG.getUrl("/institute-balance"));
         setam(res.data.balance);
       } catch (err) {
         console.error(err);
@@ -34,7 +35,7 @@ export default function AddFunds() {
 
   const fb = async () => {
     try {
-      const res = await axios.post("http://localhost:5000/institute-balance");
+      const res = await axios.post(API_CONFIG.getUrl("/institute-balance"));
       setam(res.data.balance);
     } catch (err) {
       console.error(err);
@@ -53,7 +54,7 @@ export default function AddFunds() {
     setMessage("");
 
     try {
-      const res = await axios.post("http://localhost:5000/add-institute-funds", {
+      const res = await axios.post(API_CONFIG.getUrl("/add-institute-funds"), {
         amount: Number(amount),
       });
 

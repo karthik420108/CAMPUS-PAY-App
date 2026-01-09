@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
-
+import API_CONFIG from "../config/api";
 
 function Notifications() {
   const { state } = useLocation();
@@ -50,7 +50,7 @@ function Notifications() {
       try {
         setLoading(true);
         const res = await axios.get(
-          `http://localhost:5000/notifications/${Id}`,
+          API_CONFIG.getUrl(`/notifications/${Id}`),
           {
             params: { role: state.role }, // state.role = STUDENT / VENDOR / SUBADMIN
           }
@@ -63,7 +63,7 @@ function Notifications() {
         const unreadNotifications = notifications.filter(n => !n.read);
         if (unreadNotifications.length > 0) {
           const markPromises = unreadNotifications.map(notification => 
-            axios.post(`http://localhost:5000/notifications/${notification._id}/read`, {
+            axios.post(API_CONFIG.getUrl(`/notifications/${notification._id}/read`), {
               userId: Id,
               role: state.role,
             }).catch(err => console.error("Error marking notification as read:", err))
@@ -527,6 +527,7 @@ function Notifications() {
         @keyframes spin {
           0% {
             transform: rotate(0deg);
+
           }
           100% {
             transform: rotate(360deg);

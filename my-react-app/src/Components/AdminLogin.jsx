@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate , useLocation } from "react-router-dom";
 import { motion } from "framer-motion"; 
 import Header from "./Header.jsx";
+import API_CONFIG from "../config/api";
 
 function AdminLogin() {
   const [ib, setIb] = useState(0);
@@ -23,7 +24,7 @@ function AdminLogin() {
   const fetchDashboardData = async () => {
     try {
       // console.log("Fetching dashboard data...");
-      const response = await axios.get("http://localhost:5000/admin/dashboard");
+      const response = await axios.get(API_CONFIG.getUrl("/admin/dashboard"));
       setIb(response.data.instituteFunds || 0);
       setUr(response.data.userCount || 0);
       setVr(response.data.vendorCount || 0);

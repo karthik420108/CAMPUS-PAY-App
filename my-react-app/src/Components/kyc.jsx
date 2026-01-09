@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import Header3 from "./Header3";
+import API_CONFIG from "../config/api";
 // Footer is removed from inside the main layout to match the clean look of RaiseComplaint
 // If you really need Footer, you can add it back at the bottom, but usually these centered forms look better without it.
 
@@ -68,7 +69,7 @@ function Kyc({ role, Email }) {
       formData.append("kycImage", kycFile);
       formData.append("email", Email);
 
-      const res = await axios.post(`http://localhost:5000/upload-kyc`, formData, {
+      const res = await axios.post(API_CONFIG.getUrl(`/upload-kyc`), formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

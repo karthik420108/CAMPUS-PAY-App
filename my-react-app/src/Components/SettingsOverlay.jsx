@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import "./SettingsOverlay.css";
+import API_CONFIG from "../config/api";
 
 function SettingsOverlay({ isOpen, onClose, theme, onNavigate }) {
   const isLight = theme === "light";

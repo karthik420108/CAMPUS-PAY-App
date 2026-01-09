@@ -1,5 +1,5 @@
-/* Main Overlay */
-.scan-pay-overlay {
+/* Scanner Page - Full Screen Layout */
+.scanner-page {
   position: fixed;
   top: 0;
   left: 0;
@@ -7,6 +7,7 @@
   bottom: 0;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   z-index: 9999;
@@ -14,29 +15,12 @@
   overflow: hidden;
   width: 100vw;
   height: 100vh;
-  position: fixed;
   touch-action: none;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
 }
 
-/* Prevent body scroll when overlay is open */
-body:has(.scan-pay-overlay) {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  height: 100%;
-}
-
-/* Fallback for browsers without :has() support */
-body.scan-overlay-open {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  height: 100%;
-}
-
-.scan-pay-overlay::before {
+.scanner-page::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -53,54 +37,42 @@ body.scan-overlay-open {
   to { transform: rotate(360deg); }
 }
 
-/* Overlay Content */
-.scan-overlay-content {
-  position: relative;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  padding: 32px;
-  width: 90%;
-  max-width: 420px;
-  max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  z-index: 10;
-  touch-action: none;
-}
-
 /* Header */
-.scan-header {
+.scanner-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
   position: relative;
+  z-index: 10;
 }
 
-.close-scan-btn {
+.back-scan-btn {
   position: absolute;
   top: -8px;
-  right: -8px;
-  width: 36px;
-  height: 36px;
+  left: -8px;
+  padding: 8px 16px;
   border: none;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, #64748b, #475569);
   color: white;
-  border-radius: 50%;
-  font-size: 18px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
   transition: all 0.3s ease;
 }
 
-.close-scan-btn:hover {
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-  transform: scale(1.05);
+.back-scan-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(100, 116, 139, 0.4);
+  transform: translateY(-1px);
+}
+
+.back-scan-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .scan-title {
@@ -115,7 +87,7 @@ body.scan-overlay-open {
 
 .scan-subtitle {
   margin: 0;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 14px;
   font-weight: 500;
 }
@@ -126,6 +98,7 @@ body.scan-overlay-open {
   justify-content: center;
   margin: 24px 0;
   position: relative;
+  z-index: 10;
 }
 
 .scanner-frame {
@@ -209,7 +182,7 @@ body.scan-overlay-open {
 }
 
 /* QR Reader Container - Comprehensive targeting */
-#qr-reader-overlay {
+#qr-reader-page {
   position: absolute;
   top: 0;
   left: 0;
@@ -225,23 +198,23 @@ body.scan-overlay-open {
 }
 
 /* Target ALL possible video elements with maximum specificity */
-#qr-reader-overlay video,
-#qr-reader-overlay .qr-reader__video,
-#qr-reader-overlay .qr-reader__dashboard_section_csr video,
-#qr-reader-overlay [id*="qr-reader"] video,
-#qr-reader-overlay div[id*="qr"] video,
-#qr-reader-overlay section video,
-#qr-reader-overlay * video,
-#qr-reader-overlay div video,
-#qr-reader-overlay span video,
-#qr-reader-overlay section div video,
-#qr-reader-overlay div section video,
-#qr-reader-overlay *[class*="qr"] video,
-#qr-reader-overlay *[id*="qr"] *[class*="video"],
-#qr-reader-overlay *[class*="qr"] *[class*="video"],
-#qr-reader-overlay *[id*="video"],
-#qr-reader-overlay video[src],
-#qr-reader-overlay *[src] video {
+#qr-reader-page video,
+#qr-reader-page .qr-reader__video,
+#qr-reader-page .qr-reader__dashboard_section_csr video,
+#qr-reader-page [id*="qr-reader"] video,
+#qr-reader-page div[id*="qr"] video,
+#qr-reader-page section video,
+#qr-reader-page * video,
+#qr-reader-page div video,
+#qr-reader-page span video,
+#qr-reader-page section div video,
+#qr-reader-page div section video,
+#qr-reader-page *[class*="qr"] video,
+#qr-reader-page *[id*="qr"] *[class*="video"],
+#qr-reader-page *[class*="qr"] *[class*="video"],
+#qr-reader-page *[id*="video"],
+#qr-reader-page video[src],
+#qr-reader-page *[src] video {
   border-radius: 16px !important;
   width: 100% !important;
   height: 100% !important;
@@ -265,13 +238,13 @@ body.scan-overlay-open {
 }
 
 /* Target all possible containers that might hold the video */
-#qr-reader-overlay .qr-reader__dashboard_section_csr,
-#qr-reader-overlay .qr-reader__video_container,
-#qr-reader-overlay div[class*="qr-reader"],
-#qr-reader-overlay div[id*="qr"],
-#qr-reader-overlay section[class*="qr"],
-#qr-reader-overlay *[class*="dashboard"],
-#qr-reader-overlay *[id*="dashboard"] {
+#qr-reader-page .qr-reader__dashboard_section_csr,
+#qr-reader-page .qr-reader__video_container,
+#qr-reader-page div[class*="qr-reader"],
+#qr-reader-page div[id*="qr"],
+#qr-reader-page section[class*="qr"],
+#qr-reader-page *[class*="dashboard"],
+#qr-reader-page *[id*="dashboard"] {
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
@@ -285,28 +258,28 @@ body.scan-overlay-open {
 }
 
 /* Force visibility on all nested elements */
-#qr-reader-overlay *,
-#qr-reader-overlay div,
-#qr-reader-overlay section,
-#qr-reader-overlay span {
+#qr-reader-page *,
+#qr-reader-page div,
+#qr-reader-page section,
+#qr-reader-page span {
   opacity: 1 !important;
   visibility: visible !important;
 }
 
 /* Hide only the control buttons, keep everything else visible */
-#qr-reader-overlay button,
-#qr-reader-overlay input,
-#qr-reader-overlay select,
-#qr-reader-overlay textarea,
-#qr-reader-overlay .qr-reader__dashboard_section_csr button,
-#qr-reader-overlay .qr-reader__dashboard_section_csr input,
-#qr-reader-overlay .qr-reader__dashboard_section_csr select,
-#qr-reader-overlay .qr-reader__dashboard_section_csr textarea {
+#qr-reader-page button,
+#qr-reader-page input,
+#qr-reader-page select,
+#qr-reader-page textarea,
+#qr-reader-page .qr-reader__dashboard_section_csr button,
+#qr-reader-page .qr-reader__dashboard_section_csr input,
+#qr-reader-page .qr-reader__dashboard_section_csr select,
+#qr-reader-page .qr-reader__dashboard_section_csr textarea {
   display: none !important;
 }
 
 /* Ensure the main scanner section is visible */
-#qr-reader-overlay .qr-reader__dashboard_section_csr {
+#qr-reader-page .qr-reader__dashboard_section_csr {
   display: block !important;
   position: absolute !important;
   top: 0 !important;
@@ -317,7 +290,7 @@ body.scan-overlay-open {
   background: transparent !important;
 }
 
-#qr-reader-overlay .qr-reader__dashboard_section_csr video {
+#qr-reader-page .qr-reader__dashboard_section_csr video {
   width: 100% !important;
   height: 100% !important;
   border-radius: 16px !important;
@@ -371,28 +344,28 @@ video {
 }
 
 /* Hide all control buttons and UI elements from HTML5 QR Scanner */
-#qr-reader-overlay button {
+#qr-reader-page button {
   display: none !important;
 }
 
-#qr-reader-overlay .qr-reader__dashboard_section_csr {
+#qr-reader-page .qr-reader__dashboard_section_csr {
   display: none !important;
 }
 
-#qr-reader-overlay .qr-reader__status_span {
+#qr-reader-page .qr-reader__status_span {
   display: none !important;
 }
 
-#qr-reader-overlay .qr-reader__header_section {
+#qr-reader-page .qr-reader__header_section {
   display: none !important;
 }
 
-#qr-reader-overlay .qr-reader__camera_permission_section {
+#qr-reader-page .qr-reader__camera_permission_section {
   display: none !important;
 }
 
 /* Force HTML5 QR Scanner to fill container */
-#qr-reader-overlay > div {
+#qr-reader-page > div {
   width: 100% !important;
   height: 100% !important;
   position: absolute !important;
@@ -400,14 +373,14 @@ video {
   left: 0 !important;
 }
 
-#qr-reader-overlay > div > video {
+#qr-reader-page > div > video {
   width: 100% !important;
   height: 100% !important;
   border-radius: 16px !important;
   object-fit: cover !important;
 }
 
-#qr-reader-overlay > div > div {
+#qr-reader-page > div > div {
   display: none !important;
 }
 
@@ -501,6 +474,9 @@ video {
   border-radius: 12px;
   padding: 12px 16px;
   margin: 16px 0;
+  max-width: 400px;
+  z-index: 10;
+  position: relative;
 }
 
 .scan-error-text {
@@ -517,6 +493,9 @@ video {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-width: 400px;
+  z-index: 10;
+  position: relative;
 }
 
 .instruction-item {
@@ -535,7 +514,7 @@ video {
 }
 
 .instruction-item span:last-child {
-  color: #475569;
+  color: #cbd5e1;
   font-size: 13px;
   font-weight: 500;
 }
@@ -545,6 +524,8 @@ video {
   display: flex;
   justify-content: center;
   margin-top: 24px;
+  z-index: 10;
+  position: relative;
 }
 
 .cancel-scan-btn {
@@ -560,15 +541,21 @@ video {
   box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
 }
 
-.cancel-scan-btn:hover {
+.cancel-scan-btn:hover:not(:disabled) {
   box-shadow: 0 6px 20px rgba(100, 116, 139, 0.4);
   transform: translateY(-1px);
 }
 
+.cancel-scan-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Dark Theme Support */
-[data-theme="dark"] .scan-overlay-content {
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+[data-theme="dark"] .scan-error-container {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b);
+  border: 1px solid #dc2626;
 }
 
 [data-theme="dark"] .scan-subtitle {
@@ -591,12 +578,6 @@ video {
 
 /* Responsive Design */
 @media (max-width: 480px) {
-  .scan-overlay-content {
-    width: 95%;
-    padding: 20px;
-    margin: 10px;
-  }
-  
   .scanner-frame {
     width: 280px;
     height: 280px;

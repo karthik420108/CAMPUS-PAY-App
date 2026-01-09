@@ -5,11 +5,12 @@ import { motion } from "motion/react";
 import Header from "./Header3.jsx";
 import Footer from "./Footer.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function ResetMpin() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { userId, role } = state || {};
+  const { userId, role, type} = state || {};
   const { showAlert } = useAlert();
 
   const [mpin, setMpin] = useState("");
@@ -61,7 +62,7 @@ function ResetMpin() {
 
     try {
       setLoading(true);
-      await axios.post("http://localhost:5000/reset-mpin", {
+      await axios.post(API_CONFIG.getUrl("/reset-mpin"), {
         userId,
         mpin,
         role,
@@ -71,7 +72,9 @@ function ResetMpin() {
         title: "MPIN Reset",
         message: "MPIN reset successfully"
       });
-      if (role === "vendor") navigate("/redeem", { state: { vendorId: userId } });
+      if (role === "vendor" && !type) navigate("/redeem", { state: { vendorId: userId } });
+      else if(role == "vendor" && type) navigate("/vlogin", { state: { vendorId: userId } });
+      else if(role == "student") navigate("/login", { state: { userId } });
       else navigate("/");
     } catch {
       setErr("Failed to reset MPIN");

@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react"; // Added for animations
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function AdminMonitorVendors() {
   const { state } = useLocation();
@@ -34,7 +35,7 @@ function AdminMonitorVendors() {
   const fetchVendors = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5000/admin/monitor/vendors"
+        API_CONFIG.getUrl("/admin/monitor/vendors")
       );
       setVendors(res.data);
     } catch (err) {
@@ -47,7 +48,7 @@ function AdminMonitorVendors() {
   const fetchVendorDetails = async (vendorId) => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/admin/monitor/vendor/${vendorId}`
+        API_CONFIG.getUrl(`/admin/monitor/vendor/${vendorId}`)
       );
       setSelectedVendor(res.data);
       setShowDetails(true);
@@ -70,7 +71,7 @@ function AdminMonitorVendors() {
   const toggleFreeze = async (vendorId, currentStatus) => {
     try {
       await axios.put(
-        `http://localhost:5000/admin/monitor/vendor/${vendorId}/freeze`,
+        API_CONFIG.getUrl(`/admin/monitor/vendor/${vendorId}/freeze`),
         { isFrozen: !currentStatus }
       );
       fetchVendors();
@@ -95,7 +96,7 @@ function AdminMonitorVendors() {
       if (reason === null) return;
 
       await axios.put(
-        `http://localhost:5000/admin/monitor/vendor/${vendorId}/suspend`,
+        API_CONFIG.getUrl(`/admin/monitor/vendor/${vendorId}/suspend`),
         {
           isSuspended: !currentStatus,
           reason: reason,
@@ -130,7 +131,7 @@ function AdminMonitorVendors() {
 
   const handleViewMoreTransactions = async (vendor) => {
     try {
-      const res = await axios.get(`http://localhost:5000/admin/monitor/vendor/${vendor._id}`);
+      const res = await axios.get(API_CONFIG.getUrl(`/admin/monitor/vendor/${vendor._id}`));
       setModalVendor(res.data);
       setShowTransactionsModal(true);
     } catch (err) {
@@ -145,7 +146,7 @@ function AdminMonitorVendors() {
 
   const handleViewMoreRedeems = async (vendor) => {
     try {
-      const res = await axios.get(`http://localhost:5000/admin/monitor/vendor/${vendor._id}`);
+      const res = await axios.get(API_CONFIG.getUrl(`/admin/monitor/vendor/${vendor._id}`));
       setModalVendor(res.data);
       setShowRedeemsModal(true);
     } catch (err) {

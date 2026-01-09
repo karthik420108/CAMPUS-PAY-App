@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import axios from "axios";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function Refund() {
   const { state } = useLocation();
@@ -29,7 +30,7 @@ function Refund() {
     const fetchAmount = async () => {
       try {
         const res = await axios.post(
-          `http://localhost:5000/amount/${vendorId}`
+          API_CONFIG.getUrl(`/amount/${vendorId}`)
         );
         setAvailableAmount(res.data.totalAmount || 0);
       } catch (err) {
@@ -212,7 +213,7 @@ function Refund() {
     setLoading(true);
     setMessage("");
     try {
-      await axios.post("http://localhost:5000/refund", {
+      await axios.post(API_CONFIG.getUrl("/refund"), {
         vendorId,
         amount: Number(refundAmount),
         mpin,
@@ -230,7 +231,7 @@ function Refund() {
 
   const forgotMpin = async () => {
     try {
-      await axios.post("http://localhost:5000/send-mpin-otp", {
+      await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), {
         userId: vendorId,
         role: "vendor",
       });

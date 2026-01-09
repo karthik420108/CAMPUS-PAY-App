@@ -6,6 +6,7 @@ import Header1 from "./Header1";
 import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
 import Header from "./Header3";
+import API_CONFIG from "../config/api";
 
 function VendorLogin() {
   const { state } = useLocation();
@@ -83,7 +84,7 @@ function VendorLogin() {
 
   useEffect(() => {
     axios
-      .post(`http://localhost:5000/vendor/${vendorId}`)
+      .post(API_CONFIG.getUrl(`/vendor/${vendorId}`))
       .then((res) => {
         setVendorName(res.data.vendorName);
         setBalance(res.data.Wallet);
@@ -102,7 +103,7 @@ function VendorLogin() {
     if (!vendorId) return;
     const fetchNotifications = () => {
       axios
-        .get(`http://localhost:5000/notifications/${vendorId}`, {
+        .get(API_CONFIG.getUrl(`/notifications/${vendorId}`), {
           params: { role: "vendor" },
         })
         .then((res) => {

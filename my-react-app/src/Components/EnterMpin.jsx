@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
+import API_CONFIG from "../config/api";
 
 function EnterMpin() {
   const { state } = useLocation();
@@ -61,7 +62,7 @@ function EnterMpin() {
 
   async function forgotMpin() {
     try {
-      await axios.post("http://localhost:5000/send-mpin-otp", { userId });
+      await axios.post(API_CONFIG.getUrl("/send-mpin-otp"), { userId });
       showAlertOverlay("OTP sent to institute email", "success");
       setTimeout(() => navigate("/forgot-mpin", { state: { userId } }), 1500);
     } catch {
@@ -77,22 +78,22 @@ function EnterMpin() {
         return;
       }
 
-      const verify = await axios.post("http://localhost:5000/verify-upin", { userId, upin: mpin });
+      const verify = await axios.post(API_CONFIG.getUrl("/verify-upin"), { userId, upin: mpin });
       if (!verify.data.valid) {
         setErr("Incorrect MPIN");
         return;
       }
 
-      const balanceRes = await axios.post("http://localhost:5000/institute-balance");
+      const balanceRes = await axios.post(API_CONFIG.getUrl("/institute-balance"));
       if (balanceRes.data.balance < amount) {
-        await axios.post("http://localhost:5000/payment-mid", {
+        await axios.post(API_CONFIG.getUrl("/payment-mid"), {
           userId, vendorId, amount: Number(amount), transactionId, Status: "FAILED",
         });
         setErr("Institute credits are insufficient");
         return;
       }
 
-      await axios.post("http://localhost:5000/payment-mid", {
+      await axios.post(API_CONFIG.getUrl("/payment-mid"), {
         userId, vendorId, amount: Number(amount), transactionId, Status: "SUCCESS",
       });
 

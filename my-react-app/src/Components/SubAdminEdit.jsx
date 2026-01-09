@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
+import API_CONFIG from "../config/api";
 
 function SubAdminEdit() {
   const { state } = useLocation();
@@ -44,7 +45,7 @@ function SubAdminEdit() {
     const fetchProfile = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/subadmin/${subAdminId}/profile`
+          API_CONFIG.getUrl(`/subadmin/${subAdminId}/profile`)
         );
         setProfile(res.data);
         setImagePreview(res.data.imageUrl || null);
@@ -81,7 +82,7 @@ function SubAdminEdit() {
         formData.append("profileImage", imageFile);
 
         const uploadRes = await axios.post(
-          "http://localhost:5000/upload/subadmin",
+          API_CONFIG.getUrl("/upload/subadmin"),
           formData,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
@@ -94,7 +95,7 @@ function SubAdminEdit() {
 
       // Update profile data (include imageUrl when available)
       const res = await axios.put(
-        `http://localhost:5000/subadmin/${subAdminId}/profile`,
+        API_CONFIG.getUrl(`/subadmin/${subAdminId}/profile`),
         {
           name: updatedProfile.name,
           imageUrl: updatedProfile.imageUrl,
@@ -129,7 +130,7 @@ function SubAdminEdit() {
       setError("");
 
       const res = await axios.put(
-        `http://localhost:5000/subadmin/${subAdminId}/profile`,
+        API_CONFIG.getUrl(`/subadmin/${subAdminId}/profile`),
         { name: profile.name, imageUrl: "" }
       );
 

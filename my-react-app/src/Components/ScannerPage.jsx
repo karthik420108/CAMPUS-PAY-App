@@ -1,14 +1,20 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Html5Qrcode } from "html5-qrcode";
 import { motion, AnimatePresence } from "motion/react";
 import axios from "axios";
-import "./ScanPayOverlay.css";
+import "./ScannerPage.css";
 import API_CONFIG from "../config/api";
 
-function ScanPayOverlay({ isOpen, onClose, userId, onScanSuccess }) {
+function ScannerPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { userId, frozen } = location.state || {};
+  
   const [error, setError] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   
   // Move scanner to component level scope
   const scannerRef = useRef(null);
@@ -17,7 +23,7 @@ function ScanPayOverlay({ isOpen, onClose, userId, onScanSuccess }) {
   const initializeScanner = () => {
     try {
       // Create Html5Qrcode instance for direct video control
-      const html5QrCode = new Html5Qrcode("qr-reader-overlay");
+      const html5QrCode = new Html5Qrcode("qr-reader-page");
       
       // Update the scanner ref
       scannerRef.current = html5QrCode;
@@ -83,12 +89,14 @@ function ScanPayOverlay({ isOpen, onClose, userId, onScanSuccess }) {
             setIsInitializing(false);
             scannerRef.current = null;
 
-            // 6️⃣ Call success callback (this will close overlay and navigate)
-            onScanSuccess({
-              vendorId,
-              amount,
-              transactionId: tid,
-              userId
+            // 6️⃣ Navigate to payment page
+            navigate("/payment-mid", {
+              state: {
+                vendorId,
+                amount,
+                transactionId: tid,
+                userId
+              },
             });
 
           } catch (err) {
@@ -149,29 +157,54 @@ function ScanPayOverlay({ isOpen, onClose, userId, onScanSuccess }) {
     }
   };
 
-  // Add cleanup function to stop camera when overlay closes
-  const stopScanner = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().catch((err) => {
-        console.error("Scanner stop error:", err);
+  // Add cleanup function to stop camera when component unmounts
+  const stopScanner = async () => {
+    try {
+      setIsStopping(true);
+      console.log("Stopping scanner...");
+      
+      // Stop the scanner if it's running
+      if (scannerRef.current) {
+        await scannerRef.current.stop();
+        scannerRef.current = null;
+        console.log("Scanner stopped successfully");
+      }
+      
+      // Additional cleanup: stop any media tracks
+      const videoElements = document.querySelectorAll('video');
+      videoElements.forEach(video => {
+        const stream = video.srcObject;
+        if (stream) {
+          const tracks = stream.getTracks();
+          tracks.forEach(track => {
+            track.stop();
+            console.log("Media track stopped");
+          });
+          video.srcObject = null;
+        }
       });
-      scannerRef.current = null;
+      
+      // Clear any remaining video elements
+      const qrReaderElement = document.getElementById('qr-reader-page');
+      if (qrReaderElement) {
+        qrReaderElement.innerHTML = '';
+      }
+      
+    } catch (error) {
+      console.error("Error stopping scanner:", error);
+    } finally {
+      setIsScanning(false);
+      setIsInitializing(false);
+      setIsStopping(false);
     }
-    setIsScanning(false);
-    setIsInitializing(false);
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      // Stop camera when overlay closes
-      stopScanner();
-      // Remove body scroll lock class
-      document.body.classList.remove('scan-overlay-open');
+    // Check if user is frozen
+    if (frozen) {
+      navigate(-1);
       return;
     }
-
-    // Add body scroll lock class
-    document.body.classList.add('scan-overlay-open');
 
     setIsScanning(true);
     setIsInitializing(true);
@@ -262,156 +295,161 @@ function ScanPayOverlay({ isOpen, onClose, userId, onScanSuccess }) {
         initTimeout = null;
       }
       
-      // Stop scanner when component unmounts or isOpen changes
+      // Stop scanner when component unmounts
       stopScanner();
-      // Remove body scroll lock class
-      document.body.classList.remove('scan-overlay-open');
     };
-  }, [isOpen, userId, onScanSuccess]);
+  }, [userId, frozen, navigate]);
+
+  // Additional cleanup for page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      stopScanner();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  const handleGoBack = async () => {
+    await stopScanner();
+    navigate(-1);
+  };
+
+  const handleCancel = async () => {
+    await stopScanner();
+    navigate(-1);
+  };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="scan-pay-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+    <div className="scanner-page">
+      {/* Header */}
+      <div className="scanner-header">
+        <motion.button
+          className="back-scan-btn"
+          onClick={handleGoBack}
+          whileHover={{ scale: isStopping ? 1 : 1.1 }}
+          whileTap={{ scale: isStopping ? 1 : 0.9 }}
+          disabled={isStopping}
         >
-          <motion.div
-            className="scan-overlay-content"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            {/* Header */}
-            <div className="scan-header">
-              <motion.button
-                className="close-scan-btn"
-                onClick={onClose}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+          {isStopping ? "Stopping..." : "← Back"}
+        </motion.button>
+        <h2 className="scan-title">Scan & Pay</h2>
+        <p className="scan-subtitle">Position QR code within the frame</p>
+      </div>
+
+      {/* Scanner Container */}
+      <div className="scanner-container">
+        <div className="scanner-frame">
+          <div className="scanner-corners">
+            <div className="corner top-left"></div>
+            <div className="corner top-right"></div>
+            <div className="corner bottom-left"></div>
+            <div className="corner bottom-right"></div>
+          </div>
+          <div className="scan-line"></div>
+          <div id="qr-reader-page" />
+          
+          {/* Loading Indicator */}
+          {isInitializing && (
+            <div className="scanner-loading">
+              <div className="loading-spinner"></div>
+              <p>Initializing camera...</p>
+              <button 
+                className="retry-camera-btn"
+                onClick={() => {
+                  setIsInitializing(false);
+                  setError("");
+                  // Force re-render to retry initialization
+                  setTimeout(() => setIsInitializing(true), 100);
+                }}
               >
-                ✕
-              </motion.button>
-              <h2 className="scan-title">Scan & Pay</h2>
-              <p className="scan-subtitle">Position QR code within the frame</p>
-            </div>
-
-            {/* Scanner Container */}
-            <div className="scanner-container">
-              <div className="scanner-frame">
-                <div className="scanner-corners">
-                  <div className="corner top-left"></div>
-                  <div className="corner top-right"></div>
-                  <div className="corner bottom-left"></div>
-                  <div className="corner bottom-right"></div>
-                </div>
-                <div className="scan-line"></div>
-                <div id="qr-reader-overlay" />
-                
-                {/* Loading Indicator */}
-                {isInitializing && (
-                  <div className="scanner-loading">
-                    <div className="loading-spinner"></div>
-                    <p>Initializing camera...</p>
-                    <button 
-                      className="retry-camera-btn"
-                      onClick={() => {
-                        setIsInitializing(false);
-                        setError("");
-                        // Force re-render to retry initialization
-                        setTimeout(() => setIsInitializing(true), 100);
-                      }}
-                    >
-                      Retry
-                    </button>
-                    <button 
-                      className="manual-camera-btn"
-                      onClick={() => {
-                        // Manual camera trigger as fallback
-                        setIsInitializing(false);
-                        setError("");
-                        // Try direct camera access
-                        navigator.mediaDevices.getUserMedia({ 
-                          video: { 
-                            facingMode: 'environment',
-                            width: { ideal: 640 },
-                            height: { ideal: 480 }
-                          } 
-                        }).then(stream => {
-                          // Show success message
-                          setError("Camera accessed successfully! Initializing scanner...");
-                          
-                          // Clear any existing scanner first
-                          if (scannerRef.current) {
-                            scannerRef.current.stop().catch(() => {});
-                            scannerRef.current = null;
-                          }
-                          
-                          // Initialize scanner immediately
-                          setTimeout(() => {
-                            setIsInitializing(false); // Reset initializing state
-                            setError(""); // Clear success message
-                            initializeScanner(); // Initialize fresh scanner
-                          }, 100);
-                        }).catch(err => {
-                          setError(`Manual camera access failed: ${err.message || 'Unknown error'}`);
-                        });
-                      }}
-                    >
-                      Manual Camera Trigger
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Error Display */}
-            {error && (
-              <motion.div
-                className="scan-error-container"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                Retry
+              </button>
+              <button 
+                className="manual-camera-btn"
+                onClick={() => {
+                  // Manual camera trigger as fallback
+                  setIsInitializing(false);
+                  setError("");
+                  // Try direct camera access
+                  navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                      facingMode: 'environment',
+                      width: { ideal: 640 },
+                      height: { ideal: 480 }
+                    } 
+                  }).then(stream => {
+                    // Show success message
+                    setError("Camera accessed successfully! Initializing scanner...");
+                    
+                    // Clear any existing scanner first
+                    if (scannerRef.current) {
+                      scannerRef.current.stop().catch(() => {});
+                      scannerRef.current = null;
+                    }
+                    
+                    // Initialize scanner immediately
+                    setTimeout(() => {
+                      setIsInitializing(false); // Reset initializing state
+                      setError(""); // Clear success message
+                      initializeScanner(); // Initialize fresh scanner
+                    }, 100);
+                  }).catch(err => {
+                    setError(`Manual camera access failed: ${err.message || 'Unknown error'}`);
+                  });
+                }}
               >
-                <p className="scan-error-text">⚠️ {error}</p>
-              </motion.div>
-            )}
-
-            {/* Instructions */}
-            <div className="scan-instructions">
-              <div className="instruction-item">
-                <span className="instruction-icon">📷</span>
-                <span>Allow camera access when prompted</span>
-              </div>
-              <div className="instruction-item">
-                <span className="instruction-icon">📱</span>
-                <span>Hold your device steady</span>
-              </div>
-              <div className="instruction-item">
-                <span className="instruction-icon">🎯</span>
-                <span>Keep QR code within the frame</span>
-              </div>
+                Manual Camera Trigger
+              </button>
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* Footer Actions */}
-            <div className="scan-footer">
-              <motion.button
-                className="cancel-scan-btn"
-                onClick={onClose}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Cancel
-              </motion.button>
-            </div>
-          </motion.div>
+      {/* Error Display */}
+      {error && (
+        <motion.div
+          className="scan-error-container"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <p className="scan-error-text">⚠️ {error}</p>
         </motion.div>
       )}
-    </AnimatePresence>
+
+      {/* Instructions */}
+      <div className="scan-instructions">
+        <div className="instruction-item">
+          <span className="instruction-icon">📷</span>
+          <span>Allow camera access when prompted</span>
+        </div>
+        <div className="instruction-item">
+          <span className="instruction-icon">📱</span>
+          <span>Hold your device steady</span>
+        </div>
+        <div className="instruction-item">
+          <span className="instruction-icon">🎯</span>
+          <span>Keep QR code within the frame</span>
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className="scan-footer">
+        <motion.button
+          className="cancel-scan-btn"
+          onClick={handleCancel}
+          whileHover={{ scale: isStopping ? 1 : 1.02 }}
+          whileTap={{ scale: isStopping ? 1 : 0.98 }}
+          disabled={isStopping}
+        >
+          {isStopping ? "Stopping..." : "Cancel"}
+        </motion.button>
+      </div>
+    </div>
   );
 }
 
-export default ScanPayOverlay;
+export default ScannerPage;

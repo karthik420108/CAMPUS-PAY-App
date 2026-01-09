@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function SubAdminStudents({ state }) {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ function SubAdminStudents({ state }) {
 
   const fetchStudents = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/subadmin/students");
+      const res = await axios.get(API_CONFIG.getUrl("/subadmin/students"));
       console.log("Students data:", res.data);
       res.data.forEach((student) => {
         console.log(
@@ -67,7 +68,7 @@ function SubAdminStudents({ state }) {
     try {
       console.log("Sending unfreeze request for student:", studentId);
       const response = await axios.post(
-        `http://localhost:5000/subadmin/student/${studentId}/unfreeze`
+        API_CONFIG.getUrl(`/subadmin/student/${studentId}/unfreeze`)
       );
 
       console.log("Unfreeze response:", response.data);
@@ -98,7 +99,7 @@ function SubAdminStudents({ state }) {
   const handleVerifyKYC = async (studentId, status) => {
     try {
       await axios.post(
-        `http://localhost:5000/subadmin/student/${studentId}/kyc`,
+        API_CONFIG.getUrl(`/subadmin/student/${studentId}/kyc`),
         { status }
       );
       showAlert({

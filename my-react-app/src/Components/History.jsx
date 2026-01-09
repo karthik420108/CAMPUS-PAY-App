@@ -2,8 +2,9 @@ import Header1 from "./Header1";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
-import { motion } from "motion/react";
-import Header from "./Header3"
+import { motion } from "framer-motion"; // changed to framer-motion
+import Header from "./Header3";
+import API_CONFIG from "../config/api";
 
 function History() {
   const navigate = useNavigate();
@@ -60,51 +61,37 @@ function History() {
       return;
     }
 
-    axios
-      .get(`http://localhost:5000/transactions/${userId}`)
-      .then((res) => {
-        setTransactions(res.data);
-      })
-      .catch(console.error);
-  }, [userId, navigate]);
-
-  useEffect(() => {
-    if (!userId) {
-      navigate("/");
-      return;
-    }
-
     const fetchUserData = async () => {
       try {
-        const userRes = await axios.get(`http://localhost:5000/user/${userId}`);
+        // Fetch user data and transactions in parallel
+        const [userRes, txnRes] = await Promise.all([
+          axios.get(API_CONFIG.getUrl(`/user/${userId}`)),
+          axios.get(API_CONFIG.getUrl(`/transactions/${userId}`))
+        ]);
+        
         const { isFrozen, isSuspended } = userRes.data;
-
         setIsFrozen(isFrozen);
         setIsSuspended(isSuspended);
+        setTransactions(txnRes.data);
 
         // Handle redirects
         if (isSuspended) {
           setBlockingMessage(
             "Your account is suspended. Redirecting to homepage..."
           );
-          setTimeout(() => navigate("/", 2500));
+          setTimeout(() => navigate("/"), 2500);
           return;
         }
-
-        // Fetch transactions only if not blocked
-        const txnRes = await axios.get(
-          `http://localhost:5000/transactions/${userId}`
-        );
-        setTransactions(txnRes.data);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching data:", err);
       }
     };
 
+    // Initial fetch
     fetchUserData();
 
-    // Optional: real-time polling every 5s
-    const interval = setInterval(fetchUserData, 5000);
+    // Optional: real-time polling every 30s (reduced from 5s)
+    const interval = setInterval(fetchUserData, 30000);
     return () => clearInterval(interval);
   }, [userId, navigate]);
 

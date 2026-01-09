@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "./Header.jsx";
 import { useAlert } from "../context/AlertContext";
+import API_CONFIG from "../config/api";
 
 function FreezeUsers() {
   const [users, setUsers] = useState([]);
@@ -24,7 +25,7 @@ function FreezeUsers() {
 
     const fetchUsers = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/users");
+        const response = await axios.get(API_CONFIG.getUrl("/users"));
         setUsers(response.data);
         setLoading(false);
       } catch (err) {
@@ -38,12 +39,12 @@ function FreezeUsers() {
 
   const handleFreezeToggle = async (userId, currentFreezeStatus) => {
     try {
-      await axios.put(`http://localhost:5000/user/${userId}/freeze`, {
+      await axios.put(API_CONFIG.getUrl(`/user/${userId}/freeze`), {
         isFrozen: !currentFreezeStatus,
       });
 
       // Refresh users list
-      const response = await axios.get("http://localhost:5000/users");
+      const response = await axios.get(API_CONFIG.getUrl("/users"));
       setUsers(response.data);
 
       showAlert({
@@ -86,14 +87,14 @@ function FreezeUsers() {
       // Freeze all users in parallel
       await Promise.all(
         unfrozenUsers.map((user) =>
-          axios.put(`http://localhost:5000/user/${user._id}/freeze`, {
+          axios.put(API_CONFIG.getUrl(`/user/${user._id}/freeze`), {
             isFrozen: true,
           })
         )
       );
 
       // Refresh users list
-      const response = await axios.get("http://localhost:5000/users");
+      const response = await axios.get(API_CONFIG.getUrl("/users"));
       setUsers(response.data);
 
       showAlert({
@@ -136,14 +137,14 @@ function FreezeUsers() {
       // Unfreeze all users in parallel
       await Promise.all(
         frozenUsers.map((user) =>
-          axios.put(`http://localhost:5000/user/${user._id}/freeze`, {
+          axios.put(API_CONFIG.getUrl(`/user/${user._id}/freeze`), {
             isFrozen: false,
           })
         )
       );
 
       // Refresh users list
-      const response = await axios.get("http://localhost:5000/users");
+      const response = await axios.get(API_CONFIG.getUrl("/users"));
       setUsers(response.data);
 
       showAlert({

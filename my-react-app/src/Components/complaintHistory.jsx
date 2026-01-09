@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
+import API_CONFIG from "../config/api";
 import Header1 from "./Header1";
 import Header from "./Header3"
+
 function ComplaintHistory() {
   const navigate = useNavigate();
+
   const location = useLocation();
   const { userId, vendorId, role } = location.state || {};
 
@@ -63,7 +66,7 @@ function ComplaintHistory() {
 
     const fetchUserData = async () => {
       try {
-        const userRes = await axios.get(`http://localhost:5000/user/${id}`);
+        const userRes = await axios.get(API_CONFIG.getUrl(`/user/${id}`));
         const { isFrozen, isSuspended } = userRes.data;
 
         setIsFrozen(isFrozen);
@@ -120,7 +123,7 @@ useEffect(() => {
       setLoading(true);
 
       const res = await axios.get(
-        `http://localhost:5000/complaints/user/${id}`
+        API_CONFIG.getUrl(`/complaints/user/${id}`)
       );
 
       const complaintsData = res.data.complaints || [];
