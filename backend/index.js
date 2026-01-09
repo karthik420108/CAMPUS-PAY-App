@@ -36,7 +36,7 @@ const getFileUrl = (filePath) => {
 // CORS Configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://campus-pay-omega.vercel.app/'] 
+    ? ['https://campus-pay-omega.vercel.app', 'https://campus-pay-backend.onrender.com'] 
     : ['http://localhost:5173', 'http://localhost:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
