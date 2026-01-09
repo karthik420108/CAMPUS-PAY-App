@@ -1,7 +1,7 @@
 import React from "react";
 import "./App.css";
 import { AlertProvider } from "./context/AlertContext";
-import AlertModal from "./components/Alert/AlertModal";
+import AlertModal from "./Components/Alert/AlertModal";
 import Start from "./Components/Start.jsx";
 import SignUp1 from "./Components/Signup1.jsx";
 import Signup2 from "./Components/Signup2.jsx";
