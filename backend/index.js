@@ -33,12 +33,30 @@ const getFileUrl = (filePath) => {
   return `${baseUrl}/uploads/${filePath}`;
 };
 
-// CORS Configuration - Accept all origins (not recommended for production)
+// CORS Configuration - Accept all origins
 app.use(cors({
-  origin: "*", // Accepts all origins including campus-pay-76vpo9jlc-karthiks-projects-e2da5a76.vercel.app
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // In development, allow localhost on any port
+    if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+      // When credentials is true, return the specific origin instead of true
+      return callback(null, origin);
+    }
+    
+    // Allow Vercel deployment URLs (starts with https://)
+    if (origin.startsWith('https://')) {
+      return callback(null, origin);
+    }
+    
+    // Default: allow the request (return the origin value for credentials support)
+    callback(null, origin || true);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
 }));
 
 app.use(express.json());
