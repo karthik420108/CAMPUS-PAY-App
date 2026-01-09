@@ -70,9 +70,18 @@ function Signup2({ Email, PEmail, Pass, role }) {
     const studentOtpValue = studentOtp.join("");
     const parentOtpValue = parentOtp.join("");
 
-    if (studentOtpValue.length !== 6 || (role === "student" && parentOtpValue.length !== 6)) {
-      setErr("Please enter both 6-digit OTPs");
-      return;
+    // For vendor, only one OTP is required
+    if (role === "vendor") {
+      if (studentOtpValue.length !== 6) {
+        setErr("Please enter 6-digit OTP");
+        return;
+      }
+    } else {
+      // For student, both OTPs are required
+      if (studentOtpValue.length !== 6 || parentOtpValue.length !== 6) {
+        setErr("Please enter both 6-digit OTPs");
+        return;
+      }
     }
 
     try {
@@ -80,7 +89,7 @@ function Signup2({ Email, PEmail, Pass, role }) {
         studentEmail: Email,
         parentEmail: PEmail,
         studentOtp: studentOtpValue,
-        parentOtp: parentOtpValue,
+        parentOtp: role === "student" ? parentOtpValue : null,
         role
       });
       navigate('/signup3', { state: { role } });
@@ -257,8 +266,8 @@ function Signup2({ Email, PEmail, Pass, role }) {
 
           {Err && <p style={{ color: "#b91c1c", textAlign: "center", marginBottom: 6 }}>{Err}</p>}
 
-          {/* Student OTP */}
-          <label>Enter OTP Sent to Institute Mail</label>
+          {/* OTP Label */}
+          <label>{role === "vendor" ? "Enter OTP Sent to Email" : "Enter OTP Sent to Institute Mail"}</label>
           <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 8 }}>
             {studentOtp.map((val, idx) => (
               <input

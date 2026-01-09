@@ -111,20 +111,10 @@ const handleSubmit = async (e) => {
       role,
     });
     
-    // Show OTP in console for testing
-    if (response.data.studentOtp) {
-      console.log(`🔢 Student OTP: ${response.data.studentOtp}`);
-      alert(`Student OTP: ${response.data.studentOtp}`);
-    }
-    if (response.data.parentOtp) {
-      console.log(`🔢 Parent OTP: ${response.data.parentOtp}`);
-      alert(`Parent OTP: ${response.data.parentOtp}`);
-    }
-    
     navigate("/signup2");
   } catch (error) {
     console.error("Error sending OTP:", error);
-    setError("Institute Email already Registered");
+    setError(error.response?.data?.message || "Failed to send OTP. Please try again.");
     setLoading(false);
   }
 };
