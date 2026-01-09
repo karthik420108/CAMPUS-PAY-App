@@ -29,10 +29,16 @@ const API_CONFIG = {
     UPLOAD_SUBADMIN: '/upload/subadmin',
     UPLOAD_SCREENSHOT: '/c-screenshot',
     
-    // Notifications
-    NOTIFICATIONS: '/notifications',
-    ADMIN_NOTIFICATIONS: '/admin/notifications',
-    ADMIN_ADD_NOTIFICATION: '/admin/notification/add',
+    // OTP and MPIN Reset
+    SEND_OTP: '/send-otp',
+    VERIFY_OTP: '/verify-both-otp',
+    RESEND_OTP: '/resend-otp',
+    FORGOT_OTP: '/forgot-otp',
+    
+    // MPIN Reset Endpoints
+    SEND_MPIN_OTP: '/send-mpin-otp',
+    VERIFY_MPIN_OTP: '/verify-mpin-otp',
+    RESEND_MPIN_OTP: '/resend-mpin-otp',
     
     // Complaints
     COMPLAINTS: '/complaints',
