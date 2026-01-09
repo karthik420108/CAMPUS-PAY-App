@@ -33,11 +33,9 @@ const getFileUrl = (filePath) => {
   return `${baseUrl}/uploads/${filePath}`;
 };
 
-// CORS Configuration
+// CORS Configuration - Accept all origins (not recommended for production)
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://campus-pay-omega.vercel.app', 'https://campus-pay-backend.onrender.com'] 
-    : ['http://localhost:5173', 'http://localhost:5000'],
+  origin: "*", // Accepts all origins including campus-pay-76vpo9jlc-karthiks-projects-e2da5a76.vercel.app
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -524,8 +522,12 @@ app.post("/register", async (req, res) => {
     if (role === "vendor") {
 
       // ✅ email duplicate check
+      console.log(`🔍 Checking for existing vendor with email: ${email}`);
       const existingVendor = await Vendor.findOne({ Email: email });
+      console.log(`📊 Found vendor:`, existingVendor ? existingVendor.Email : 'None');
+      
       if (existingVendor) {
+        console.log(`❌ Vendor already exists: ${existingVendor.Email}`);
         return res.status(409).json({
           message: "Vendor already registered with this email"
         });
