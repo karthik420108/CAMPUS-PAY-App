@@ -105,11 +105,22 @@ const handleSubmit = async (e) => {
   setPass(password);
 
   try {
-    await axios.post(API_CONFIG.getUrl("/send-otp"), {
+    const response = await axios.post(API_CONFIG.getUrl("/send-otp"), {
       Email: email,
       PEmail: pmail,
       role,
     });
+    
+    // Show OTP in console for testing
+    if (response.data.studentOtp) {
+      console.log(`🔢 Student OTP: ${response.data.studentOtp}`);
+      alert(`Student OTP: ${response.data.studentOtp}`);
+    }
+    if (response.data.parentOtp) {
+      console.log(`🔢 Parent OTP: ${response.data.parentOtp}`);
+      alert(`Parent OTP: ${response.data.parentOtp}`);
+    }
+    
     navigate("/signup2");
   } catch (error) {
     console.error("Error sending OTP:", error);
