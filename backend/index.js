@@ -36,35 +36,21 @@ const getFileUrl = (filePath) => {
   return `${baseUrl}/uploads/${filePath}`;
 };
 
-// CORS Configuration - Accept all origins
+// CORS Configuration - Accept all origins (not recommended for production)
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // In development, allow localhost on any port
-    if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-      // When credentials is true, return the specific origin instead of true
-      return callback(null, origin);
-    }
-    
-    // Allow Vercel deployment URLs (starts with https://)
-    if (origin.startsWith('https://')) {
-      return callback(null, origin);
-    }
-    
-    // Default: allow the request (return the origin value for credentials support)
-    callback(null, origin || true);
-  },
+  origin: "*", // Accepts all origins including campus-pay-76vpo9jlc-karthiks-projects-e2da5a76.vercel.app
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+app.get("/health" , (req , res)=>{
+  res.status(200).send("OK");
+})
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -565,30 +551,26 @@ app.post("/register", async (req, res) => {
         return vendorId;
       }
 
-      console.log(`Generating vendor ID for: ${firstName} ${lastName}`);
       const newVendor = new Vendor({
         vendorName: `${firstName} ${lastName}`,
         vendorid: await generateUniqueVendorId(),
         Email: email,
-        Password: password, 
-        Wallet: 0,
-        isFrozen: false,
-        isSuspended: false,
-        ImageUrl: profileImage || "",
-        AccountNumber: Acc || "",
-        IFSC: Ifsc || "",
-        KYCStatus: "pending",
-        createdAt: new Date(),
+        password,
+        kyc,
+        ImageUrl: profileImage,
+        Mpin: mpin,
+        Acc: Acc || null,
+        Ifsc: Ifsc || null,
+        transactions: []   // ✅ SAFE
       });
 
-      console.log(`Saving new vendor: ${newVendor.vendorName} (${newVendor.vendorid})`);
       await newVendor.save();
-      console.log(`Vendor saved successfully: ${newVendor.vendorid}`);
 
       return res.status(201).json({
-        message: "Vendor registered successfully",
+        message: "Vendor created successfully",
         vendorId: newVendor.vendorid,
         vendorName: newVendor.vendorName,
+        ImageUrl: newVendor.ImageUrl
       });
     }
 
@@ -895,136 +877,65 @@ const otpStore = {};
 app.post("/send-otp", async (req, res) => {
   try {
     const { Email, PEmail, role } = req.body;
-    console.log(`🔐 OTP Request: Email=${Email}, PEmail=${PEmail}, role=${role}`);
-    
-    if (!Email) {
-      return res.status(400).json({ message: "Email is required" });
+    if (!Email || (role == "student" && !PEmail)) {
+      return res.status(400).json({ message: "Both emails are required" });
+    }
+    console.log(Email);
+    // Check if student email already exists
+    const existingUser = await User.findOne({ collegeEmail: Email });
+    console.log(existingUser);
+    if (existingUser) {
+      return res.status(400).json({ message: "Student email already exists" });
+    }
+    console.log(existingUser);
+
+    // Optional: check if student and parent emails are equal
+    if (Email === PEmail) {
+      return res
+        .status(400)
+        .json({ message: "Student email and Parent email cannot be the same" });
     }
 
-    // ================= VENDOR REGISTRATION FLOW =================
-    if (role === "vendor") {
-      // Check if vendor email already exists
-      const existingVendor = await Vendor.findOne({ Email: Email });
-      console.log(`📊 Existing vendor check:`, existingVendor ? 'Found' : 'None');
-      
-      if (existingVendor) {
-        return res.status(400).json({ message: "Vendor email already exists" });
-      }
+    // Generate separate OTPs
+    const studentOtp = Math.floor(100000 + Math.random() * 900000);
+    const parentOtp = Math.floor(100000 + Math.random() * 900000);
+    console.log("OTPs:", studentOtp, parentOtp);
 
-      // Generate OTP for vendor
-      const vendorOtp = Math.floor(100000 + Math.random() * 900000);
-      console.log(`🎲 Generated OTP for vendor: ${vendorOtp}`);
+    // Store separately in memory (or DB if you prefer)
+    otpStore[Email] = {
+      otp: studentOtp,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    };
+    otpStore[PEmail] = {
+      otp: parentOtp,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    };
 
-      // Store OTP in memory
-      otpStore[Email] = {
-        otp: vendorOtp,
-        expiresAt: Date.now() + 5 * 60 * 1000,
-      };
-
-      // Send OTP to vendor email
-      try {
-        await transporter.sendMail({
-          from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-          to: Email,
-          subject: "Campus Pay OTP Verification - Vendor",
-          html: `<h2>Your OTP for vendor registration is ${vendorOtp}</h2><p>Valid for 5 minutes</p>`,
-        });
-        console.log(`✅ OTP email sent to vendor: ${Email}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send OTP email to vendor ${Email}:`, emailError);
-        // Don't fail the request, but log the error
-        // Email service might be unavailable, but OTP is still generated
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: "OTP sent to vendor email",
-        email: Email,
-        role: "vendor"
-      });
-    }
-
-    // ================= STUDENT REGISTRATION FLOW =================
-    if (role === "student") {
-      if (!PEmail) {
-        return res.status(400).json({ message: "Both emails are required for student registration" });
-      }
-
-      // Check if student email already exists
-      const existingUser = await User.findOne({ collegeEmail: Email });
-      console.log(`📊 Existing user check:`, existingUser ? 'Found' : 'None');
-      
-      if (existingUser) {
-        return res.status(400).json({ message: "Student email already exists" });
-      }
-
-      // Check if student and parent emails are equal
-      if (Email === PEmail) {
-        return res
-          .status(400)
-          .json({ message: "Student email and Parent email cannot be the same" });
-      }
-
-      // Generate separate OTPs
-      const studentOtp = Math.floor(100000 + Math.random() * 900000);
-      const parentOtp = Math.floor(100000 + Math.random() * 900000);
-      console.log(`🎲 Generated OTPs: Student=${studentOtp}, Parent=${parentOtp}`);
-
-      // Store separately in memory
-      otpStore[Email] = {
-        otp: studentOtp,
-        expiresAt: Date.now() + 5 * 60 * 1000,
-      };
-      otpStore[PEmail] = {
-        otp: parentOtp,
-        expiresAt: Date.now() + 5 * 60 * 1000,
-      };
-
-      // Send OTP to student
-      try {
-        await transporter.sendMail({
-          from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-          to: Email,
-          subject: "Campus Pay OTP Verification - Student",
-          html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
-        });
-        console.log(`✅ OTP email sent to student: ${Email}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send OTP email to student ${Email}:`, emailError);
-        // Don't fail the request, but log the error
-      }
-
-      // Send OTP to parent
-      try {
-        await transporter.sendMail({
-          from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-          to: PEmail,
-          subject: "OTP Verification - Personal",
-          html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
-        });
-        console.log(`✅ OTP email sent to parent: ${PEmail}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send OTP email to parent ${PEmail}:`, emailError);
-        // Don't fail the request, but log the error
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: "OTP sent to both emails separately",
-        studentEmail: Email,
-        parentEmail: PEmail,
-        role: "student"
-      });
-    }
-
-    // Invalid role
-    return res.status(400).json({ message: "Invalid role. Use 'student' or 'vendor'" });
-  } catch (err) {
-    console.error('❌ OTP route error:', err);
-    res.status(500).json({ 
-      message: "Failed to send OTP",
-      error: err.message 
+    // Send OTP to student
+    await transporter.sendMail({
+      to: Email,
+      subject: "Campus Pay OTP Verification - Student",
+      html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
     });
+
+    // Send OTP to parent
+    if (role == "student") {
+      await transporter.sendMail({
+        to: PEmail,
+        subject: "OTP Verification - Personal",
+        html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent to both emails separately",
+      studentEmail: Email,
+      parentEmail: PEmail,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to send OTP" });
   }
 });
 
@@ -1036,126 +947,86 @@ app.post("/verify-both-otp", (req, res) => {
     return res.status(400).json({ message: "Required fields missing" });
   }
 
-  // For vendor, only email and OTP are required
-  if (role === "vendor") {
-    const vendorRecord = otpStore[studentEmail];
-    
-    if (!vendorRecord) {
-      return res.status(400).json({ message: "OTP not found. Request a new one." });
-    }
-
-    const now = Date.now();
-    if (now > vendorRecord.expiresAt) {
-      delete otpStore[studentEmail];
-      return res.status(400).json({ message: "OTP expired" });
-    }
-
-    if (parseInt(studentOtp) !== vendorRecord.otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // Cleanup
-    delete otpStore[studentEmail];
-
-    return res.status(200).json({
-      message: "OTP verified successfully",
-    });
+  if (role === "student" && (!parentEmail || !parentOtp)) {
+    return res.status(400).json({ message: "Personalt OTP required" });
   }
 
-  // For student, both OTPs are required
-  if (role === "student") {
-    if (!parentEmail || !parentOtp) {
-      return res.status(400).json({ message: "Personal OTP required" });
-    }
+  // ---------------- FETCH OTP RECORDS ----------------
+  const studentRecord = otpStore[studentEmail];
+  const parentRecord = role === "student" ? otpStore[parentEmail] : null;
 
-    // ---------------- FETCH OTP RECORDS ----------------
-    const studentRecord = otpStore[studentEmail];
-    const parentRecord = otpStore[parentEmail];
+  if (!studentRecord) {
+    return res
+      .status(400)
+      .json({ message: "OTP not found. Request a new one." });
+  }
 
-    if (!studentRecord) {
-      return res.status(400).json({ message: "OTP not found. Request a new one." });
-    }
+  if (role === "student" && !parentRecord) {
+    return res
+      .status(400)
+      .json({ message: "Personal OTP not found. Request a new one." });
+  }
 
-    if (!parentRecord) {
-      return res.status(400).json({ message: "Personal OTP not found. Request a new one." });
-    }
+  const now = Date.now();
 
-    const now = Date.now();
-
-    // ---------------- EXPIRY CHECK ----------------
-    if (now > studentRecord.expiresAt) {
-      delete otpStore[studentEmail];
-      return res.status(400).json({ message: "OTP expired" });
-    }
-
-    if (now > parentRecord.expiresAt) {
-      delete otpStore[parentEmail];
-      return res.status(400).json({ message: "Personal OTP expired" });
-    }
-
-    // ---------------- OTP MATCH CHECK ----------------
-    if (parseInt(studentOtp) !== studentRecord.otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    if (parseInt(parentOtp) !== parentRecord.otp) {
-      return res.status(400).json({ message: "Invalid Personal OTP" });
-    }
-
-    // ---------------- CLEANUP ----------------
+  // ---------------- EXPIRY CHECK ----------------
+  if (now > studentRecord.expiresAt) {
     delete otpStore[studentEmail];
+    return res.status(400).json({ message: "OTP expired" });
+  }
+
+  if (role === "student" && now > parentRecord.expiresAt) {
     delete otpStore[parentEmail];
-
-    // ---------------- SUCCESS ----------------
-    return res.status(200).json({
-      message: "Both OTPs verified successfully",
-    });
+    return res.status(400).json({ message: "Personal OTP expired" });
   }
 
-  // Invalid role
-  return res.status(400).json({ message: "Invalid role" });
+  // ---------------- OTP MATCH CHECK ----------------
+  if (parseInt(studentOtp) !== studentRecord.otp) {
+    return res.status(400).json({ message: "Invalid OTP" });
+  }
+
+  if (role === "student" && parseInt(parentOtp) !== parentRecord.otp) {
+    return res.status(400).json({ message: "Invalid Personal OTP" });
+  }
+
+  // ---------------- CLEANUP ----------------
+  delete otpStore[studentEmail];
+  if (role === "student") delete otpStore[parentEmail];
+
+  // ---------------- SUCCESS ----------------
+  return res.status(200).json({
+    message:
+      role === "vendor"
+        ? "OTP verified successfully"
+        : "Both OTPs verified successfully",
+  });
 });
 
 app.post("/resend-otp", async (req, res) => {
   try {
     const { email, type } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
-    
-    // For forgot password flow (f-pass), don't check existing users
-    // For registration flow, check if user already exists
-    if (type !== "f-pass") {
-      const existingUser = await User.findOne({ collegeEmail: email });
-      if (existingUser) {
-        return res.status(400).json({ message: "Student email already exists" });
-      }
-      
-      // Also check for existing vendor
-      const existingVendor = await Vendor.findOne({ Email: email });
-      if (existingVendor) {
-        return res.status(400).json({ message: "Vendor email already exists" });
-      }
+    const existingUser = await User.findOne({ collegeEmail: email });
+    if (existingUser && !(type === "f-pass")) {
+      return res.status(400).json({ message: "Student email already exists" });
     }
-    
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     otpStore[email] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
 
-    try {
-      await transporter.sendMail({
-        from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-        to: email,
-        subject: type === "f-pass" ? "Campus Pay - Password Reset OTP" : "Campus Pay - OTP Verification",
-        html: `<h2>Your new OTP is ${otp}</h2><p>Valid for 5 minutes</p>`,
-      });
-      console.log(`✅ Resend OTP email sent to: ${email}`);
-    } catch (emailError) {
-      console.error(`❌ Failed to resend OTP email to ${email}:`, emailError);
-      // Don't fail the request, but log the error
-    }
+    const subject = email.includes("@")
+      ? "OTP Verification"
+      : "OTP Verification";
+
+    await transporter.sendMail({
+      to: email,
+      subject: "Campus Pay - Otp",
+      html: `<h2>Your new OTP is ${otp}</h2><p>Valid for 5 minutes</p>`,
+    });
 
     res.status(200).json({ message: `OTP sent to ${email}` });
   } catch (err) {
-    console.error('❌ Resend OTP error:', err);
+    console.error(err);
     res.status(500).json({ message: "Failed to resend OTP" });
   }
 });
@@ -1260,29 +1131,17 @@ app.post("/forgot-otp", async (req, res) => {
         expiresAt: Date.now() + 5 * 60 * 1000,
       };
 
-      try {
-        await transporter.sendMail({
-          from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-          to: studentEmail,
-          subject: "Student OTP - Password Reset",
-          html: `<h2>Your OTP is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
-        });
-        console.log(`✅ Forgot OTP email sent to student: ${studentEmail}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send forgot OTP email to student ${studentEmail}:`, emailError);
-      }
+      await transporter.sendMail({
+        to: studentEmail,
+        subject: "Student OTP - Password Reset",
+        html: `<h2>Your OTP is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
+      });
 
-      try {
-        await transporter.sendMail({
-          from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-          to: parentEmail,
-          subject: "Parent OTP - Password Reset",
-          html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
-        });
-        console.log(`✅ Forgot OTP email sent to parent: ${parentEmail}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send forgot OTP email to parent ${parentEmail}:`, emailError);
-      }
+      await transporter.sendMail({
+        to: parentEmail,
+        subject: "Parent OTP - Password Reset",
+        html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
+      });
 
       return res.status(200).json({
         message: "OTPs sent to student and parent emails",
@@ -1319,18 +1178,11 @@ app.post("/forgot-otp", async (req, res) => {
           expiresAt: Date.now() + 5 * 60 * 1000,
         };
 
-        try {
-          await transporter.sendMail({
-            from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-            to: email,
-            subject: "Vendor OTP - Password Reset",
-            html: `<h2>Your OTP is ${vendorOtp}</h2><p>Valid for 5 minutes</p>`,
-          });
-          console.log(`✅ Forgot OTP email sent to vendor: ${email}`);
-        } catch (emailError) {
-          console.error(`❌ Failed to send forgot OTP email to vendor ${email}:`, emailError);
-          // Don't fail the request, but log the error
-        }
+        await transporter.sendMail({
+          to: email,
+          subject: "Vendor OTP - Password Reset",
+          html: `<h2>Your OTP is ${vendorOtp}</h2><p>Valid for 5 minutes</p>`,
+        });
 
         return res.status(200).json({
           message: "OTP sent to vendor email",
@@ -1356,17 +1208,11 @@ app.post("/forgot-otp", async (req, res) => {
           expiresAt: Date.now() + 5 * 60 * 1000,
         };
 
-        try {
-          await transporter.sendMail({
-            from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-            to: email,
-            subject: "SubAdmin OTP - Password Reset",
-            html: `<h2>Your OTP password reset  is ${subAdminOtp}</h2><p>Valid for 5 minutes</p>`,
-          });
-          console.log(`✅ Forgot OTP email sent to subadmin: ${email}`);
-        } catch (emailError) {
-          console.error(`❌ Failed to send forgot OTP email to subadmin ${email}:`, emailError);
-        }
+        await transporter.sendMail({
+          to: email,
+          subject: "SubAdmin OTP - Password Reset",
+          html: `<h2>Your OTP password reset  is ${subAdminOtp}</h2><p>Valid for 5 minutes</p>`,
+        });
 
         return res.status(200).json({
           message: "OTP sent to subadmin email",
@@ -1392,17 +1238,11 @@ app.post("/forgot-otp", async (req, res) => {
           expiresAt: Date.now() + 5 * 60 * 1000,
         };
 
-        try {
-          await transporter.sendMail({
-            from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-            to: email,
-            subject: "Admin OTP - Password Reset",
-            html: `<h2>Your OTP for password reset is ${adminOtp}</h2><p>Valid for 5 minutes</p>`,
-          });
-          console.log(`✅ Forgot OTP email sent to admin: ${email}`);
-        } catch (emailError) {
-          console.error(`❌ Failed to send forgot OTP email to admin ${email}:`, emailError);
-        }
+        await transporter.sendMail({
+          to: email,
+          subject: "Admin OTP - Password Reset",
+          html: `<h2>Your OTP for password reset is ${adminOtp}</h2><p>Valid for 5 minutes</p>`,
+        });
 
         return res.status(200).json({
           message: "OTP sent to admin email",
@@ -2941,63 +2781,44 @@ const mpinOtpStore = {}; // { userId: { otp: '123456', expiresAt: 123456789 } }
 app.post("/send-mpin-otp", async (req, res) => {
   try {
     const { userId, role } = req.body;
-    console.log(`🔐 MPIN OTP Request: userId=${userId}, role=${role}`);
 
     if (!userId) return res.status(400).json({ message: "UserId required" });
 
     if (role === "vendor") {
       const user = await Vendor.findById(userId).select("Email");
-      if (!user) return res.status(404).json({ message: "Vendor not found" });
+      if (!user) return res.status(404).json({ message: "User not found" });
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
-      console.log(`📧 Sending MPIN OTP to vendor: ${user.Email}, OTP: ${otp}`);
 
-      try {
-        await transporter.sendMail({
-          from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-          to: user.Email,
-          subject: "MPIN Reset OTP",
-          html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
-        });
-        console.log(`✅ MPIN OTP email sent to vendor: ${user.Email}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send MPIN OTP email to vendor ${user.Email}:`, emailError);
-        // Don't fail the request, but log the error
-      }
-
-      return res.json({ 
-        message: "OTP_SENT"
+      await transporter.sendMail({
+        from: process.env.MAIL_USER || "campuspay0@gmail.com",
+        to: user.Email,
+        subject: "MPIN Reset OTP",
+        html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
       });
+
+      return res.json({ message: "OTP_SENT" }); // <-- RETURN
     }
 
-    // Regular user (student)
+    // Regular user
     const user = await User.findById(userId).select("collegeEmail");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
-    console.log(`📧 Sending MPIN OTP to student: ${user.collegeEmail}, OTP: ${otp}`);
 
-    try {
-      await transporter.sendMail({
-        from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-        to: user.collegeEmail,
-        subject: "MPIN Reset OTP",
-        html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
-      });
-      console.log(`✅ MPIN OTP email sent to student: ${user.collegeEmail}`);
-    } catch (emailError) {
-      console.error(`❌ Failed to send MPIN OTP email to student ${user.collegeEmail}:`, emailError);
-      // Don't fail the request, but log the error
-    }
-
-    return res.json({ 
-      message: "OTP_SENT"
+    await transporter.sendMail({
+      from: process.env.MAIL_USER || "campuspay0@gmail.com",
+      to: user.collegeEmail,
+      subject: "MPIN Reset OTP",
+      html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
     });
+
+    return res.json({ message: "OTP_SENT" }); // <-- RETURN
   } catch (err) {
-    console.error('❌ MPIN OTP route error:', err);
-    return res.status(500).json({ message: "Failed to send OTP" });
+    console.error(err);
+    return res.status(500).json({ message: "Failed to send OTP" }); // <-- RETURN
   }
 });
 
@@ -3030,27 +2851,19 @@ app.post("/resend-mpin-otp", async (req, res) => {
     };
 
     // Send OTP email
-    try {
-      await transporter.sendMail({
-        from: process.env.MAIL_USER || CONFIG.EMAIL.USER,
-        to: userEmail,
-        subject: "Resend MPIN OTP",
-        html: `
-          <h2>MPIN Reset Request</h2>
-          <p>Your new OTP is:</p>
-          <h1>${otp}</h1>
-          <p>This OTP is valid for 5 minutes.</p>
-        `,
-      });
-      console.log(`✅ Resend MPIN OTP email sent to: ${userEmail}`);
-    } catch (emailError) {
-      console.error(`❌ Failed to resend MPIN OTP email to ${userEmail}:`, emailError);
-      // Don't fail the request, but log the error
-    }
-
-    return res.json({ 
-      message: "OTP_SENT"
+    await transporter.sendMail({
+      from: process.env.MAIL_USER || "campuspay0@gmail.com",
+      to: userEmail,
+      subject: "Resend MPIN OTP",
+      html: `
+        <h2>MPIN Reset Request</h2>
+        <p>Your new OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP is valid for 5 minutes.</p>
+      `,
     });
+
+    return res.json({ message: "OTP_SENT" }); // <-- ensure only one response
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Failed to resend OTP" });
@@ -3059,7 +2872,7 @@ app.post("/resend-mpin-otp", async (req, res) => {
 
 // ------------------- VERIFY MPIN OTP -------------------
 app.post("/verify-mpin-otp", (req, res) => {
-  const { userId, otp, role } = req.body;
+  const { userId, otp } = req.body;
 
   const record = mpinOtpStore[userId];
   if (!record) return res.status(400).json({ message: "Invalid OTP" });
