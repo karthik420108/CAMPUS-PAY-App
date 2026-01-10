@@ -12,7 +12,10 @@ const CONFIG = require('./config');
 const fileUploadService = require('./services/fileUpload');
 
 const transporter = nodemailer.createTransport({
-  service: CONFIG.EMAIL.SERVICE,
+  secure : true,
+  host:'smtp.gmail.com',
+  port : 465,
+
   auth: {
     user: CONFIG.EMAIL.USER,
     pass: CONFIG.EMAIL.PASS,
