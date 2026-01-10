@@ -183,7 +183,7 @@ function GenerateQR() {
       pollRef.current = setInterval(async () => {
         if (!res.data.qrId) return;
         try {
-          const statusRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/vendor/check-qr-status`, { params: { qrId: res.data.qrId } });
+          const statusRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/vendor/qr-status/${res.data.qrId}`);
           const status = statusRes.data.status;
 
           if (status === "SUCCESS") {
