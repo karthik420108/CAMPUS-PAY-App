@@ -18,6 +18,7 @@ function ScannerPage() {
 
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const scannerRef = useRef(null);
 
@@ -213,22 +214,16 @@ function ScannerPage() {
   };
 
   useEffect(() => {
-    if (frozen) {
-      navigate(-1);
-      return;
-    }
-
     // Check if we're in a secure context (HTTPS or localhost)
     const isSecureContext = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     if (!isSecureContext) {
       setError("Camera access requires HTTPS or localhost. Please use a secure connection.");
-      setIsInitializing(false);
-      setIsScanning(false);
       return;
     }
 
-    setIsScanning(true);
-    setIsInitializing(true);
+    // Don't auto-start camera - wait for user to click button
+    setIsScanning(false);
+    setIsInitializing(false);
     setError("");
 
     const initializeCamera = async () => {
@@ -250,11 +245,11 @@ function ScannerPage() {
         // Stop the stream after getting permission
         stream.getTracks().forEach((track) => track.stop());
 
-        // Initialize scanner after successful permission
+        // Set camera as ready after successful permission
         setTimeout(() => {
           setIsInitializing(false);
           setError("");
-          initializeScanner();
+          setCameraReady(true);
         }, 100);
 
       } catch (permissionErr) {
@@ -291,8 +286,8 @@ function ScannerPage() {
       }
     }, 10000); // Increased timeout to 10 seconds
 
-    // Initialize camera immediately
-    initializeCamera();
+    // Don't initialize camera immediately - wait for user to click button
+    // initializeCamera();
 
     return () => {
       if (initTimeout) {
@@ -345,6 +340,28 @@ function ScannerPage() {
             >
               {torchOn ? "Turn Torch Off" : "Turn Torch On"}
             </button>
+          )}
+
+          {!cameraReady && !isInitializing && (
+            <div className="camera-prompt">
+              <div className="camera-prompt-content">
+                <div className="camera-icon">📷</div>
+                <div className="camera-prompt-text">
+                  <h3>Camera Access Required</h3>
+                  <p>Click the button below to enable your camera for QR scanning</p>
+                </div>
+              </div>
+              <button
+                className="start-camera-btn"
+                onClick={() => {
+                  setIsInitializing(true);
+                  initializeCamera();
+                }}
+                disabled={isInitializing}
+              >
+                {isInitializing ? "Requesting Camera Access..." : "Start Camera"}
+              </button>
+            </div>
           )}
 
           {isInitializing && (
