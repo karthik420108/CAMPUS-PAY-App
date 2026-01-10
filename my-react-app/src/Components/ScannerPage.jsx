@@ -218,89 +218,85 @@ function ScannerPage() {
       return;
     }
 
+    // Check if we're in a secure context (HTTPS or localhost)
+    const isSecureContext = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (!isSecureContext) {
+      setError("Camera access requires HTTPS or localhost. Please use a secure connection.");
+      setIsInitializing(false);
+      setIsScanning(false);
+      return;
+    }
+
     setIsScanning(true);
     setIsInitializing(true);
     setError("");
 
-    let initTimeout = null;
+    const initializeCamera = async () => {
+      try {
+        // Check if browser supports mediaDevices
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera API not supported in this browser. Please try using a modern browser like Chrome, Firefox, or Safari.");
+        }
 
-    try {
-      initTimeout = setTimeout(() => {
-        if (isInitializing) {
+        // Request camera permission immediately
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "environment",
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+          },
+        });
+
+        // Stop the stream after getting permission
+        stream.getTracks().forEach((track) => track.stop());
+
+        // Initialize scanner after successful permission
+        setTimeout(() => {
+          setIsInitializing(false);
+          setError("");
+          initializeScanner();
+        }, 100);
+
+      } catch (permissionErr) {
+        console.error("Camera permission error:", permissionErr);
+        setIsInitializing(false);
+        setIsScanning(false);
+        
+        if (permissionErr.name === "NotAllowedError") {
           setError(
-            "Camera initialization timed out. Please check camera permissions and try again."
+            "Camera access denied. Please allow camera permissions and try again."
           );
-          setIsInitializing(false);
-          setIsScanning(false);
+        } else if (permissionErr.name === "NotFoundError") {
+          setError("No camera found. Please connect a camera and try again.");
+        } else if (permissionErr.name === "NotReadableError") {
+          setError("Camera is already in use by another application.");
+        } else if (permissionErr.message && permissionErr.message.includes("getUserMedia")) {
+          setError("Camera API not available. Please ensure you're using HTTPS or localhost.");
+        } else {
+          setError(
+            `Camera error: ${permissionErr.message || "Unknown error"}`
+          );
         }
-      }, 5000);
-
-      const checkCameraPermission = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "environment",
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-            },
-          });
-
-          stream.getTracks().forEach((track) => track.stop());
-
-          if (scannerRef.current) {
-            scannerRef.current.stop().catch(() => {});
-            scannerRef.current = null;
-          }
-
-          setTimeout(() => {
-            setIsInitializing(false);
-            setError("");
-            initializeScanner();
-          }, 100);
-        } catch (permissionErr) {
-          console.error("Camera permission error:", permissionErr);
-          if (permissionErr.name === "NotAllowedError") {
-            setError(
-              "Camera access denied. Please allow camera permissions and try again."
-            );
-          } else if (permissionErr.name === "NotFoundError") {
-            setError("No camera found. Please connect a camera and try again.");
-          } else if (permissionErr.name === "NotReadableError") {
-            setError("Camera is already in use by another application.");
-          } else {
-            setError(
-              `Camera error: ${permissionErr.message || "Unknown error"}`
-            );
-          }
-          setIsInitializing(false);
-          setIsScanning(false);
-
-          if (initTimeout) {
-            clearTimeout(initTimeout);
-            initTimeout = null;
-          }
-        }
-      };
-
-      checkCameraPermission();
-    } catch (err) {
-      console.error("Overall initialization error:", err);
-      setError(
-        `Camera initialization failed: ${err.message || "Unknown error"}`
-      );
-      setIsScanning(false);
-      setIsInitializing(false);
-
-      if (initTimeout) {
-        clearTimeout(initTimeout);
-        initTimeout = null;
       }
-    }
+    };
+
+    // Set a timeout for initialization
+    const initTimeout = setTimeout(() => {
+      if (isInitializing) {
+        setError(
+          "Camera initialization timed out. Please check camera permissions and try again."
+        );
+        setIsInitializing(false);
+        setIsScanning(false);
+      }
+    }, 10000); // Increased timeout to 10 seconds
+
+    // Initialize camera immediately
+    initializeCamera();
 
     return () => {
       if (initTimeout) {
         clearTimeout(initTimeout);
-        initTimeout = null;
       }
       stopScanner();
     };

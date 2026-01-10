@@ -4668,7 +4668,7 @@ app.get("/admin-actions/:userId/:role", async (req, res) => {
 });
 
 const PORT = CONFIG.PORT;
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0",() => {
   console.log(`🚀 Campus Pay Backend Server running on port ${PORT}`);
   console.log(`📝 Environment: ${CONFIG.NODE_ENV}`);
   console.log(`🔗 API Base URL: ${CONFIG.NODE_ENV === 'production' ? process.env.DEPLOYED_BASE_URL || 'https://your-deployed-backend-url.com' : `http://localhost:${PORT}`}`);
