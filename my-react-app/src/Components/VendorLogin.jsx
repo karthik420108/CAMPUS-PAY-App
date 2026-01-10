@@ -63,7 +63,7 @@ function VendorLogin() {
     width: typeof window !== "undefined" ? window.innerWidth : 0,
     height: typeof window !== "undefined" ? window.innerHeight : 0,
   });
-  const isMobile = deviceSize.width <= 480;
+  const isMobile = deviceSize.width <= 768;
 
   useEffect(() => {
     const handleResize = () => {
@@ -125,11 +125,6 @@ function VendorLogin() {
 
   const pageStyle = isLight
     ? {
-        background:
-          "radial-gradient(circle at 0% 0%, #e0f2fe 0, transparent 55%)," +
-          "radial-gradient(circle at 100% 0%, #dbeafe 0, transparent 55%)," +
-          "radial-gradient(circle at 0% 100%, #e0f2fe 0, transparent 55%)," +
-          "radial-gradient(circle at 100% 100%, #d1fae5 0, transparent 55%)",
         backgroundColor: "#f3f4f6",
       }
     : {
@@ -201,7 +196,7 @@ function VendorLogin() {
   return (
     <>
       <Header1 userId={vendorId} role="vendor" isFrozen={isFrozen} />
-      <Header theme={theme} setTheme={setTheme} />
+      <Header theme={theme} setTheme={setTheme} showBackButton={false} />
       <SuspensionBanner show={showSuspensionBanner} />
       <div
         onClick={() => {
@@ -211,15 +206,12 @@ function VendorLogin() {
         <motion.div
           style={{
             width: deviceSize.width || "100vw",
-            minHeight: deviceSize.height || "100vh",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "flex-start",
-            padding: isMobile ? "72px 16px 16px" : "96px 24px 32px",
+            padding: isMobile ? "124px 16px 16px" : "148px 24px 32px",
             gap: 24,
-            overflowY: "auto",
-            overflowX: "hidden",
             position: "relative",
             boxSizing: "border-box",
             ...pageStyle,

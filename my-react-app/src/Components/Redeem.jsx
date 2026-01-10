@@ -197,29 +197,7 @@ export default function RedeemForm() {
       <Header theme={theme} setTheme={setTheme} />
       <SuspensionBanner show={showSuspensionBanner} />
 
-      {/* Back Button */}
-      <motion.button
-        onClick={() => navigate("/vlogin", { state: { vendorId: userId } })}
-        whileHover={{ scale: 1.02, boxShadow: "0 0 18px rgba(59,130,246,0.5)" }}
-        whileTap={{ scale: 0.98 }}
-        style={{
-          position: "absolute",
-          top: "20px",
-          left: "20px",
-          padding: "8px 14px",
-          borderRadius: "14px",
-          border: "none",
-          background: "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
-          color: "#f9fafb",
-          fontWeight: 600,
-          cursor: "pointer",
-          fontSize: "14px",
-          zIndex: 10,
-        }}
-      >
-        ← Back
-      </motion.button>
-
+      
       <motion.div
         style={{
           minHeight: "100vh",

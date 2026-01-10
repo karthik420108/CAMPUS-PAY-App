@@ -187,44 +187,6 @@ function ComplaintSuccess() {
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
 
-        {/* BACK BUTTON - COMPLETE Top Left */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, ease: easingSoft }}
-          onClick={() => navigate(-1)}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          style={{
-            position: "absolute",
-            top: 20,
-            left: 24,
-            padding: "12px 18px",
-            borderRadius: 16,
-            border: "1px solid rgba(148,163,184,0.6)",
-            background: isLight ? "rgba(255,255,255,0.95)" : "rgba(15,23,42,0.85)",
-            color: textMain,
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: "pointer",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            boxShadow: 
-              "0 8px 24px rgba(0,0,0,0.15), " +
-              "0 4px 12px rgba(0,0,0,0.08), " +
-              "inset 0 1px 0 rgba(255,255,255,0.2)",
-            zIndex: 10,
-            transition: "all 0.2s ease",
-          }}
-        >
-          
-          <span style={{ fontSize: 16 }}>←</span>
-          <span>Back</span>
-        </motion.button>
-
         {/* Theme Toggle - Top Right */}
         <div
           style={{

@@ -273,40 +273,7 @@ function GenerateQR() {
           ...pageStyle,
         }}
       >
-        {/* Back Button - Top Left, Theme Matching */}
-        <motion.button
-          onClick={() => Navigate(-1)}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          style={{
-            position: "absolute",
-            top: 28,
-            left: 28,
-            padding: "10px 16px",
-            borderRadius: 16,
-            border: "none",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            zIndex: 10,
-            background: isLight
-              ? "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.95))"
-              : "linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.95))",
-            color: textMain,
-            boxShadow: isLight
-              ? "0 8px 24px rgba(15,23,42,0.12), 0 0 0 1px rgba(148,163,184,0.3)"
-              : "0 10px 28px rgba(15,23,42,0.8), 0 0 0 1px rgba(30,64,175,0.4)",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          ← Back
-        </motion.button>
-
+        
         {/* soft background orbs */}
         <motion.div
           style={{

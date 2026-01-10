@@ -320,7 +320,7 @@ function Login() {
   return (
     <>
       <Header1 role="student" userId={userId} isFrozen={isFrozen} />
-      <Header theme={theme} setTheme={setTheme} />
+      <Header theme={theme} setTheme={setTheme} showBackButton={false} />
 
       {/* Suspension Banner */}
       {suspended && (
