@@ -162,29 +162,6 @@ function ViewvProfile() {
           transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
         />
 
-        {/* Back button */}
-        <motion.button
-          onClick={() => navigate(-1)}
-          whileHover={{ scale: 1.02, boxShadow: "0 0 18px rgba(59,130,246,0.5)" }}
-          whileTap={{ scale: 0.97 }}
-          style={{
-            position: "absolute",
-            top: 20,
-            left: 20,
-            padding: "8px 14px",
-            borderRadius: 14,
-            border: "none",
-            background: "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
-            color: "#f9fafb",
-            fontWeight: 600,
-            cursor: "pointer",
-            fontSize: 14,
-            zIndex: 10,
-          }}
-        >
-          ← Back
-        </motion.button>
-
         {/* Profile card */}
         <motion.div
           style={{

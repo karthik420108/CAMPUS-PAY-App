@@ -12,6 +12,7 @@ function History() {
   const { userId, role } = location.state || {};
   const [transactions, setTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("appTheme") || "light";
   });
@@ -73,6 +74,7 @@ function History() {
         setIsFrozen(isFrozen);
         setIsSuspended(isSuspended);
         setTransactions(txnRes.data);
+        setLoading(false);
 
         // Handle redirects
         if (isSuspended) {
@@ -84,6 +86,7 @@ function History() {
         }
       } catch (err) {
         console.error("Error fetching data:", err);
+        setLoading(false);
       }
     };
 
@@ -178,29 +181,7 @@ function History() {
       <Header1 userId={userId} role={role} />
       <Header theme={theme} setTheme={setTheme} />
 
-      {/* Back Button */}
-      <motion.button
-        onClick={() => navigate(-1)}
-        whileHover={{ scale: 1.02, boxShadow: "0 0 18px rgba(59,130,246,0.5)" }}
-        whileTap={{ scale: 0.98 }}
-        style={{
-          position: "absolute",
-          top: "20px",
-          left: "20px",
-          padding: "8px 14px",
-          borderRadius: "14px",
-          border: "none",
-          background: "linear-gradient(120deg,#3b82f6,#0ea5e9,#22c55e,#0f766e)",
-          color: "#f9fafb",
-          fontWeight: 600,
-          cursor: "pointer",
-          fontSize: "14px",
-          zIndex: 10,
-        }}
-      >
-        ← Back
-      </motion.button>
-
+      
       <motion.div
         style={{
           minHeight: "100vh",
@@ -403,7 +384,80 @@ function History() {
 
           {/* Transactions List */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {filteredTransactions.length === 0 ? (
+            {loading ? (
+              // Modern Loading Animation
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  padding: "80px 20px",
+                  width: "100%",
+                }}
+              >
+                <motion.div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 16,
+                  }}
+                >
+                  {/* Main Loading Spinner */}
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "50%",
+                      border: "3px solid rgba(59, 130, 246, 0.2)",
+                      borderTop: "3px solid #3b82f6",
+                      borderRight: "3px solid #0ea5e9",
+                      borderBottom: "3px solid #22c55e",
+                      borderLeft: "3px solid #0f766e",
+                      position: "relative",
+                      background: "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(59,130,246,0.05))",
+                    }}
+                  >
+                    {/* Inner Glow */}
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      style={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        background: "radial-gradient(circle, rgba(59,130,246,0.8), transparent)",
+                        filter: "blur(8px)",
+                      }}
+                    />
+                  </motion.div>
+                  
+                  {/* Loading Text */}
+                  <motion.div
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: isLight ? "#3b82f6" : "#60a5fa",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Loading Transactions...
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+            ) : filteredTransactions.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}

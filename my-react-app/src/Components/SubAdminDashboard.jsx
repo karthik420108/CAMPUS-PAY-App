@@ -111,7 +111,7 @@ function SubAdminDashboard() {
 
   return (
     <SubAdminStatusChecker subAdminId={subAdminId}>
-      <Header/>
+      <Header showBackButton={false} showThemeToggle={false}/>
       <motion.div
         style={{
           minHeight: "100vh",

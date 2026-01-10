@@ -52,10 +52,7 @@ function Refund() {
         overflow: "hidden",
         position: "relative",
         background:
-          "radial-gradient(circle at 0% 0%, #e0f2fe 0, transparent 55%)," +
-          "radial-gradient(circle at 100% 0%, #dbeafe 0, transparent 55%)," +
-          "radial-gradient(circle at 0% 100%, #e0f2fe 0, transparent 55%)," +
-          "radial-gradient(circle at 100% 100%, #d1fae5 0, transparent 55%)",
+          "radial-gradient(circle at 0% 0%, #e0f2fe 0, transparent 55%), radial-gradient(circle at 100% 0%, #dbeafe 0, transparent 55%), radial-gradient(circle at 0% 100%, #e0f2fe 0, transparent 55%), radial-gradient(circle at 100% 100%, #d1fae5 0, transparent 55%)",
         backgroundColor: "#f3f4f6",
       }
     : {
@@ -68,12 +65,7 @@ function Refund() {
         position: "relative",
         backgroundColor: "#020617",
         backgroundImage:
-          "radial-gradient(circle at 0% 0%, rgba(37,99,235,0.35), transparent 55%)," +
-          "radial-gradient(circle at 100% 0%, rgba(56,189,248,0.30), transparent 55%)," +
-          "radial-gradient(circle at 0% 100%, rgba(16,185,129,0.18), transparent 55%)," +
-          "radial-gradient(circle at 100% 100%, rgba(37,99,235,0.32), transparent 55%)," +
-          "linear-gradient(to right, rgba(15,23,42,0.9) 1px, transparent 1px)," +
-          "linear-gradient(to bottom, rgba(15,23,42,0.9) 1px, transparent 1px)",
+          "radial-gradient(circle at 0% 0%, rgba(37,99,235,0.35), transparent 55%), radial-gradient(circle at 100% 0%, rgba(56,189,248,0.30), transparent 55%), radial-gradient(circle at 0% 100%, rgba(16,185,129,0.18), transparent 55%), radial-gradient(circle at 100% 100%, rgba(37,99,235,0.32), transparent 55%), linear-gradient(to right, rgba(15,23,42,0.9) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.9) 1px, transparent 1px)",
         backgroundSize: "cover, cover, cover, cover, 80px 80px, 80px 80px",
         backgroundPosition: "center, center, center, center, 0 0, 0 0",
       };
@@ -128,8 +120,7 @@ function Refund() {
     ? {
         ...inputBase,
         border: "1px solid rgba(148,163,184,0.9)",
-        background:
-          "radial-gradient(circle at 0 0, rgba(219,234,254,0.9), transparent 70%), rgba(255,255,255,0.98)",
+        background: "rgba(255,255,255,0.98)",
         boxShadow:
           "0 10px 24px rgba(15,23,42,0.10), inset 0 0 0 1px rgba(248,250,252,0.95)",
         color: textMain,
@@ -137,8 +128,7 @@ function Refund() {
     : {
         ...inputBase,
         border: "1px solid rgba(51,65,85,0.95)",
-        background:
-          "radial-gradient(circle at 0 0, rgba(30,64,175,0.38), transparent 70%), #020617",
+        background: "#020617",
         boxShadow:
           "0 12px 30px rgba(15,23,42,0.75), inset 0 0 0 1px rgba(15,23,42,0.9)",
         color: textMain,
@@ -248,7 +238,50 @@ function Refund() {
 
   return (
     <div style={pageStyle}>
-      <button onClick = {()=>navigate(-1)}>Back</button>
+      {/* Styled Back Button */}
+      <motion.button
+        onClick={() => navigate(-1)}
+        style={{
+          position: "absolute",
+          top: 24,
+          left: 24,
+          padding: "10px 16px",
+          borderRadius: 12,
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          zIndex: 20,
+          background: isLight
+            ? "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.95))"
+            : "linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.95))",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: `1px solid ${
+            isLight ? "rgba(148,163,184,0.3)" : "rgba(148,163,184,0.2)"
+          }`,
+          color: textMain,
+          boxShadow: isLight
+            ? "0 8px 24px rgba(15,23,42,0.12), 0 0 0 1px rgba(148,163,184,0.1)"
+            : "0 8px 24px rgba(15,23,42,0.4), 0 0 0 1px rgba(30,64,175,0.2)",
+          transition: "all 0.3s ease",
+        }}
+        whileHover={{
+          scale: 1.05,
+          background: isLight
+            ? "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(241,245,249,0.9))"
+            : "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))",
+          boxShadow: isLight
+            ? "0 12px 32px rgba(15,23,42,0.18), 0 0 0 1px rgba(59,130,246,0.2)"
+            : "0 12px 32px rgba(15,23,42,0.6), 0 0 0 1px rgba(59,130,246,0.3)",
+        }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <span style={{ fontSize: 16 }}>←</span>
+        Back
+      </motion.button>
       {/* orbs */}
       <motion.div
         style={{
@@ -257,8 +290,8 @@ function Refund() {
           height: 240,
           borderRadius: "50%",
           background: isLight
-            ? "radial-gradient(circle at 30% 0%, #bfdbfe, #60a5fa, #1d4ed8)"
-            : "radial-gradient(circle at 30% 0%, #1d4ed8, #4f46e5, #020617)",
+            ? "radial-gradient(circle, #60a5fa, #1d4ed8)"
+            : "radial-gradient(circle, #1d4ed8, #020617)",
           filter: "blur(40px)",
           opacity: isLight ? 0.5 : 0.75,
           top: -40,
@@ -277,8 +310,8 @@ function Refund() {
           height: 210,
           borderRadius: "50%",
           background: isLight
-            ? "radial-gradient(circle at 70% 80%, #bae6fd, #7dd3fc, #22c55e)"
-            : "radial-gradient(circle at 70% 80%, #22c55e, #0ea5e9, #020617)",
+            ? "radial-gradient(circle, #7dd3fc, #22c55e)"
+            : "radial-gradient(circle, #0ea5e9, #020617)",
           filter: "blur(34px)",
           opacity: isLight ? 0.45 : 0.7,
           bottom: -40,

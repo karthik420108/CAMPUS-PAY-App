@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,9 +26,17 @@ function SubAdminComplaints({ state }) {
 
   const [forwardedComplaints, setForwardedComplaints] = useState([]);
 
+  // NEW: refs to each complaint card
+  const cardRefs = useRef({}); // { [complaintId]: HTMLElement }
+  
+  // NEW: ref for textarea auto-focus
+  const textareaRef = useRef(null);
+  
+  // NEW: store original scroll position
+  const [originalScrollPosition, setOriginalScrollPosition] = useState(0);
+
   const fetchComplaints = useCallback(async () => {
     try {
-      // Get subAdminId from state or localStorage
       const subAdminId =
         state?.subAdminId || localStorage.getItem("subAdminId");
 
@@ -37,32 +45,29 @@ function SubAdminComplaints({ state }) {
         showAlert({
           type: "error",
           title: "Authentication Error",
-          message: "SubAdmin ID not found. Please log in again."
+          message: "SubAdmin ID not found. Please log in again.",
         });
         return;
       }
 
-      console.log("Fetching complaints for subAdminId:", subAdminId);
       const res = await axios.get(
         API_CONFIG.getUrl(`/subadmin/${subAdminId}/complaints`)
       );
-      console.log("Complaints response:", res.data);
       setComplaints(res.data);
     } catch (err) {
       console.error("Failed to fetch complaints:", err);
       showAlert({
         type: "error",
         title: "Loading Failed",
-        message: "Failed to load complaints"
+        message: "Failed to load complaints",
       });
     } finally {
       setLoading(false);
     }
-  }, [state?.subAdminId]);
+  }, [state?.subAdminId, showAlert]);
 
   const fetchForwardedComplaints = useCallback(async () => {
     try {
-      // Get subAdminId from state or localStorage
       const subAdminId =
         state?.subAdminId || localStorage.getItem("subAdminId");
 
@@ -71,34 +76,47 @@ function SubAdminComplaints({ state }) {
         showAlert({
           type: "error",
           title: "Authentication Error",
-          message: "SubAdmin ID not found. Please log in again."
+          message: "SubAdmin ID not found. Please log in again.",
         });
         return;
       }
 
-      console.log("Fetching forwarded complaints for subAdminId:", subAdminId);
       const res = await axios.get(
         API_CONFIG.getUrl(`/subadmin/${subAdminId}/forwarded-complaints`)
       );
-      console.log("Forwarded complaints response:", res.data);
       setForwardedComplaints(res.data);
     } catch (err) {
       console.error("Failed to fetch forwarded complaints:", err);
       showAlert({
         type: "error",
         title: "Loading Failed",
-        message: "Failed to load forwarded complaints"
+        message: "Failed to load forwarded complaints",
       });
     }
-  }, [state?.subAdminId]);
+  }, [state?.subAdminId, showAlert]);
 
   useEffect(() => {
     fetchComplaints();
     fetchForwardedComplaints();
   }, [fetchComplaints, fetchForwardedComplaints]);
 
+  // UPDATED: scroll card into view then open modal
   const handleResponse = (complaintId) => {
+    // Store current scroll position before scrolling
+    setOriginalScrollPosition(window.pageYOffset);
+    
+    const node = cardRefs.current[complaintId];
+    if (node) {
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     setResponseModal({ isOpen: true, complaintId, response: "" });
+    
+    // Auto-focus textarea after modal opens
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }, 100);
   };
 
   const handleViewScreenshot = (screenshotUrl, complaint) => {
@@ -106,11 +124,25 @@ function SubAdminComplaints({ state }) {
       state: {
         screenshotUrl: screenshotUrl,
         complaintId: complaint.complaintId,
-        studentName: complaint.role === "vendor"
-          ? complaint.userId?.vendorName || "Unknown Vendor"
-          : `${complaint.userId?.firstName || "Unknown"} ${complaint.userId?.lastName || ""}`.trim()
-      }
+        studentName:
+          complaint.role === "vendor"
+            ? complaint.userId?.vendorName || "Unknown Vendor"
+            : `${complaint.userId?.firstName || "Unknown"} ${
+                complaint.userId?.lastName || ""
+              }`.trim(),
+      },
     });
+  };
+
+  // NEW: function to close modal and restore scroll position
+  const closeResponseModal = () => {
+    setResponseModal({
+      isOpen: false,
+      complaintId: null,
+      response: "",
+    });
+    // Restore original scroll position
+    window.scrollTo(0, originalScrollPosition);
   };
 
   const handleSubmitResponse = async () => {
@@ -118,33 +150,37 @@ function SubAdminComplaints({ state }) {
       showAlert({
         type: "warning",
         title: "Missing Response",
-        message: "Please enter a response"
+        message: "Please enter a response",
       });
       return;
     }
 
     try {
       await axios.post(
-        API_CONFIG.getUrl(`/subadmin/complaint/${responseModal.complaintId}/respond`),
+        API_CONFIG.getUrl(
+          `/subadmin/complaint/${responseModal.complaintId}/respond`
+        ),
         { response: responseModal.response.trim() }
       );
       showAlert({
         type: "success",
         title: "Response Sent",
-        message: "Response sent successfully!"
+        message: "Response sent successfully!",
       });
       setResponseModal({
         isOpen: false,
         complaintId: null,
         response: "",
       });
+      // Restore original scroll position after successful submission
+      window.scrollTo(0, originalScrollPosition);
       fetchComplaints();
     } catch (err) {
       console.error("Failed to send response:", err);
       showAlert({
         type: "error",
         title: "Send Failed",
-        message: "Failed to send response"
+        message: "Failed to send response",
       });
     }
   };
@@ -158,7 +194,6 @@ function SubAdminComplaints({ state }) {
       return;
     }
     try {
-      // Get subAdminId from state or localStorage
       const subAdminId =
         state?.subAdminId || localStorage.getItem("subAdminId");
 
@@ -167,21 +202,19 @@ function SubAdminComplaints({ state }) {
         showAlert({
           type: "error",
           title: "Authentication Error",
-          message: "SubAdmin ID not found. Please log in again."
+          message: "SubAdmin ID not found. Please log in again.",
         });
         return;
       }
 
-      console.log("Forwarding complaint with subAdminId:", subAdminId);
-
       await axios.post(
         API_CONFIG.getUrl(`/subadmin/complaint/${complaintId}/forward`),
-        { subAdminId: subAdminId } // Pass the SubAdmin ID for tracking
+        { subAdminId }
       );
       showAlert({
         type: "success",
         title: "Complaint Forwarded",
-        message: "Complaint forwarded to admin!"
+        message: "Complaint forwarded to admin!",
       });
       fetchComplaints();
     } catch (err) {
@@ -189,12 +222,14 @@ function SubAdminComplaints({ state }) {
       showAlert({
         type: "error",
         title: "Forward Failed",
-        message: "Failed to forward complaint: " + (err.response?.data?.message || err.message)
+        message:
+          "Failed to forward complaint: " +
+          (err.response?.data?.message || err.message),
       });
     }
   };
 
-  // Filter complaints based on search term and status
+  // Filter complaints
   const filteredComplaints = complaints.filter((complaint) => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -205,22 +240,28 @@ function SubAdminComplaints({ state }) {
     );
   });
 
-  const filteredForwardedComplaints = forwardedComplaints.filter((complaint) => {
-    const searchLower = searchTerm.toLowerCase();
-    const studentName = complaint.role === "vendor" 
-      ? complaint.userId?.vendorName || ""
-      : `${complaint.userId?.firstName || ""} ${complaint.userId?.lastName || ""}`.trim();
-    const studentEmail = complaint.role === "vendor"
-      ? complaint.userId?.Email || ""
-      : complaint.userId?.collegeEmail || "";
-    
-    return (
-      studentName?.toLowerCase().includes(searchLower) ||
-      studentEmail?.toLowerCase().includes(searchLower) ||
-      complaint.description?.toLowerCase().includes(searchLower) ||
-      complaint.complaintId?.toLowerCase().includes(searchLower)
-    );
-  });
+  const filteredForwardedComplaints = forwardedComplaints.filter(
+    (complaint) => {
+      const searchLower = searchTerm.toLowerCase();
+      const studentName =
+        complaint.role === "vendor"
+          ? complaint.userId?.vendorName || ""
+          : `${complaint.userId?.firstName || ""} ${
+              complaint.userId?.lastName || ""
+            }`.trim();
+      const studentEmail =
+        complaint.role === "vendor"
+          ? complaint.userId?.Email || ""
+          : complaint.userId?.collegeEmail || "";
+
+      return (
+        studentName?.toLowerCase().includes(searchLower) ||
+        studentEmail?.toLowerCase().includes(searchLower) ||
+        complaint.description?.toLowerCase().includes(searchLower) ||
+        complaint.complaintId?.toLowerCase().includes(searchLower)
+      );
+    }
+  );
 
   const pendingComplaints = filteredComplaints.filter(
     (c) => c.status !== "resolved"
@@ -228,11 +269,13 @@ function SubAdminComplaints({ state }) {
   const resolvedComplaints = filteredComplaints.filter(
     (c) => c.status === "resolved"
   );
-  
+
   const currentComplaints =
-    activeTab === "pending" ? pendingComplaints : 
-    activeTab === "resolved" ? resolvedComplaints : 
-    filteredForwardedComplaints;
+    activeTab === "pending"
+      ? pendingComplaints
+      : activeTab === "resolved"
+      ? resolvedComplaints
+      : filteredForwardedComplaints;
 
   // --- STYLING CONSTANTS ---
   const isLight = theme === "light";
@@ -302,7 +345,6 @@ function SubAdminComplaints({ state }) {
     gap: "6px",
   };
 
-  // Get subAdminId for status checker
   const currentSubAdminId =
     state?.subAdminId || localStorage.getItem("subAdminId");
 
@@ -597,6 +639,9 @@ function SubAdminComplaints({ state }) {
                 currentComplaints.map((complaint) => (
                   <motion.div
                     key={complaint._id}
+                    ref={(el) => {
+                      if (el) cardRefs.current[complaint._id] = el;
+                    }}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98 }}
@@ -606,6 +651,7 @@ function SubAdminComplaints({ state }) {
                       borderRadius: "16px",
                     }}
                   >
+                    {/* top info */}
                     <div
                       style={{
                         display: "flex",
@@ -643,7 +689,9 @@ function SubAdminComplaints({ state }) {
                               textTransform: "uppercase",
                             }}
                           >
-                            {activeTab === "forwarded" ? "Forwarded to Admin" : complaint.status}
+                            {activeTab === "forwarded"
+                              ? "Forwarded to Admin"
+                              : complaint.status}
                           </span>
                           <span
                             style={{
@@ -672,12 +720,15 @@ function SubAdminComplaints({ state }) {
                           </div>
                           <div>
                             <strong style={{ color: textMain }}>Date:</strong>{" "}
-                            {new Date(complaint.createdAt).toLocaleString()}
+                            {new Date(
+                              complaint.createdAt
+                            ).toLocaleString()}
                           </div>
                         </div>
                       </div>
                     </div>
 
+                    {/* description */}
                     <div
                       style={{
                         background: isLight
@@ -687,7 +738,9 @@ function SubAdminComplaints({ state }) {
                         borderRadius: "12px",
                         marginBottom: "16px",
                         border: `1px solid ${
-                          isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"
+                          isLight
+                            ? "rgba(0,0,0,0.05)"
+                            : "rgba(255,255,255,0.05)"
                         }`,
                       }}
                     >
@@ -703,6 +756,7 @@ function SubAdminComplaints({ state }) {
                       </p>
                     </div>
 
+                    {/* existing response */}
                     {complaint.response && (
                       <div
                         style={{
@@ -739,6 +793,7 @@ function SubAdminComplaints({ state }) {
                       </div>
                     )}
 
+                    {/* screenshot */}
                     {complaint.screenshot && (
                       <div style={{ marginBottom: "16px" }}>
                         <div
@@ -752,19 +807,28 @@ function SubAdminComplaints({ state }) {
                               : "rgba(15, 23, 42, 0.4)",
                             borderRadius: "12px",
                             border: `1px solid ${
-                              isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)"
+                              isLight
+                                ? "rgba(0,0,0,0.05)"
+                                : "rgba(255,255,255,0.05)"
                             }`,
                           }}
                         >
-                          <span style={{ 
-                            color: textSub, 
-                            fontSize: "14px",
-                            fontWeight: 500 
-                          }}>
+                          <span
+                            style={{
+                              color: textSub,
+                              fontSize: "14px",
+                              fontWeight: 500,
+                            }}
+                          >
                             📸 Screenshot available
                           </span>
                           <button
-                            onClick={() => handleViewScreenshot(complaint.screenshot, complaint)}
+                            onClick={() =>
+                              handleViewScreenshot(
+                                complaint.screenshot,
+                                complaint
+                              )
+                            }
                             style={{
                               ...buttonBase,
                               background: "rgba(59, 130, 246, 0.15)",
@@ -780,45 +844,53 @@ function SubAdminComplaints({ state }) {
                       </div>
                     )}
 
-                    {complaint.status === "active" && activeTab !== "forwarded" && (
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <button
-                          onClick={() => handleResponse(complaint._id)}
-                          style={{
-                            ...buttonBase,
-                            background: "#10b981",
-                            color: "white",
-                          }}
-                        >
-                          Send Response
-                        </button>
-                        <button
-                          onClick={() => handleForwardToAdmin(complaint._id)}
-                          style={{
-                            ...buttonBase,
-                            background: "rgba(245, 158, 11, 0.15)",
-                            color: "#f59e0b",
-                            border: "1px solid rgba(245, 158, 11, 0.3)",
-                          }}
-                        >
-                          Forward to Admin
-                        </button>
-                      </div>
-                    )}
+                    {/* actions */}
+                    {complaint.status === "active" &&
+                      activeTab !== "forwarded" && (
+                        <div style={{ display: "flex", gap: "10px" }}>
+                          <button
+                            onClick={() => handleResponse(complaint._id)}
+                            style={{
+                              ...buttonBase,
+                              background: "#10b981",
+                              color: "white",
+                            }}
+                          >
+                            Send Response
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleForwardToAdmin(complaint._id)
+                            }
+                            style={{
+                              ...buttonBase,
+                              background:
+                                "rgba(245, 158, 11, 0.15)",
+                              color: "#f59e0b",
+                              border:
+                                "1px solid rgba(245, 158, 11, 0.3)",
+                            }}
+                          >
+                            Forward to Admin
+                          </button>
+                        </div>
+                      )}
 
                     {activeTab === "forwarded" && (
-                      <div style={{ 
-                        padding: "12px 16px",
-                        background: "rgba(139, 92, 246, 0.1)",
-                        border: "1px solid rgba(139, 92, 246, 0.3)",
-                        borderRadius: "8px",
-                        color: "#7c3aed",
-                        fontSize: "13px",
-                        fontWeight: 500,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px"
-                      }}>
+                      <div
+                        style={{
+                          padding: "12px 16px",
+                          background: "rgba(139, 92, 246, 0.1)",
+                          border: "1px solid rgba(139, 92, 246, 0.3)",
+                          borderRadius: "8px",
+                          color: "#7c3aed",
+                          fontSize: "13px",
+                          fontWeight: 500,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
                         📤 This complaint has been forwarded to Admin for review
                       </div>
                     )}
@@ -859,9 +931,12 @@ function SubAdminComplaints({ state }) {
                     borderRadius: "20px",
                     width: "90%",
                     maxWidth: "500px",
-                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                    boxShadow:
+                      "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
                     border: `1px solid ${
-                      isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"
+                      isLight
+                        ? "rgba(0,0,0,0.1)"
+                        : "rgba(255,255,255,0.1)"
                     }`,
                     color: textMain,
                   }}
@@ -870,12 +945,13 @@ function SubAdminComplaints({ state }) {
                     Send Response to Student
                   </h3>
                   <textarea
+                    ref={textareaRef}
                     value={responseModal.response}
                     onChange={(e) =>
-                      setResponseModal({
-                        ...responseModal,
+                      setResponseModal((prev) => ({
+                        ...prev,
                         response: e.target.value,
-                      })
+                      }))
                     }
                     placeholder="Enter your response..."
                     style={{
@@ -903,13 +979,7 @@ function SubAdminComplaints({ state }) {
                     }}
                   >
                     <button
-                      onClick={() =>
-                        setResponseModal({
-                          isOpen: false,
-                          complaintId: null,
-                          response: "",
-                        })
-                      }
+                      onClick={closeResponseModal}
                       style={{
                         ...buttonBase,
                         background: isLight ? "#e2e8f0" : "#334155",
