@@ -62,6 +62,7 @@ function Start() {
         const msg = err.response.data.error;
         if (msg.toLowerCase().includes("email")) setError("Email does not exist");
         else if (msg.toLowerCase().includes("password")) setError("Password is incorrect");
+        else if (msg.toLowerCase().includes("kyc not verified")) setError("KYC not verified. Please complete your KYC verification first.");
         else if (err.response.data.isSuspended) {
           // Show suspension message in a popup
           showAlert({

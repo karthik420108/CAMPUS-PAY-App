@@ -36,13 +36,13 @@ const getFileUrl = (filePath) => {
   return `${baseUrl}/uploads/${filePath}`;
 };
 
-// CORS Configuration - Accept all origins (not recommended for production)
-app.use(cors({
-  origin: "*", // Accepts all origins including campus-pay-76vpo9jlc-karthiks-projects-e2da5a76.vercel.app
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: "*",
+    credentials: true
+  })
+);
+
 
 app.get("/health" , (req , res)=>{
   res.status(200).send("OK");
@@ -680,7 +680,8 @@ app.post("/login", async (req, res) => {
     // Allow frozen vendors to login but with restricted access
     // Frozen status will be handled in frontend
 
-    if (vendor.kyc.status !== "success") {
+    // Check KYC status - handle cases where kyc might not exist
+    if (vendor.kyc && vendor.kyc.status !== "verified") {
       return res.status(403).json({ error: "KYC not verified" });
     }
 
@@ -4634,9 +4635,16 @@ app.get("/admin-actions/:userId/:role", async (req, res) => {
 });
 
 const PORT = CONFIG.PORT;
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Campus Pay Backend Server running on port ${PORT}`);
   console.log(`📝 Environment: ${CONFIG.NODE_ENV}`);
-  console.log(`🔗 API Base URL: ${CONFIG.NODE_ENV === 'production' ? process.env.DEPLOYED_BASE_URL || 'https://your-deployed-backend-url.com' : `http://localhost:${PORT}`}`);
+  console.log(
+    `🔗 API Base URL: ${
+      CONFIG.NODE_ENV === "production"
+        ? process.env.DEPLOYED_BASE_URL || "https://your-deployed-backend-url.com"
+        : `http://localhost:${PORT}`
+    }`
+  );
   console.log(`📁 File Storage: Local storage enabled`);
 });
+

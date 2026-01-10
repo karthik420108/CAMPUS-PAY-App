@@ -83,6 +83,7 @@ function VendorLogin() {
   }
 
   useEffect(() => {
+    if (!vendorId) return;
     axios
       .post(API_CONFIG.getUrl(`/vendor/${vendorId}`))
       .then((res) => {
@@ -96,8 +97,12 @@ function VendorLogin() {
       })
       .catch((err) => {
         console.error("Error fetching vendor details:", err);
+        // If vendor details fetch fails, redirect to login
+        if (err.response?.status === 404) {
+          navigate("/");
+        }
       });
-  }, [vendorId]);
+  }, [vendorId, navigate]);
 
   useEffect(() => {
     if (!vendorId) return;
