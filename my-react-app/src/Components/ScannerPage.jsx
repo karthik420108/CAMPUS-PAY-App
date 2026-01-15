@@ -18,7 +18,6 @@ function ScannerPage() {
 
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
 
   const scannerRef = useRef(null);
 
@@ -214,84 +213,94 @@ function ScannerPage() {
   };
 
   useEffect(() => {
-    // Check if we're in a secure context (HTTPS or localhost)
-    const isSecureContext = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    if (!isSecureContext) {
-      setError("Camera access requires HTTPS or localhost. Please use a secure connection.");
+    if (frozen) {
+      navigate(-1);
       return;
     }
 
-    // Don't auto-start camera - wait for user to click button
-    setIsScanning(false);
-    setIsInitializing(false);
+    setIsScanning(true);
+    setIsInitializing(true);
     setError("");
 
-    const initializeCamera = async () => {
-      try {
-        // Check if browser supports mediaDevices
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error("Camera API not supported in this browser. Please try using a modern browser like Chrome, Firefox, or Safari.");
-        }
+    let initTimeout = null;
 
-        // Request camera permission immediately
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment",
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-          },
-        });
-
-        // Stop the stream after getting permission
-        stream.getTracks().forEach((track) => track.stop());
-
-        // Set camera as ready after successful permission
-        setTimeout(() => {
+    try {
+      initTimeout = setTimeout(() => {
+        if (isInitializing) {
+          setError(
+            "Camera initialization timed out. Please check camera permissions and try again."
+          );
           setIsInitializing(false);
-          setError("");
-          setCameraReady(true);
-        }, 100);
-
-      } catch (permissionErr) {
-        console.error("Camera permission error:", permissionErr);
-        setIsInitializing(false);
-        setIsScanning(false);
-        
-        if (permissionErr.name === "NotAllowedError") {
-          setError(
-            "Camera access denied. Please allow camera permissions and try again."
-          );
-        } else if (permissionErr.name === "NotFoundError") {
-          setError("No camera found. Please connect a camera and try again.");
-        } else if (permissionErr.name === "NotReadableError") {
-          setError("Camera is already in use by another application.");
-        } else if (permissionErr.message && permissionErr.message.includes("getUserMedia")) {
-          setError("Camera API not available. Please ensure you're using HTTPS or localhost.");
-        } else {
-          setError(
-            `Camera error: ${permissionErr.message || "Unknown error"}`
-          );
+          setIsScanning(false);
         }
-      }
-    };
+      }, 5000);
 
-    // Set a timeout for initialization
-    const initTimeout = setTimeout(() => {
-      if (isInitializing) {
-        setError(
-          "Camera initialization timed out. Please check camera permissions and try again."
-        );
-        setIsInitializing(false);
-        setIsScanning(false);
-      }
-    }, 10000); // Increased timeout to 10 seconds
+      const checkCameraPermission = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "environment",
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+            },
+          });
 
-    // Don't initialize camera immediately - wait for user to click button
-    // initializeCamera();
+          stream.getTracks().forEach((track) => track.stop());
+
+          if (scannerRef.current) {
+            scannerRef.current.stop().catch(() => {});
+            scannerRef.current = null;
+          }
+
+          setTimeout(() => {
+            setIsInitializing(false);
+            setError("");
+            initializeScanner();
+          }, 100);
+        } catch (permissionErr) {
+          console.error("Camera permission error:", permissionErr);
+          if (permissionErr.name === "NotAllowedError") {
+            setError(
+              "Camera access denied. Please allow camera permissions and try again."
+            );
+          } else if (permissionErr.name === "NotFoundError") {
+            setError("No camera found. Please connect a camera and try again.");
+          } else if (permissionErr.name === "NotReadableError") {
+            setError("Camera is already in use by another application.");
+          } else {
+            setError(
+              `Camera error: ${permissionErr.message || "Unknown error"}`
+            );
+          }
+          setIsInitializing(false);
+          setIsScanning(false);
+
+          if (initTimeout) {
+            clearTimeout(initTimeout);
+            initTimeout = null;
+          }
+        }
+      };
+
+      checkCameraPermission();
+    } catch (err) {
+      console.error("Overall initialization error:", err);
+      setError(
+        `Camera initialization failed: ${err.message || "Unknown error"}`
+      );
+      setIsScanning(false);
+      setIsInitializing(false);
+
+      if (initTimeout) {
+        clearTimeout(initTimeout);
+        initTimeout = null;
+      }
+    }
 
     return () => {
       if (initTimeout) {
         clearTimeout(initTimeout);
+        initTimeout = null;
       }
       stopScanner();
     };
@@ -340,28 +349,6 @@ function ScannerPage() {
             >
               {torchOn ? "Turn Torch Off" : "Turn Torch On"}
             </button>
-          )}
-
-          {!cameraReady && !isInitializing && (
-            <div className="camera-prompt">
-              <div className="camera-prompt-content">
-                <div className="camera-icon">📷</div>
-                <div className="camera-prompt-text">
-                  <h3>Camera Access Required</h3>
-                  <p>Click the button below to enable your camera for QR scanning</p>
-                </div>
-              </div>
-              <button
-                className="start-camera-btn"
-                onClick={() => {
-                  setIsInitializing(true);
-                  initializeCamera();
-                }}
-                disabled={isInitializing}
-              >
-                {isInitializing ? "Requesting Camera Access..." : "Start Camera"}
-              </button>
-            </div>
           )}
 
           {isInitializing && (
