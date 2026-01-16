@@ -87,12 +87,15 @@ class FileUploadService {
     }
   }
 
-  // Get local file URL
+  // Get local file URL with cache-busting timestamp
   getLocalFileUrl(filePath) {
     const baseUrl = CONFIG.NODE_ENV === 'production' 
       ? process.env.DEPLOYED_BASE_URL || 'http://localhost:5000'
       : `http://localhost:${CONFIG.PORT}`;
-    return `${baseUrl}/uploads/${filePath}`;
+    
+    // Add timestamp to cache-bust the browser cache
+    const timestamp = Date.now();
+    return `${baseUrl}/uploads/${filePath}?t=${timestamp}`;
   }
 
   // Delete local file

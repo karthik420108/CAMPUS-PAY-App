@@ -618,15 +618,15 @@ app.post("/upload", fileUploadService.getUploadMiddleware('profileImage'), async
 app.post("/upload/subadmin", fileUploadService.getUploadMiddleware('profileImage'), async (req, res) => {
   try {
     if (!req.file) {
+      console.error("❌ No file uploaded");
       return res.status(400).json({ error: "File not uploaded" });
     }
 
     const { subadminId } = req.body;
-    console.log(`📤 SubAdmin upload - ID: ${subadminId}, File: ${req.file.originalname}`);
+    console.log(`📤 SubAdmin upload - ID: ${subadminId}, File: ${req.file.originalname}, Size: ${req.file.size}`);
     
     const fileUrl = await fileUploadService.processFileUpload(req, res);
-
-    console.log("✅ SubAdmin profile uploaded to:", fileUrl);
+    console.log(`✅ File URL generated: ${fileUrl}`);
 
     // ✅ Save to database
     if (subadminId) {
@@ -634,15 +634,21 @@ app.post("/upload/subadmin", fileUploadService.getUploadMiddleware('profileImage
         subadminId,
         { imageUrl: fileUrl },
         { new: true }
-      );
+      ).select("name email imageUrl");
+      
       if (updated) {
-        console.log(`✅ SubAdmin profile updated in DB: ${subadminId}`);
+        console.log(`✅ SubAdmin DB updated: ${subadminId}, New URL: ${updated.imageUrl}`);
+        return res.json({ 
+          success: true,
+          url: fileUrl,
+          subAdmin: updated
+        });
       } else {
         console.warn(`⚠️ SubAdmin not found: ${subadminId}`);
       }
     }
 
-    res.json({ url: fileUrl });
+    res.json({ success: true, url: fileUrl });
   } catch (error) {
     console.error("❌ SubAdmin upload error:", error);
     res.status(500).json({ error: "File upload failed", details: error.message });
