@@ -553,7 +553,7 @@ app.post("/register", async (req, res) => {
         vendorName: `${firstName} ${lastName}`,
         vendorid: await generateUniqueVendorId(),
         Email: email,
-        Password: password, 
+        password: password,
         Mpin: mpin,
         Wallet: 0,
         isFrozen: false,
