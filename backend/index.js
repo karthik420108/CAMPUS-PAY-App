@@ -874,10 +874,14 @@ function generateOTP() {
 }
 
 // ✅ Helper function to send email with SendGrid (with retry logic)
-// ✅ Optimized SendGrid email sending (fast, no unnecessary delays)
-const sendEmailWithRetry = async (mailOptions, maxRetries = 2) => {
+// ✅ SendGrid email sending with proper error handling
+const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
+  let lastError;
+  
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`📧 Sending email to ${mailOptions.to} (attempt ${attempt}/${maxRetries})...`);
+      
       const msg = {
         to: mailOptions.to,
         from: SENDGRID_FROM_EMAIL,
@@ -886,20 +890,25 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 2) => {
       };
       
       const result = await sgMail.send(msg);
-      console.log(`✅ Email sent to ${mailOptions.to}`);
+      console.log(`✅ Email sent successfully to ${mailOptions.to}`);
       return result;
-    } catch (error) {
-      console.error(`❌ Email attempt ${attempt} failed for ${mailOptions.to}: ${error.message}`);
       
-      // Only retry on network errors, not on validation errors
-      if (attempt < maxRetries && (error.message.includes('ECONNREFUSED') || error.message.includes('timeout') || error.message.includes('ETIMEDOUT'))) {
-        const waitTime = 200 * attempt; // 200ms, 400ms (minimal backoff)
+    } catch (error) {
+      lastError = error;
+      console.error(`❌ Attempt ${attempt} failed: ${error.message}`);
+      
+      // Only retry if we haven't exceeded max attempts
+      if (attempt < maxRetries) {
+        const waitTime = 300 * attempt; // 300ms first, 600ms second retry
+        console.log(`⏳ Retrying in ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
-      } else if (attempt === maxRetries) {
-        throw error;
       }
     }
   }
+  
+  // After all retries, still throw the error
+  console.error(`❌ All ${maxRetries} attempts failed for ${mailOptions.to}`);
+  throw lastError;
 };
 
 const otpStore = {};
@@ -944,13 +953,15 @@ app.post("/send-otp", async (req, res) => {
     };
 
     // ✅ Send OTP emails in background (fire and forget for speed)
-    // Don't use Promise.race() - it slows things down. Just fire emails in background.
+    // Student email
     sendEmailWithRetry({
       to: Email,
       subject: "Campus Pay OTP Verification - Student",
       html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
+    }).then(() => {
+      console.log(`✅ Student OTP email queued to ${Email}`);
     }).catch(err => {
-      console.error(`❌ Student email failed: ${err.message}`);
+      console.error(`❌ Failed to send student OTP: ${err.message}`);
     });
 
     // Send OTP to parent if student role
@@ -959,8 +970,10 @@ app.post("/send-otp", async (req, res) => {
         to: PEmail,
         subject: "OTP Verification - Personal",
         html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
+      }).then(() => {
+        console.log(`✅ Parent OTP email queued to ${PEmail}`);
       }).catch(err => {
-        console.error(`❌ Parent email failed: ${err.message}`);
+        console.error(`❌ Failed to send parent OTP: ${err.message}`);
       });
     }
 

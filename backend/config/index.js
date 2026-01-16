@@ -10,13 +10,7 @@ const CONFIG = {
   
   // Database Configuration
   MONGO_URI: process.env.MONGO_URI || 'mongodb+srv://root:123@campuspay.i8ucsny.mongodb.net/',
-  
-  // Email Configuration
-  EMAIL: {
-    SERVICE: process.env.EMAIL_SERVICE || 'gmail',
-    USER: process.env.EMAIL_USER || 'campuspay0@gmail.com',
-    PASS: process.env.EMAIL_PASS || 'jlvhymspuqdqhqxb'
-  },
+
   
   // File Upload Configuration
   UPLOAD: {
