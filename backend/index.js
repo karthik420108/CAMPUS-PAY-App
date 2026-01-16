@@ -695,7 +695,7 @@ app.post("/login", async (req, res) => {
     // Allow frozen vendors to login but with restricted access
     // Frozen status will be handled in frontend
 
-    if (vendor.kyc.status !== "success") {
+    if (vendor.kyc.status !== "verified") {
       return res.status(403).json({ error: "KYC not verified" });
     }
 
