@@ -874,11 +874,10 @@ function generateOTP() {
 }
 
 // ✅ Helper function to send email with SendGrid (with retry logic)
-const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
+// ✅ Optimized SendGrid email sending (fast, no unnecessary delays)
+const sendEmailWithRetry = async (mailOptions, maxRetries = 2) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`📧 Attempting to send email to ${mailOptions.to} via SendGrid (attempt ${attempt}/${maxRetries})...`);
-      
       const msg = {
         to: mailOptions.to,
         from: SENDGRID_FROM_EMAIL,
@@ -887,18 +886,16 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
       };
       
       const result = await sgMail.send(msg);
-      console.log(`✅ Email sent successfully to ${mailOptions.to}`);
+      console.log(`✅ Email sent to ${mailOptions.to}`);
       return result;
     } catch (error) {
-      console.error(`❌ Attempt ${attempt} failed: ${error.message}`);
+      console.error(`❌ Email attempt ${attempt} failed for ${mailOptions.to}: ${error.message}`);
       
-      if (attempt < maxRetries) {
-        // Exponential backoff: wait 1s, 2s, 4s
-        const waitTime = Math.pow(2, attempt - 1) * 1000;
-        console.log(`⏳ Retrying after ${waitTime}ms...`);
+      // Only retry on network errors, not on validation errors
+      if (attempt < maxRetries && (error.message.includes('ECONNREFUSED') || error.message.includes('timeout') || error.message.includes('ETIMEDOUT'))) {
+        const waitTime = 200 * attempt; // 200ms, 400ms (minimal backoff)
         await new Promise(resolve => setTimeout(resolve, waitTime));
-      } else {
-        console.error(`❌ All ${maxRetries} email attempts failed for ${mailOptions.to}`);
+      } else if (attempt === maxRetries) {
         throw error;
       }
     }
@@ -946,40 +943,26 @@ app.post("/send-otp", async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000,
     };
 
-    // ✅ Send OTP emails with retry logic (non-blocking)
-    Promise.all([
-      // Send OTP to student
-      Promise.race([
-        sendEmailWithRetry({
-          from: CONFIG.EMAIL.USER,
-          to: Email,
-          subject: "Campus Pay OTP Verification - Student",
-          html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
-        }, 2).catch(err => {
-          console.error(`❌ Email failed to ${Email}: ${err.message}`);
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
-      ]).catch(err => {
-        console.error(`❌ Email operation failed for ${Email}: ${err.message}`);
-      }),
-      
-      // Send OTP to parent (if student role)
-      role === "student" ? Promise.race([
-        sendEmailWithRetry({
-          from: CONFIG.EMAIL.USER,
-          to: PEmail,
-          subject: "OTP Verification - Personal",
-          html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
-        }, 2).catch(err => {
-          console.error(`❌ Email failed to ${PEmail}: ${err.message}`);
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
-      ]).catch(err => {
-        console.error(`❌ Email operation failed for ${PEmail}: ${err.message}`);
-      }) : Promise.resolve()
-    ]).catch(err => {
-      console.error(`❌ Background email sending error: ${err.message}`);
+    // ✅ Send OTP emails in background (fire and forget for speed)
+    // Don't use Promise.race() - it slows things down. Just fire emails in background.
+    sendEmailWithRetry({
+      to: Email,
+      subject: "Campus Pay OTP Verification - Student",
+      html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
+    }).catch(err => {
+      console.error(`❌ Student email failed: ${err.message}`);
     });
+
+    // Send OTP to parent if student role
+    if (role === "student") {
+      sendEmailWithRetry({
+        to: PEmail,
+        subject: "OTP Verification - Personal",
+        html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
+      }).catch(err => {
+        console.error(`❌ Parent email failed: ${err.message}`);
+      });
+    }
 
     // ✅ Return response immediately - don't wait for emails
     res.status(200).json({
@@ -1074,19 +1057,13 @@ app.post("/resend-otp", async (req, res) => {
 
     otpStore[email] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
 
-    // ✅ Send OTP email with retry logic (non-blocking)
-    Promise.race([
-      sendEmailWithRetry({
-        from: CONFIG.EMAIL.USER,
-        to: email,
-        subject: "Campus Pay - OTP",
-        html: `<h2>Your new OTP is ${otp}</h2><p>Valid for 5 minutes</p>`,
-      }, 2).catch(err => {
-        console.error(`❌ Email resend failed to ${email}: ${err.message}`);
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
-    ]).catch(err => {
-      console.error(`❌ Email operation failed: ${err.message}`);
+    // ✅ Send OTP email in background (fire and forget)
+    sendEmailWithRetry({
+      to: email,
+      subject: "Campus Pay - OTP",
+      html: `<h2>Your new OTP is ${otp}</h2><p>Valid for 5 minutes</p>`,
+    }).catch(err => {
+      console.error(`❌ Email resend failed to ${email}: ${err.message}`);
     });
 
     // ✅ Return response immediately
@@ -2857,21 +2834,14 @@ app.post("/send-mpin-otp", async (req, res) => {
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
-      console.log(`📧 Sending MPIN OTP to vendor: ${user.Email}, OTP: ${otp}`);
 
-      // ✅ Send email non-blocking with retry logic
-      Promise.race([
-        sendEmailWithRetry({
-          from: CONFIG.EMAIL.USER,
-          to: user.Email,
-          subject: "MPIN Reset OTP",
-          html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
-        }, 2).catch(err => {
-          console.error(`❌ MPIN email failed to vendor: ${user.Email}, Error: ${err.message}`);
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
-      ]).catch(err => {
-        console.error(`❌ MPIN email operation failed: ${err.message}`);
+      // ✅ Send email in background (fire and forget for speed)
+      sendEmailWithRetry({
+        to: user.Email,
+        subject: "MPIN Reset OTP",
+        html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
+      }).catch(err => {
+        console.error(`❌ MPIN email failed to vendor: ${err.message}`);
       });
 
       // Return immediately
@@ -2887,21 +2857,14 @@ app.post("/send-mpin-otp", async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
-    console.log(`📧 Sending MPIN OTP to student: ${user.collegeEmail}, OTP: ${otp}`);
 
-    // ✅ Send email non-blocking with retry logic
-    Promise.race([
-      sendEmailWithRetry({
-        from: CONFIG.EMAIL.USER,
-        to: user.collegeEmail,
-        subject: "MPIN Reset OTP",
-        html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
-      }, 2).catch(err => {
-        console.error(`❌ MPIN email failed to student: ${user.collegeEmail}, Error: ${err.message}`);
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
-    ]).catch(err => {
-      console.error(`❌ MPIN email operation failed: ${err.message}`);
+    // ✅ Send email in background (fire and forget for speed)
+    sendEmailWithRetry({
+      to: user.collegeEmail,
+      subject: "MPIN Reset OTP",
+      html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
+    }).catch(err => {
+      console.error(`❌ MPIN email failed to student: ${err.message}`);
     });
 
     return res.json({ 
@@ -2942,24 +2905,18 @@ app.post("/resend-mpin-otp", async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000,
     };
 
-    // ✅ Send OTP email with retry logic (non-blocking)
-    Promise.race([
-      sendEmailWithRetry({
-        from: CONFIG.EMAIL.USER,
-        to: userEmail,
-        subject: "Resend MPIN OTP",
-        html: `
-          <h2>MPIN Reset Request</h2>
-          <p>Your new OTP is:</p>
-          <h1>${otp}</h1>
-          <p>This OTP is valid for 5 minutes.</p>
-        `,
-      }, 2).catch(err => {
-        console.error(`❌ MPIN resend failed to ${userEmail}: ${err.message}`);
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
-    ]).catch(err => {
-      console.error(`❌ MPIN resend operation failed: ${err.message}`);
+    // ✅ Send OTP email in background (fire and forget)
+    sendEmailWithRetry({
+      to: userEmail,
+      subject: "Resend MPIN OTP",
+      html: `
+        <h2>MPIN Reset Request</h2>
+        <p>Your new OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP is valid for 5 minutes.</p>
+      `,
+    }).catch(err => {
+      console.error(`❌ MPIN resend failed to ${userEmail}: ${err.message}`);
     });
 
     // Return immediately
