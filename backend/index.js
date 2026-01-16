@@ -11,30 +11,59 @@ const fs = require("fs");
 const CONFIG = require('./config');
 const fileUploadService = require('./services/fileUpload');
 
-// ✅ Improved email configuration with connection pooling
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: CONFIG.EMAIL.USER,
-    pass: CONFIG.EMAIL.PASS,
-  },
-  connectionTimeout: 10000,      // 10 seconds to establish connection
-  socketTimeout: 10000,           // 10 seconds for socket operations
-  pool: {
-    maxConnections: 5,
-    maxMessages: 100,
-    rateDelta: 1000,
-    rateLimit: 10
-  }
-});
+// ✅ Improved email configuration with multi-port fallback for Render compatibility
+let transporter;
+
+const createTransporter = () => {
+  // Try to create transporter with port 587 first (more compatible with Render)
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,  // TLS instead of SSL (works better on Render)
+    auth: {
+      user: CONFIG.EMAIL.USER,
+      pass: CONFIG.EMAIL.PASS,
+    },
+    connectionTimeout: 10000,      // 10 seconds to establish connection
+    socketTimeout: 10000,           // 10 seconds for socket operations
+    pool: {
+      maxConnections: 3,
+      maxMessages: 100,
+      rateDelta: 1000,
+      rateLimit: 10
+    }
+  });
+};
+
+transporter = createTransporter();
 
 // Test email connection on startup
 transporter.verify((error, success) => {
   if (error) {
     console.error('❌ Email transporter error:', error.message);
-    console.log('⚠️ Emails may not work. Check Gmail credentials in .env');
+    console.log('⚠️ Using fallback SMTP configuration...');
+    
+    // Try alternative configuration if primary fails
+    transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: CONFIG.EMAIL.USER,
+        pass: CONFIG.EMAIL.PASS,
+      },
+      connectionTimeout: 15000,
+      socketTimeout: 15000,
+    });
+    
+    transporter.verify((error2, success2) => {
+      if (error2) {
+        console.error('❌ Email fallback also failed:', error2.message);
+        console.log('⚠️ Emails may not work. Continuing anyway - OTPs will be stored in memory.');
+      } else {
+        console.log('✅ Email service is ready (fallback configuration)');
+      }
+    });
   } else {
     console.log('✅ Email service is ready');
   }
@@ -890,6 +919,30 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000); // 6-digit
 }
 
+// ✅ Helper function to send email with retry logic and exponential backoff
+const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`📧 Attempting to send email to ${mailOptions.to} (attempt ${attempt}/${maxRetries})...`);
+      const result = await transporter.sendMail(mailOptions);
+      console.log(`✅ Email sent successfully to ${mailOptions.to}`);
+      return result;
+    } catch (error) {
+      console.error(`❌ Attempt ${attempt} failed: ${error.message}`);
+      
+      if (attempt < maxRetries) {
+        // Exponential backoff: wait 1s, 2s, 4s
+        const waitTime = Math.pow(2, attempt - 1) * 1000;
+        console.log(`⏳ Retrying after ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      } else {
+        console.error(`❌ All ${maxRetries} email attempts failed for ${mailOptions.to}`);
+        throw error;
+      }
+    }
+  }
+};
+
 const otpStore = {};
 
 app.post("/send-otp", async (req, res) => {
@@ -921,7 +974,7 @@ app.post("/send-otp", async (req, res) => {
     const parentOtp = Math.floor(100000 + Math.random() * 900000);
     console.log(`🎲 Generated OTPs: Student=${studentOtp}, Parent=${parentOtp}`);
 
-    // Store separately in memory (or DB if you prefer)
+    // Store separately in memory
     otpStore[Email] = {
       otp: studentOtp,
       expiresAt: Date.now() + 5 * 60 * 1000,
@@ -931,33 +984,36 @@ app.post("/send-otp", async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000,
     };
 
-    // ✅ Send OTP emails with timeout (non-blocking) - Don't wait for email to complete
-    // This prevents slow email service from blocking the API response
+    // ✅ Send OTP emails with retry logic (non-blocking)
     Promise.all([
-      // Send OTP to student (with timeout)
+      // Send OTP to student
       Promise.race([
-        transporter.sendMail({
+        sendEmailWithRetry({
           from: CONFIG.EMAIL.USER,
           to: Email,
           subject: "Campus Pay OTP Verification - Student",
           html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
+        }, 2).catch(err => {
+          console.error(`❌ Email failed to ${Email}: ${err.message}`);
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 10s')), 10000)) // 10 second timeout
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
       ]).catch(err => {
-        console.error(`❌ Email failed to ${Email}: ${err.message}`);
+        console.error(`❌ Email operation failed for ${Email}: ${err.message}`);
       }),
       
-      // Send OTP to parent (if student role, with timeout)
+      // Send OTP to parent (if student role)
       role === "student" ? Promise.race([
-        transporter.sendMail({
+        sendEmailWithRetry({
           from: CONFIG.EMAIL.USER,
           to: PEmail,
           subject: "OTP Verification - Personal",
           html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
+        }, 2).catch(err => {
+          console.error(`❌ Email failed to ${PEmail}: ${err.message}`);
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 10s')), 10000)) // 10 second timeout
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
       ]).catch(err => {
-        console.error(`❌ Email failed to ${PEmail}: ${err.message}`);
+        console.error(`❌ Email operation failed for ${PEmail}: ${err.message}`);
       }) : Promise.resolve()
     ]).catch(err => {
       console.error(`❌ Background email sending error: ${err.message}`);
@@ -969,7 +1025,7 @@ app.post("/send-otp", async (req, res) => {
       message: "OTP sent to both emails separately",
       studentEmail: Email,
       parentEmail: PEmail,
-      studentOtp: studentOtp, // Add OTP for testing
+      studentOtp: studentOtp,
       parentOtp: role === "student" ? parentOtp : null
     });
   } catch (err) {
@@ -1056,24 +1112,22 @@ app.post("/resend-otp", async (req, res) => {
 
     otpStore[email] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
 
-    const subject = email.includes("@")
-      ? "OTP Verification"
-      : "OTP Verification";
-
-    // ✅ Send OTP email with timeout (non-blocking) - Don't wait for email to complete
+    // ✅ Send OTP email with retry logic (non-blocking)
     Promise.race([
-      transporter.sendMail({
+      sendEmailWithRetry({
         from: CONFIG.EMAIL.USER,
         to: email,
         subject: "Campus Pay - OTP",
         html: `<h2>Your new OTP is ${otp}</h2><p>Valid for 5 minutes</p>`,
+      }, 2).catch(err => {
+        console.error(`❌ Email resend failed to ${email}: ${err.message}`);
       }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 10s')), 10000)) // 10 second timeout
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
     ]).catch(err => {
-      console.error(`❌ Email resend failed to ${email}: ${err.message}`);
+      console.error(`❌ Email operation failed: ${err.message}`);
     });
 
-    // ✅ Return response immediately - don't wait for email
+    // ✅ Return response immediately
     res.status(200).json({ message: `OTP sent to ${email}` });
   } catch (err) {
     console.error(err);
@@ -2843,17 +2897,19 @@ app.post("/send-mpin-otp", async (req, res) => {
       mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
       console.log(`📧 Sending MPIN OTP to vendor: ${user.Email}, OTP: ${otp}`);
 
-      // ✅ Send email non-blocking with timeout
+      // ✅ Send email non-blocking with retry logic
       Promise.race([
-        transporter.sendMail({
+        sendEmailWithRetry({
           from: CONFIG.EMAIL.USER,
           to: user.Email,
           subject: "MPIN Reset OTP",
           html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
+        }, 2).catch(err => {
+          console.error(`❌ MPIN email failed to vendor: ${user.Email}, Error: ${err.message}`);
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
       ]).catch(err => {
-        console.log(`⚠️ MPIN email send to vendor failed (non-blocking): ${user.Email}, Error: ${err.message}`);
+        console.error(`❌ MPIN email operation failed: ${err.message}`);
       });
 
       // Return immediately
@@ -2871,17 +2927,19 @@ app.post("/send-mpin-otp", async (req, res) => {
     mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
     console.log(`📧 Sending MPIN OTP to student: ${user.collegeEmail}, OTP: ${otp}`);
 
-    // ✅ Send email non-blocking with timeout
+    // ✅ Send email non-blocking with retry logic
     Promise.race([
-      transporter.sendMail({
+      sendEmailWithRetry({
         from: CONFIG.EMAIL.USER,
         to: user.collegeEmail,
         subject: "MPIN Reset OTP",
         html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
+      }, 2).catch(err => {
+        console.error(`❌ MPIN email failed to student: ${user.collegeEmail}, Error: ${err.message}`);
       }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
     ]).catch(err => {
-      console.log(`⚠️ MPIN email send to student failed (non-blocking): ${user.collegeEmail}, Error: ${err.message}`);
+      console.error(`❌ MPIN email operation failed: ${err.message}`);
     });
 
     return res.json({ 
@@ -2922,9 +2980,9 @@ app.post("/resend-mpin-otp", async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000,
     };
 
-    // ✅ Send OTP email with timeout (non-blocking)
+    // ✅ Send OTP email with retry logic (non-blocking)
     Promise.race([
-      transporter.sendMail({
+      sendEmailWithRetry({
         from: CONFIG.EMAIL.USER,
         to: userEmail,
         subject: "Resend MPIN OTP",
@@ -2934,10 +2992,12 @@ app.post("/resend-mpin-otp", async (req, res) => {
           <h1>${otp}</h1>
           <p>This OTP is valid for 5 minutes.</p>
         `,
+      }, 2).catch(err => {
+        console.error(`❌ MPIN resend failed to ${userEmail}: ${err.message}`);
       }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 20s')), 20000))
     ]).catch(err => {
-      console.log(`⚠️ MPIN resend failed (non-blocking): ${userEmail}, Error: ${err.message}`);
+      console.error(`❌ MPIN resend operation failed: ${err.message}`);
     });
 
     // Return immediately
