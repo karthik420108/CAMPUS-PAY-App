@@ -111,6 +111,7 @@ const handleSubmit = async (e) => {
       role,
     });
     
+    setLoading(false);
     navigate("/signup2");
   } catch (error) {
     console.error("Error sending OTP:", error);

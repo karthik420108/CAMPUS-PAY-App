@@ -15,6 +15,13 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "dist",
       sourcemap: true
+    },
+    define: {
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
+        env.VITE_API_BASE_URL || (mode === 'production' 
+          ? 'https://campus-pay-backend.onrender.com' 
+          : 'http://localhost:5000')
+      ),
     }
   };
 });

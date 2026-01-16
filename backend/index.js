@@ -913,32 +913,39 @@ app.post("/send-otp", async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000,
     };
 
-    // Send OTP to student
-    try {
-      await transporter.sendMail({
-        to: Email,
-        subject: "Campus Pay OTP Verification - Student",
-        html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
-      });
-    } catch (emailError) {
-      // Skip email error and continue with registration
-      console.log(`Email service unavailable, continuing without email to: ${Email}`);
-    }
-
-    // Send OTP to parent
-    if (role == "student") {
-      try {
-        await transporter.sendMail({
+    // ✅ Send OTP emails with timeout (non-blocking) - Don't wait for email to complete
+    // This prevents slow email service from blocking the API response
+    Promise.all([
+      // Send OTP to student (with timeout)
+      Promise.race([
+        transporter.sendMail({
+          from: CONFIG.EMAIL.USER,
+          to: Email,
+          subject: "Campus Pay OTP Verification - Student",
+          html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000)) // 5 second timeout
+      ]).catch(err => {
+        console.log(`⚠️ Email send to student failed (non-blocking): ${Email}, Error: ${err.message}`);
+      }),
+      
+      // Send OTP to parent (if student role, with timeout)
+      role === "student" ? Promise.race([
+        transporter.sendMail({
+          from: CONFIG.EMAIL.USER,
           to: PEmail,
           subject: "OTP Verification - Personal",
           html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
-        });
-      } catch (emailError) {
-        // Skip email error and continue with registration
-        console.log(`Email service unavailable, continuing without email to: ${PEmail}`);
-      }
-    }
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000)) // 5 second timeout
+      ]).catch(err => {
+        console.log(`⚠️ Email send to parent failed (non-blocking): ${PEmail}, Error: ${err.message}`);
+      }) : Promise.resolve()
+    ]).catch(err => {
+      console.log(`⚠️ Background email sending error (non-blocking): ${err.message}`);
+    });
 
+    // ✅ Return response immediately - don't wait for emails
     res.status(200).json({
       success: true,
       message: "OTP sent to both emails separately",
@@ -1035,12 +1042,20 @@ app.post("/resend-otp", async (req, res) => {
       ? "OTP Verification"
       : "OTP Verification";
 
-    await transporter.sendMail({
-      to: email,
-      subject: "Campus Pay - Otp",
-      html: `<h2>Your new OTP is ${otp}</h2><p>Valid for 5 minutes</p>`,
+    // ✅ Send OTP email with timeout (non-blocking) - Don't wait for email to complete
+    Promise.race([
+      transporter.sendMail({
+        from: CONFIG.EMAIL.USER,
+        to: email,
+        subject: "Campus Pay - OTP",
+        html: `<h2>Your new OTP is ${otp}</h2><p>Valid for 5 minutes</p>`,
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000)) // 5 second timeout
+    ]).catch(err => {
+      console.log(`⚠️ Email resend failed (non-blocking): ${email}, Error: ${err.message}`);
     });
 
+    // ✅ Return response immediately - don't wait for email
     res.status(200).json({ message: `OTP sent to ${email}` });
   } catch (err) {
     console.error(err);
@@ -2810,17 +2825,24 @@ app.post("/send-mpin-otp", async (req, res) => {
       mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
       console.log(`📧 Sending MPIN OTP to vendor: ${user.Email}, OTP: ${otp}`);
 
-      try {
-        await transporter.sendMail({
-          from: process.env.MAIL_USER || "campuspay0@gmail.com",
+      // ✅ Send email non-blocking with timeout
+      Promise.race([
+        transporter.sendMail({
+          from: CONFIG.EMAIL.USER,
           to: user.Email,
           subject: "MPIN Reset OTP",
           html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
-        });
-      } catch (emailError) {
-        // Skip email error and continue
-        console.log(`Email service unavailable, continuing without MPIN email to: ${user.Email}`);
-      }
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
+      ]).catch(err => {
+        console.log(`⚠️ MPIN email send to vendor failed (non-blocking): ${user.Email}, Error: ${err.message}`);
+      });
+
+      // Return immediately
+      return res.json({ 
+        message: "OTP_SENT",
+        otp: otp
+      });
     }
 
     // Regular user
@@ -2831,21 +2853,22 @@ app.post("/send-mpin-otp", async (req, res) => {
     mpinOtpStore[userId] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
     console.log(`📧 Sending MPIN OTP to student: ${user.collegeEmail}, OTP: ${otp}`);
 
-    try {
-      await transporter.sendMail({
-        from: process.env.MAIL_USER || "campuspay0@gmail.com",
+    // ✅ Send email non-blocking with timeout
+    Promise.race([
+      transporter.sendMail({
+        from: CONFIG.EMAIL.USER,
         to: user.collegeEmail,
         subject: "MPIN Reset OTP",
         html: `<h2>MPIN Reset Request</h2><p>Your OTP is:</p><h1>${otp}</h1><p>This OTP is valid for 5 minutes.</p>`,
-      });
-    } catch (emailError) {
-      // Skip email error and continue
-      console.log(`Email service unavailable, continuing without MPIN email to: ${user.collegeEmail}`);
-    }
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
+    ]).catch(err => {
+      console.log(`⚠️ MPIN email send to student failed (non-blocking): ${user.collegeEmail}, Error: ${err.message}`);
+    });
 
     return res.json({ 
       message: "OTP_SENT",
-      otp: otp // Add OTP for testing
+      otp: otp
     });
   } catch (err) {
     console.error('❌ MPIN OTP route error:', err);
@@ -2881,23 +2904,29 @@ app.post("/resend-mpin-otp", async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000,
     };
 
-    // Send OTP email
-    await transporter.sendMail({
-      from: process.env.MAIL_USER || "campuspay0@gmail.com",
-      to: userEmail,
-      subject: "Resend MPIN OTP",
-      html: `
-        <h2>MPIN Reset Request</h2>
-        <p>Your new OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP is valid for 5 minutes.</p>
-      `,
+    // ✅ Send OTP email with timeout (non-blocking)
+    Promise.race([
+      transporter.sendMail({
+        from: CONFIG.EMAIL.USER,
+        to: userEmail,
+        subject: "Resend MPIN OTP",
+        html: `
+          <h2>MPIN Reset Request</h2>
+          <p>Your new OTP is:</p>
+          <h1>${otp}</h1>
+          <p>This OTP is valid for 5 minutes.</p>
+        `,
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
+    ]).catch(err => {
+      console.log(`⚠️ MPIN resend failed (non-blocking): ${userEmail}, Error: ${err.message}`);
     });
 
+    // Return immediately
     return res.json({ 
       message: "OTP_SENT",
-      otp: otp // Add OTP for testing
-    }); // <-- ensure only one response
+      otp: otp
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Failed to resend OTP" });
