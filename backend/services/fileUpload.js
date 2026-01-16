@@ -23,11 +23,23 @@ class FileUploadService {
   configureStorage() {
     return multer.diskStorage({
       destination: (req, file, cb) => {
-        const { role } = req.body;
+        // Try to get role from body, but have fallbacks
+        let role = req.body?.role || req.query?.role || "uploads";
         
-        if (!role) {
-          return cb(new Error("Role missing"), null);
+        // If no role, try to determine from field name
+        if (!role || role === "uploads") {
+          if (file.fieldname === "kycImage") {
+            role = "kyc";
+          } else if (file.fieldname === "profileImage") {
+            role = "profileImage";
+          } else if (file.fieldname === "photo") {
+            role = "photos";
+          } else if (file.fieldname === "screenshot") {
+            role = "screenshots";
+          }
         }
+        
+        console.log(`📁 Multer destination - Role: ${role}, Field: ${file.fieldname}`);
 
         const uploadPath = path.join(CONFIG.UPLOAD.DIR, role);
         fs.mkdirSync(uploadPath, { recursive: true });

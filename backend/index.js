@@ -622,16 +622,11 @@ app.post("/upload/subadmin", fileUploadService.getUploadMiddleware('profileImage
     }
 
     const { subadminId } = req.body;
-    
-    // Add role for processFileUpload if not present
-    if (!req.body.role) {
-      req.body.role = "subAdminPics";
-    }
+    console.log(`📤 SubAdmin upload - ID: ${subadminId}, File: ${req.file.originalname}`);
     
     const fileUrl = await fileUploadService.processFileUpload(req, res);
 
-    console.log("SubAdmin ID:", subadminId);
-    console.log("SubAdmin profile uploaded to:", fileUrl);
+    console.log("✅ SubAdmin profile uploaded to:", fileUrl);
 
     // ✅ Save to database
     if (subadminId) {
@@ -640,13 +635,17 @@ app.post("/upload/subadmin", fileUploadService.getUploadMiddleware('profileImage
         { imageUrl: fileUrl },
         { new: true }
       );
-      console.log(`✅ SubAdmin profile updated: ${subadminId}`);
+      if (updated) {
+        console.log(`✅ SubAdmin profile updated in DB: ${subadminId}`);
+      } else {
+        console.warn(`⚠️ SubAdmin not found: ${subadminId}`);
+      }
     }
 
     res.json({ url: fileUrl });
   } catch (error) {
-    console.error("SubAdmin upload error:", error);
-    res.status(500).json({ error: "File upload failed" });
+    console.error("❌ SubAdmin upload error:", error);
+    res.status(500).json({ error: "File upload failed", details: error.message });
   }
 });
 
@@ -2603,20 +2602,29 @@ app.get("/admin/dashboard", async (req, res) => {
 app.post("/upload-kyc", fileUploadService.getUploadMiddleware('kycImage'), async (req, res) => {
   try {
     if (!req.file) {
+      console.error("❌ No file uploaded in KYC request");
       return res.status(400).json({ error: "No file uploaded" });
     }
     
     const { role, email } = req.body;
-    console.log("🔐 KYC Upload - Role:", role, "Email:", email, "File:", req.file.originalname);
+    console.log(`🔐 KYC Upload - Role: ${role}, Email: ${email}, File: ${req.file.originalname}, Size: ${req.file.size}`);
     
     if (!email) {
+      console.error("❌ Email missing in KYC upload");
       return res.status(400).json({ error: "Email is required" });
     }
     
+    // Ensure role is set for file upload destination
+    if (!req.body.role) {
+      req.body.role = role || "kyc";
+    }
+    
+    console.log(`📁 Processing file upload with role: ${req.body.role}`);
     const imageUrl = await fileUploadService.processFileUpload(req, res);
     console.log(`✅ File uploaded to: ${imageUrl}`);
     
     // ✅ Save KYC to database immediately
+    let savedToDb = false;
     try {
       if (role === "studentkyc") {
         const user = await User.findOne({ collegeEmail: email });
@@ -2627,9 +2635,10 @@ app.post("/upload-kyc", fileUploadService.getUploadMiddleware('kycImage'), async
             submittedAt: new Date(),
           };
           await user.save();
-          console.log(`✅ KYC saved for student: ${email}`);
+          console.log(`✅ KYC saved to student: ${email}`);
+          savedToDb = true;
         } else {
-          console.warn(`⚠️ Student not found with email: ${email}`);
+          console.warn(`⚠️ Student not found: ${email}`);
         }
       } else if (role === "vendorkyc") {
         const vendor = await Vendor.findOne({ Email: email });
@@ -2640,9 +2649,10 @@ app.post("/upload-kyc", fileUploadService.getUploadMiddleware('kycImage'), async
             submittedAt: new Date(),
           };
           await vendor.save();
-          console.log(`✅ KYC saved for vendor: ${email}`);
+          console.log(`✅ KYC saved to vendor: ${email}`);
+          savedToDb = true;
         } else {
-          console.warn(`⚠️ Vendor not found with email: ${email}`);
+          console.warn(`⚠️ Vendor not found: ${email}`);
         }
       } else {
         console.warn(`⚠️ Unknown KYC role: ${role}`);
@@ -2657,10 +2667,11 @@ app.post("/upload-kyc", fileUploadService.getUploadMiddleware('kycImage'), async
       submittedAt: new Date(),
     };
 
-    // Send KYC data to frontend
+    // Send response
     res.json({
       message: "KYC submitted, verification within 48 hours",
       kycData,
+      savedToDb: savedToDb,
     });
   } catch (error) {
     console.error("❌ KYC upload error:", error);
