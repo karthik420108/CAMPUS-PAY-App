@@ -11,15 +11,33 @@ const fs = require("fs");
 const CONFIG = require('./config');
 const fileUploadService = require('./services/fileUpload');
 
+// ✅ Improved email configuration with connection pooling
 const transporter = nodemailer.createTransport({
-  secure : true,
-  host:'smtp.gmail.com',
-  port : 465,
-
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
     user: CONFIG.EMAIL.USER,
     pass: CONFIG.EMAIL.PASS,
   },
+  connectionTimeout: 10000,      // 10 seconds to establish connection
+  socketTimeout: 10000,           // 10 seconds for socket operations
+  pool: {
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 10
+  }
+});
+
+// Test email connection on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ Email transporter error:', error.message);
+    console.log('⚠️ Emails may not work. Check Gmail credentials in .env');
+  } else {
+    console.log('✅ Email service is ready');
+  }
 });
 
 const app = express();
@@ -924,9 +942,9 @@ app.post("/send-otp", async (req, res) => {
           subject: "Campus Pay OTP Verification - Student",
           html: `<h2>Your OTP for verification is ${studentOtp}</h2><p>Valid for 5 minutes</p>`,
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000)) // 5 second timeout
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 10s')), 10000)) // 10 second timeout
       ]).catch(err => {
-        console.log(`⚠️ Email send to student failed (non-blocking): ${Email}, Error: ${err.message}`);
+        console.error(`❌ Email failed to ${Email}: ${err.message}`);
       }),
       
       // Send OTP to parent (if student role, with timeout)
@@ -937,12 +955,12 @@ app.post("/send-otp", async (req, res) => {
           subject: "OTP Verification - Personal",
           html: `<h2>Your OTP is ${parentOtp}</h2><p>Valid for 5 minutes</p>`,
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000)) // 5 second timeout
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 10s')), 10000)) // 10 second timeout
       ]).catch(err => {
-        console.log(`⚠️ Email send to parent failed (non-blocking): ${PEmail}, Error: ${err.message}`);
+        console.error(`❌ Email failed to ${PEmail}: ${err.message}`);
       }) : Promise.resolve()
     ]).catch(err => {
-      console.log(`⚠️ Background email sending error (non-blocking): ${err.message}`);
+      console.error(`❌ Background email sending error: ${err.message}`);
     });
 
     // ✅ Return response immediately - don't wait for emails
@@ -1050,9 +1068,9 @@ app.post("/resend-otp", async (req, res) => {
         subject: "Campus Pay - OTP",
         html: `<h2>Your new OTP is ${otp}</h2><p>Valid for 5 minutes</p>`,
       }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000)) // 5 second timeout
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout - 10s')), 10000)) // 10 second timeout
     ]).catch(err => {
-      console.log(`⚠️ Email resend failed (non-blocking): ${email}, Error: ${err.message}`);
+      console.error(`❌ Email resend failed to ${email}: ${err.message}`);
     });
 
     // ✅ Return response immediately - don't wait for email
