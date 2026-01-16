@@ -205,9 +205,9 @@ const Vendorschema = new mongoose.Schema({
   vendorid: String,
   category: String,
   Email: String,
-  password: String,
+  password: {type : String, required : true},
   ImageUrl: String,
-  Mpin: String,
+  Mpin: {type : String, required : true},
   isSuspended: { type: Boolean, default: false },
   isFrozen: { type: Boolean, default: false },
   kyc: {
@@ -554,6 +554,7 @@ app.post("/register", async (req, res) => {
         vendorid: await generateUniqueVendorId(),
         Email: email,
         Password: password, 
+        Mpin: mpin,
         Wallet: 0,
         isFrozen: false,
         isSuspended: false,
@@ -620,9 +621,22 @@ app.post("/upload/subadmin", fileUploadService.getUploadMiddleware('profileImage
       return res.status(400).json({ error: "File not uploaded" });
     }
 
+    const { subadminId } = req.body;
     const fileUrl = await fileUploadService.processFileUpload(req, res);
 
+    console.log("SubAdmin ID:", subadminId);
     console.log("SubAdmin profile uploaded to:", fileUrl);
+
+    // ✅ Save to database
+    if (subadminId) {
+      const updated = await SubAdmin.findByIdAndUpdate(
+        subadminId,
+        { imageUrl: fileUrl },
+        { new: true }
+      );
+      console.log(`✅ SubAdmin profile updated: ${subadminId}`);
+    }
+
     res.json({ url: fileUrl });
   } catch (error) {
     console.error("SubAdmin upload error:", error);
@@ -2586,18 +2600,47 @@ app.post("/upload-kyc", fileUploadService.getUploadMiddleware('kycImage'), async
       return res.status(400).json({ error: "No file uploaded" });
     }
     
-    const { role } = req.body;
-    console.log("Role in KYC upload:", role);
+    const { role, email } = req.body;
+    console.log("KYC Upload - Role:", role, "Email:", email);
     
     const imageUrl = await fileUploadService.processFileUpload(req, res);
     
+    // ✅ Save KYC to database immediately
+    try {
+      if (role === "studentkyc") {
+        const user = await User.findOne({ collegeEmail: email });
+        if (user) {
+          user.kyc = {
+            imageUrl: imageUrl,
+            status: "pending",
+            submittedAt: new Date(),
+          };
+          await user.save();
+          console.log(`✅ KYC saved for student: ${email}`);
+        }
+      } else if (role === "vendorkyc") {
+        const vendor = await Vendor.findOne({ Email: email });
+        if (vendor) {
+          vendor.kyc = {
+            imageUrl: imageUrl,
+            status: "pending",
+            submittedAt: new Date(),
+          };
+          await vendor.save();
+          console.log(`✅ KYC saved for vendor: ${email}`);
+        }
+      }
+    } catch (dbErr) {
+      console.error("KYC database save error:", dbErr.message);
+    }
+
     const kycData = {
       imageUrl: imageUrl,
       status: "pending",
       submittedAt: new Date(),
     };
 
-    // Send KYC data directly to frontend
+    // Send KYC data to frontend
     res.json({
       message: "KYC submitted, verification within 48 hours",
       kycData,
