@@ -5,69 +5,23 @@ const cors = require("cors");
 const { v4: uuidv4 } = require("uuid");
 const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
 const { OAuth2Client } = require("google-auth-library");
 const { nanoid } = require("nanoid");
 const fs = require("fs");
 const CONFIG = require('./config');
 const fileUploadService = require('./services/fileUpload');
 
-// ✅ Improved email configuration with multi-port fallback for Render compatibility
-let transporter;
+// ✅ SendGrid email configuration (more reliable on Render than direct Gmail SMTP)
+sgMail.setApiKey(process.env.SENDGRID_API_KEY || "");
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "campuspay0@gmail.com";
 
-const createTransporter = () => {
-  // Try to create transporter with port 587 first (more compatible with Render)
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,  // TLS instead of SSL (works better on Render)
-    auth: {
-      user: CONFIG.EMAIL.USER,
-      pass: CONFIG.EMAIL.PASS,
-    },
-    connectionTimeout: 10000,      // 10 seconds to establish connection
-    socketTimeout: 10000,           // 10 seconds for socket operations
-    pool: {
-      maxConnections: 3,
-      maxMessages: 100,
-      rateDelta: 1000,
-      rateLimit: 10
-    }
-  });
-};
-
-transporter = createTransporter();
-
-// Test email connection on startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ Email transporter error:', error.message);
-    console.log('⚠️ Using fallback SMTP configuration...');
-    
-    // Try alternative configuration if primary fails
-    transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user: CONFIG.EMAIL.USER,
-        pass: CONFIG.EMAIL.PASS,
-      },
-      connectionTimeout: 15000,
-      socketTimeout: 15000,
-    });
-    
-    transporter.verify((error2, success2) => {
-      if (error2) {
-        console.error('❌ Email fallback also failed:', error2.message);
-        console.log('⚠️ Emails may not work. Continuing anyway - OTPs will be stored in memory.');
-      } else {
-        console.log('✅ Email service is ready (fallback configuration)');
-      }
-    });
-  } else {
-    console.log('✅ Email service is ready');
-  }
-});
+// Test SendGrid connection on startup
+if (process.env.SENDGRID_API_KEY) {
+  console.log('✅ SendGrid email service is configured and ready');
+} else {
+  console.error('❌ SENDGRID_API_KEY not set in environment variables');
+}
 
 const app = express();
 
@@ -919,12 +873,20 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000); // 6-digit
 }
 
-// ✅ Helper function to send email with retry logic and exponential backoff
+// ✅ Helper function to send email with SendGrid (with retry logic)
 const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`📧 Attempting to send email to ${mailOptions.to} (attempt ${attempt}/${maxRetries})...`);
-      const result = await transporter.sendMail(mailOptions);
+      console.log(`📧 Attempting to send email to ${mailOptions.to} via SendGrid (attempt ${attempt}/${maxRetries})...`);
+      
+      const msg = {
+        to: mailOptions.to,
+        from: SENDGRID_FROM_EMAIL,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+      };
+      
+      const result = await sgMail.send(msg);
       console.log(`✅ Email sent successfully to ${mailOptions.to}`);
       return result;
     } catch (error) {
