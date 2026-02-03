@@ -4,6 +4,7 @@ import axios from "axios";
 import { motion, AnimatePresence } from "motion/react";
 import Header3 from "./Header3";
 import { useAlert } from "../context/AlertContext";
+import BiometricModal from "./BiometricModal";
 import API_CONFIG from "../config/api";
 // Footer is removed from the layout to maintain the consistent centered-card look
 
@@ -29,6 +30,8 @@ function Upin({
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [registeredUserId, setRegisteredUserId] = useState(null);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("appTheme") || "light";
   });
@@ -130,28 +133,34 @@ function Upin({
           isFrozen,
         } = res.data;
 
-        // Fetch institute balance for initial state
-        const res2 = await axios.post(API_CONFIG.getUrl("/institute-balance"));
-
-        navigate("/login", {
-          state: {
-            username,
-            email: userEmail,
-            userId,
-            userCreatedAt,
-            isFrozen,
-            imageUrl: res.data.ImageUrl,
-            walletBalance: res.data.walletBalance,
-            instBalance: res2.data.balance,
-          },
-        });
+        // Store the user data and show biometric modal
+        setRegisteredUserId(userId);
+        sessionStorage.setItem('registrationData', JSON.stringify({
+          username,
+          email: userEmail,
+          userId,
+          userCreatedAt,
+          isFrozen,
+          imageUrl: res.data.ImageUrl,
+          walletBalance: res.data.walletBalance,
+          role: 'student'
+        }));
+        
+        // Show biometric modal instead of navigating immediately
+        setShowBiometricModal(true);
       } else if (role === "vendor") {
-        showAlert({
-          type: "success",
-          title: "Registration Successful",
-          message: "Registration Successful! Waiting for Admin Approval. You can login once approved."
-        });
-        navigate("/");
+        const { vendorId } = res.data;
+        
+        // Store the vendor ID and show biometric modal
+        setRegisteredUserId(vendorId);
+        sessionStorage.setItem('registrationData', JSON.stringify({
+          vendorId,
+          vendorName: res.data.vendorName,
+          role: 'vendor'
+        }));
+        
+        // Show biometric modal instead of navigating immediately
+        setShowBiometricModal(true);
       }
     } catch (err) {
       console.error(err);
@@ -159,6 +168,34 @@ function Upin({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBiometricComplete = () => {
+    const registrationData = JSON.parse(sessionStorage.getItem('registrationData') || '{}');
+    
+    if (registrationData.role === 'student') {
+      // Fetch institute balance for initial state
+      axios.post(API_CONFIG.getUrl("/institute-balance")).then((res2) => {
+        navigate("/login", {
+          state: {
+            ...registrationData,
+            instBalance: res2.data.balance,
+          },
+        });
+      }).catch(() => {
+        navigate("/login", { state: registrationData });
+      });
+    } else if (registrationData.role === 'vendor') {
+      showAlert({
+        type: "success",
+        title: "Registration Successful",
+        message: "Registration Successful! Waiting for Admin Approval. You can login once approved."
+      });
+      navigate("/");
+    }
+    
+    // Clear session storage
+    sessionStorage.removeItem('registrationData');
   };
 
   const handleInput = (e, idx, refArray) => {
@@ -595,6 +632,16 @@ function Upin({
           </motion.button>
         </motion.form>
       </motion.div>
+
+      {/* Biometric Registration Modal */}
+      <BiometricModal
+        isOpen={showBiometricModal}
+        onClose={handleBiometricComplete}
+        userId={registeredUserId}
+        userRole={role}
+        theme={theme}
+        onSuccess={handleBiometricComplete}
+      />
     </>
   );
 }

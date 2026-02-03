@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SubAdminStatusChecker from "./SubAdminStatusChecker.jsx";
 import Header from "./Header3";
 import API_CONFIG from "../config/api";
+import BiometricModal from "./BiometricModal";
 
 function SubAdminDashboard() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ function SubAdminDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [subAdminId] = useState(
     state?.subAdminId || localStorage.getItem("subAdminId")
   );
@@ -20,6 +22,7 @@ function SubAdminDashboard() {
     email: "",
     imageUrl: "",
   });
+  const [webauthnCredentials, setWebauthnCredentials] = useState([]);
   const firstLetter = profile.name ? profile.name.charAt(0).toUpperCase() : "";
   const [hasUnread, setHasUnread] = useState(false);
   
@@ -48,6 +51,7 @@ function SubAdminDashboard() {
       try {
         const res = await axios.get(API_CONFIG.getUrl(`/subadmin/${subAdminId}/profile`));
         setProfile(res.data);
+        setWebauthnCredentials(res.data.webauthnCredentials || []);
       } catch (err) {
         console.error("Failed to load subadmin profile", err);
       }
@@ -111,6 +115,14 @@ function SubAdminDashboard() {
 
   return (
     <SubAdminStatusChecker subAdminId={subAdminId}>
+      <BiometricModal
+        isOpen={showBiometricModal}
+        onClose={() => setShowBiometricModal(false)}
+        userId={subAdminId}
+        userRole="subadmin"
+        theme={theme}
+        onSuccess={() => window.location.reload()}
+      />
       <Header showBackButton={false} showThemeToggle={false}/>
       <motion.div
         style={{
@@ -208,6 +220,9 @@ function SubAdminDashboard() {
                         </button>
                         <button style={{ ...menuBtnStyle, color: textMain }} onMouseEnter={(e) => (e.target.style.background = isLight ? "#f3f4f6" : "#334155")} onMouseLeave={(e) => (e.target.style.background = "transparent")} onClick={() => navigate("/subadmin-edit", { state: { role: "SubAdmin", subAdminId } })}>
                           ✏️ Edit Profile
+                        </button>
+                        <button style={{ ...menuBtnStyle, color: textMain }} onMouseEnter={(e) => (e.target.style.background = isLight ? "#f3f4f6" : "#334155")} onMouseLeave={(e) => (e.target.style.background = "transparent")} onClick={() => { setShowBiometricModal(true); setShowProfileMenu(false); }}>
+                          🔒 Biometric {webauthnCredentials?.length > 0 ? '✓' : ''}
                         </button>
                         <div style={{ height: "1px", background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)", margin: "4px 0" }} />
                         <button style={{ ...menuBtnStyle, color: "#ef4444" }} onMouseEnter={(e) => (e.target.style.background = isLight ? "#fef2f2" : "rgba(239,68,68,0.1)")} onMouseLeave={(e) => (e.target.style.background = "transparent")} onClick={() => { localStorage.clear(); navigate("/"); }}>

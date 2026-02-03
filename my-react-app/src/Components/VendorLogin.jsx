@@ -7,6 +7,7 @@ import SuspensionBanner from "./SuspensionBanner";
 import { useVendorStatus } from "../hooks/useVendorStatus";
 import Header from "./Header3";
 import API_CONFIG from "../config/api";
+import BiometricModal from "./BiometricModal";
 
 function VendorLogin() {
   const { state } = useLocation();
@@ -18,6 +19,8 @@ function VendorLogin() {
   const [balance, setBalance] = useState(0);
   const [imageUrl, setImageUrl] = useState("");
   const [showProfileOption, setShowProfileOption] = useState(false);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [webauthnCredentials, setWebauthnCredentials] = useState([]);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("appTheme") || "light";
   });
@@ -91,6 +94,7 @@ function VendorLogin() {
         setBalance(res.data.Wallet);
         setImageUrl(res.data.ImageUrl);
         setId(res.data.vendorid);
+        setWebauthnCredentials(res.data.webauthnCredentials || []);
         if (res.data.isSuspended || res.data.isFrozen) {
           setShowProfileOption(false);
         }
@@ -195,6 +199,14 @@ function VendorLogin() {
 
   return (
     <>
+      <BiometricModal
+        isOpen={showBiometricModal}
+        onClose={() => setShowBiometricModal(false)}
+        userId={vendorId}
+        userRole="vendor"
+        theme={theme}
+        onSuccess={() => window.location.reload()}
+      />
       <Header1 userId={vendorId} role="vendor" isFrozen={isFrozen} />
       <Header theme={theme} setTheme={setTheme} showBackButton={false} />
       <SuspensionBanner show={showSuspensionBanner} />
@@ -573,6 +585,26 @@ function VendorLogin() {
                     >
                       🔐 Change MPIN
                     </button>
+                    <button
+                      onClick={() => {
+                        setShowBiometricModal(true);
+                        setShowProfileOption(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: "transparent",
+                        color: textMain,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      🔒 Biometric {webauthnCredentials?.length > 0 ? '✓' : ''}
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -868,6 +900,26 @@ function VendorLogin() {
                       }}
                     >
                       🔐 Change MPIN
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowBiometricModal(true);
+                        setShowProfileOption(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: "transparent",
+                        color: textMain,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      🔒 Biometric {webauthnCredentials?.length > 0 ? '✓' : ''}
                     </button>
                   </motion.div>
                 )}

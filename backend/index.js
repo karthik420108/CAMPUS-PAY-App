@@ -11,6 +11,23 @@ const { nanoid } = require("nanoid");
 const fs = require("fs");
 const CONFIG = require('./config');
 const fileUploadService = require('./services/fileUpload');
+const { Fido2Lib } = require('fido2-lib');
+
+// Helper: base64url encode/decode without external dependency
+const base64url = {
+  toBase64Url: (buffer) => {
+    return Buffer.from(buffer)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  },
+  fromBase64Url: (base64urlStr) => {
+    base64urlStr = base64urlStr.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64urlStr.length % 4) base64urlStr += '=';
+    return Buffer.from(base64urlStr, 'base64');
+  },
+};
 
 // ✅ SendGrid email configuration (more reliable on Render than direct Gmail SMTP)
 sgMail.setApiKey(process.env.SENDGRID_API_KEY || "");
@@ -158,6 +175,16 @@ const AdminSchema = new mongoose.Schema(
         ref: "Complaint",
       },
     ],
+    webauthnCredentials: [
+      {
+        credId: String,
+        publicKey: String,
+        signCount: { type: Number, default: 0 },
+        transports: [String],
+      },
+    ],
+    webauthnChallenge: String,
+    webauthnAssertionChallenge: String,
   }
 )
 
@@ -242,6 +269,18 @@ const Vendorschema = new mongoose.Schema({
     performedAt: { type: Date, default: Date.now },
     description: { type: String, required: true }
   }],
+    // WebAuthn credentials registered for this user (Passkeys / platform authenticators)
+    webauthnCredentials: [
+      {
+        credId: String, // base64url
+        publicKey: String, // base64 (COSE/PK format)
+        signCount: { type: Number, default: 0 },
+        transports: [String],
+      },
+    ],
+    // Temporary challenges (short-lived) used during register/auth flows
+    webauthnChallenge: String,
+    webauthnAssertionChallenge: String,
 });
 
 const notificationSchema = new mongoose.Schema({
@@ -349,6 +388,16 @@ const SubAdminSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     read: { type: Boolean, default: false },
   }],
+  webauthnCredentials: [
+    {
+      credId: String,
+      publicKey: String,
+      signCount: { type: Number, default: 0 },
+      transports: [String],
+    },
+  ],
+  webauthnChallenge: String,
+  webauthnAssertionChallenge: String,
 });
 const SubAdmin = mongoose.model("SubAdmin", SubAdminSchema);
 
@@ -390,6 +439,16 @@ const StudentSchema = new mongoose.Schema(
      performedAt: { type: Date, default: Date.now },
      description: { type: String, required: true }
    }],
+   webauthnCredentials: [
+     {
+       credId: String, // base64url
+       publicKey: String, // base64
+       signCount: { type: Number, default: 0 },
+       transports: [String],
+     },
+   ],
+   webauthnChallenge: String,
+   webauthnAssertionChallenge: String,
   },
   {
     timestamps: true, // ⭐ THIS CREATES createdAt & updatedAt
@@ -571,7 +630,8 @@ app.post("/register", async (req, res) => {
 
       return res.status(201).json({
         message: "Vendor registered successfully",
-        vendorId: newVendor.vendorid,
+        vendorId: newVendor._id,
+        vendorid: newVendor.vendorid,
         vendorName: newVendor.vendorName,
       });
     }
@@ -752,6 +812,315 @@ app.post("/login", async (req, res) => {
 
   // ❌ NO USER FOUND
   return res.status(404).json({ error: "Email not registered" });
+});
+
+// ===== WebAuthn (Passkeys / Platform Authenticator) =====
+// 1) Registration options
+app.post('/webauthn/register/options', async (req, res) => {
+  try {
+    const { userId, userRole = 'student' } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    console.log('[WebAuthn] Register options: userId=', userId, 'userRole=', userRole);
+    
+    // Find user based on role
+    let user;
+    if (userRole === 'vendor') {
+      user = await Vendor.findById(userId);
+    } else if (userRole === 'subadmin') {
+      user = await SubAdmin.findById(userId);
+    } else if (userRole === 'admin') {
+      user = await Admin.findById(userId);
+    } else {
+      user = await User.findById(userId);
+    }
+    
+    if (!user) {
+      console.error('[WebAuthn] User not found for registration:', userId, 'role:', userRole);
+      return res.json({ options: null, hasCredentials: false });
+    }
+    console.log('[WebAuthn] User found for registration:', user._id);
+
+    const rpId = req.hostname;
+    console.log('[WebAuthn] Creating Fido2Lib with rpId:', rpId);
+    
+    const f2 = new Fido2Lib({
+      timeout: 60000,
+      rpId,
+      rpName: 'Campus Pay',
+      challengeSize: 64,
+      attestation: 'none',
+      cryptoParams: [-7, -257],
+    });
+
+    console.log('[WebAuthn] Generating attestation options...');
+    const registrationOptions = await f2.attestationOptions();
+    console.log('[WebAuthn] Attestation options generated, challenge length:', registrationOptions.challenge?.length);
+    
+    // Attach user info
+    registrationOptions.user = {
+      id: base64url.toBase64Url(user._id.toString()),
+      name: user.collegeEmail || user.firstName || `user-${user._id}`,
+      displayName: user.firstName || user.collegeEmail || `User ${user._id}`,
+    };
+    registrationOptions.authenticatorSelection = {
+      authenticatorAttachment: 'platform',
+      userVerification: 'preferred',
+    };
+
+    // Store challenge as Buffer for verification later, but send as base64url to client
+    const challengeBuffer = Buffer.from(registrationOptions.challenge);
+    user.webauthnChallenge = base64url.toBase64Url(challengeBuffer);
+    console.log('[WebAuthn] Attempting to save user...');
+    const savedUser = await user.save();
+    
+    // Convert challenge to base64url for client
+    registrationOptions.challenge = base64url.toBase64Url(challengeBuffer);
+    
+    console.log('[WebAuthn] Challenge saved for userId:', savedUser._id, 'Challenge length:', registrationOptions.challenge.length);
+
+    return res.json({ options: registrationOptions });
+  } catch (err) {
+    console.error('[WebAuthn] Register options error:', {
+      message: err.message,
+      stack: err.stack,
+      code: err.code,
+    });
+    console.error('[WebAuthn] Full error:', err);
+    return res.status(500).json({ 
+      error: 'Failed to create registration options',
+      details: err.message 
+    });
+  }
+});
+
+// 2) Registration verification
+app.post('/webauthn/register/verify', async (req, res) => {
+  try {
+    const { userId, userRole = 'student', attestation } = req.body;
+    if (!userId || !attestation) return res.status(400).json({ error: 'Missing params' });
+    console.log('[WebAuthn] Register verify: userId=', userId, 'userRole=', userRole, 'attestation.id=', attestation.id);
+    
+    // Find user based on role
+    let user;
+    if (userRole === 'vendor') {
+      user = await Vendor.findById(userId);
+    } else if (userRole === 'subadmin') {
+      user = await SubAdmin.findById(userId);
+    } else if (userRole === 'admin') {
+      user = await Admin.findById(userId);
+    } else {
+      user = await User.findById(userId);
+    }
+    
+    if (!user) {
+      console.error('[WebAuthn] User not found:', userId, 'role:', userRole);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    console.log('[WebAuthn] User found:', user._id, 'Challenge:', user.webauthnChallenge ? 'exists' : 'MISSING');
+    if (!user.webauthnChallenge) {
+      console.error('[WebAuthn] Challenge missing for user:', userId);
+      return res.status(400).json({ error: 'No challenge found for user. Try registering again.' });
+    }
+
+    const rpId = req.hostname;
+    // Get origin from request header - this is critical for challenge verification
+    let origin = req.get('origin');
+    if (!origin) {
+      const protocol = req.protocol || 'http';
+      const host = req.get('host') || req.hostname;
+      origin = `${protocol}://${host}`;
+    }
+    console.log('[WebAuthn] Using origin:', origin, 'rpId:', rpId);
+    
+    const f2 = new Fido2Lib({
+      timeout: 60000,
+      rpId: rpId,
+      rpName: 'Campus Pay',
+      challengeSize: 64,
+      attestation: 'none',
+      cryptoParams: [-7, -257],
+    });
+
+    // Prepare response in expected format: convert base64url -> Buffer
+    // Note: id is a base64url string that needs to be converted to Buffer
+    const clientAttestationResponse = {
+      id: base64url.fromBase64Url(attestation.id),  // Convert string to Buffer
+      rawId: base64url.fromBase64Url(attestation.rawId),  // Convert base64url to Buffer
+      response: {
+        clientDataJSON: base64url.fromBase64Url(attestation.response.clientDataJSON),
+        attestationObject: base64url.fromBase64Url(attestation.response.attestationObject),
+      },
+      type: attestation.type || 'public-key',
+    };
+
+    // Convert challenge from base64url string to Buffer for verification
+    const challengeBuffer = user.webauthnChallenge ? 
+      base64url.fromBase64Url(user.webauthnChallenge) : 
+      Buffer.from('');
+    
+    const expected = {
+      challenge: challengeBuffer,
+      origin,
+      factor: 'either',
+      rpId,
+    };
+
+    console.log('[WebAuthn] Verification params:', {
+      rpId,
+      origin,
+      challengeLength: user.webauthnChallenge?.length,
+      clientDataJSONLength: clientAttestationResponse.response.clientDataJSON?.length,
+      attestationObjectLength: clientAttestationResponse.response.attestationObject?.length,
+      attestationType: clientAttestationResponse.type,
+      credentialId: clientAttestationResponse.id,
+    });
+
+    const regResult = await f2.attestationResult(clientAttestationResponse, expected);
+
+    // regResult contains authnrData with credentialPublicKey, credentialId, counter
+    const credId = base64url.toBase64Url(regResult.authnrData.get('credId'));
+    const publicKey = regResult.authnrData.get('credentialPublicKeyPem') || regResult.authnrData.get('credentialPublicKey');
+    const signCount = regResult.authnrData.get('counter') || 0;
+
+    // Store credential
+    user.webauthnCredentials = user.webauthnCredentials || [];
+    user.webauthnCredentials.push({
+      credId,
+      publicKey: typeof publicKey === 'string' ? publicKey : publicKey.toString('base64'),
+      signCount,
+      transports: attestation.transports || [],
+    });
+
+    // Clear stored challenge
+    user.webauthnChallenge = undefined;
+    const savedUser = await user.save();
+    console.log('[WebAuthn] Credential stored for userId:', savedUser._id, 'Total credentials:', savedUser.webauthnCredentials.length);
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[WebAuthn] Register verify error:', {
+      message: err.message,
+      stack: err.stack,
+      code: err.code,
+      name: err.name,
+    });
+    console.error('[WebAuthn] Full error object:', err);
+    return res.status(400).json({ 
+      error: 'Registration verification failed',
+      details: err.message
+    });
+  }
+});
+
+// 3) Authentication (assertion) options
+app.post('/webauthn/auth/options', async (req, res) => {
+  try {
+    const { email, userId } = req.body; // allow either
+    let user = null;
+    if (userId) user = await User.findById(userId);
+    else if (email) user = await User.findOne({ collegeEmail: email }) || await Vendor.findOne({ Email: email }) || await SubAdmin.findOne({ email }) || await Admin.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const rpId = req.hostname;
+    const f2 = new Fido2Lib({ rpId, rpName: 'Campus Pay' });
+    const assertionOptions = await f2.assertionOptions();
+
+    // allowCredentials from stored credentials
+    const allowCredentials = (user.webauthnCredentials || []).map((c) => ({ type: 'public-key', id: c.credId }));
+    assertionOptions.challenge = base64url.toBase64Url(Buffer.from(assertionOptions.challenge));
+    assertionOptions.allowCredentials = allowCredentials;
+
+    // Persist assertion challenge
+    user.webauthnAssertionChallenge = assertionOptions.challenge;
+    await user.save();
+
+    return res.json({ options: assertionOptions, hasCredentials: allowCredentials.length > 0 });
+  } catch (err) {
+    console.error('webauthn auth options error', err);
+    return res.status(500).json({ error: 'Failed to create assertion options' });
+  }
+});
+
+// 4) Authentication verification
+app.post('/webauthn/auth/verify', async (req, res) => {
+  try {
+    const { email, userId, assertion } = req.body; // assertion: id, rawId, response.{authenticatorData, clientDataJSON, signature, userHandle}
+    if (!assertion) return res.status(400).json({ error: 'Missing assertion' });
+    let user = null;
+    if (userId) user = await User.findById(userId);
+    else if (email) user = await User.findOne({ collegeEmail: email }) || await Vendor.findOne({ Email: email }) || await SubAdmin.findOne({ email }) || await Admin.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.webauthnAssertionChallenge) return res.status(400).json({ error: 'No assertion challenge for user' });
+
+    const rpId = req.hostname;
+    const origin = req.get('origin') || CONFIG.CORS.FRONTEND_URL || `http://${req.hostname}`;
+    const f2 = new Fido2Lib({ rpId, rpName: 'Campus Pay' });
+
+    const clientAssertionResponse = {
+      id: assertion.id,
+      rawId: base64url.fromBase64Url(assertion.rawId),
+      response: {
+        clientDataJSON: base64url.fromBase64Url(assertion.response.clientDataJSON),
+        authenticatorData: base64url.fromBase64Url(assertion.response.authenticatorData),
+        signature: base64url.fromBase64Url(assertion.response.signature),
+        userHandle: assertion.response.userHandle ? base64url.fromBase64Url(assertion.response.userHandle) : null,
+      },
+      type: assertion.type || 'public-key',
+    };
+
+    const expected = {
+      challenge: user.webauthnAssertionChallenge,
+      origin,
+      factor: 'either',
+      rpId,
+      publicKey: null, // will be provided per-credential below
+      prevCounter: 0,
+    };
+
+    // Find credential record
+    const credRecord = (user.webauthnCredentials || []).find((c) => c.credId === assertion.id || c.credId === base64url.toBase64Url(base64url.fromBase64Url(assertion.rawId)));
+    if (!credRecord) return res.status(404).json({ error: 'Credential not registered' });
+
+    expected.publicKey = base64url.fromBase64Url(credRecord.publicKey).toString('base64');
+    expected.prevCounter = credRecord.signCount || 0;
+
+    const authnResult = await f2.assertionResult(clientAssertionResponse, expected);
+
+    // Update stored counter to prevent replay
+    credRecord.signCount = authnResult.authnrData.get('counter') || credRecord.signCount + 1;
+    user.webauthnAssertionChallenge = undefined;
+    await user.save();
+
+    // At this point assertion is valid: issue normal login response similar to /login
+    // Build response depending on role (student/vendor/admin/subadmin)
+    if (user.collegeEmail) {
+      // Student
+      return res.json({
+        role: 'student',
+        username: user.firstName,
+        userId: user._id,
+        isFrozen: user.isFrozen,
+        isSuspended: user.isSuspended,
+        imageUrl: user.ImageUrl,
+        walletBalance: user.walletBalance,
+      });
+    }
+
+    if (user.Email) {
+      // Vendor
+      return res.json({ role: 'vendor', vendorId: user._id, vendorName: user.vendorName, imageUrl: user.ImageUrl, Wallet: user.Wallet });
+    }
+
+    if (user.email && user.name) {
+      // SubAdmin or Admin heuristics
+      if (user.password && user.name) return res.json({ role: 'SubAdmin', SubAdminName: user.name, subAdminId: user._id, imageUrl: user.imageUrl });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('webauthn auth verify error', err);
+    return res.status(400).json({ error: 'Authentication verification failed' });
+  }
 });
 
 // GET /redeem/history/:userId

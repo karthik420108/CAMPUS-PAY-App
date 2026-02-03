@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Footer from "./Footer.jsx";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { isWebAuthnSupported, authenticateWithEmail } from "../utils/webauthn";
 import { GoogleLogin } from "@react-oauth/google";
 import { motion, AnimatePresence } from "motion/react";
 import bgVideo from "./Campus_Pay_Seamless_Student_Transactions.mp4";
@@ -94,6 +95,64 @@ function Start() {
           setError("Account suspended");
         } else setError("Login failed");
       } else setError("Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const emailField = document.querySelector('input[name="email"]');
+      const email = emailField?.value || '';
+      if (!email || !email.trim()) {
+        setError('Enter your email to use biometric login');
+        setLoading(false);
+        return;
+      }
+      console.log('[Login] Starting biometric auth for:', email);
+      const res = await authenticateWithEmail(email);
+      console.log('[Login] Biometric auth response:', res);
+      
+      if (res.error) {
+        setError(res.error || 'Biometric login failed');
+        setLoading(false);
+        return;
+      }
+
+      // successful biometric login: reuse same navigation logic as password login
+      if (res.role === 'vendor') {
+        navigate('/vlogin', { state: { vendorId: res.vendorId, role: 'vendor' } });
+        return;
+      }
+      if (res.role === 'admin') {
+        navigate('/admin', { state: { role: 'admin' } });
+        return;
+      }
+      if (res.role === 'SubAdmin') {
+        navigate('/subadmin', { state: { role: 'SubAdmin', SubAdminName: res.SubAdminName, subAdminId: res.subAdminId, imageUrl: res.imageUrl } });
+        return;
+      }
+
+      // student
+      const res2 = await axios.post(API_CONFIG.getUrl('/institute-balance'));
+      navigate('/login', {
+        state: {
+          username: res.username,
+          email: email,
+          userId: res.userId,
+          userCreatedAt: res.userCreatedAt,
+          isFrozen: res.isFrozen,
+          imageUrl: res.imageUrl,
+          walletBalance: res.walletBalance,
+          instBalance: res2.data.balance,
+          role: 'student',
+        },
+      });
+    } catch (err) {
+      console.error('[Login] Biometric error:', err);
+      setError(err.message || 'Biometric login failed');
     } finally {
       setLoading(false);
     }
@@ -540,6 +599,27 @@ function Start() {
             >
               {loading ? "Logging in..." : "Login"}
             </motion.button>
+
+            {isWebAuthnSupported() && (
+              <motion.button
+                type="button"
+                onClick={handleBiometricLogin}
+                disabled={loading}
+                whileHover={!loading ? { scale: 1.02 } : {}}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 14,
+                  border: '1px solid rgba(59,130,246,0.2)',
+                  background: 'transparent',
+                  color: '#0f172a',
+                  fontWeight: 600,
+                  cursor: loading ? 'wait' : 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                Login with Biometrics
+              </motion.button>
+            )}
 
             <div
               style={{

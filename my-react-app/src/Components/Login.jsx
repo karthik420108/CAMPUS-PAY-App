@@ -4,6 +4,7 @@ import "./Login.css";
 import Header1 from "./Header1";
 import { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
+import { registerCredential, isWebAuthnSupported } from "../utils/webauthn";
 import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import ScanPay from "./ScanPay";
@@ -59,6 +60,9 @@ function Login() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [webauthnCredentials, setWebauthnCredentials] = useState([]);
 
   // Theme with persistence - sync with global theme
   const [theme, setTheme] = useState(() => {
@@ -123,6 +127,7 @@ function Login() {
           setImageUrl(userData.ImageUrl || imageUrl);
           setUsername(userData.firstName || username);
           setWallBalance(userData.walletBalance || walletBalance);
+          setWebauthnCredentials(userData.webauthnCredentials || []);
           
           // Fetch institute balance
           axios
@@ -143,6 +148,15 @@ function Login() {
               navigate("/", { replace: true });
             }, 8000);
           }
+          // Prompt to enable biometric registration after successful password login
+          try {
+            const alreadyAsked = localStorage.getItem('webauthn_prompt_asked');
+            if (!alreadyAsked && isWebAuthnSupported() && (!userData.webauthnCredentials || userData.webauthnCredentials.length === 0)) {
+              setShowBiometricPrompt(true);
+            }
+          } catch (e) {
+            console.error(e);
+          }
         })
         .catch(console.error);
     };
@@ -158,6 +172,31 @@ function Login() {
     // Only depend on userId and navigate to avoid infinite loop
     // imageUrl, username, walletBalance are set inside this effect
   }, [userId, imageUrl , username , walletBalance ,  navigate]);
+
+  const enableBiometrics = async () => {
+    if (!userId) {
+      alert('User ID not available');
+      return;
+    }
+    console.log('[Login] Enable biometrics for userId:', userId);
+    setBiometricLoading(true);
+    try {
+      const res = await registerCredential(userId);
+      console.log('[Login] Registration response:', res);
+      if (res && res.success) {
+        setShowBiometricPrompt(false);
+        localStorage.setItem('webauthn_prompt_asked', '1');
+        alert('Biometric login enabled! Use it on next login.');
+        return;
+      }
+      alert(res.error || 'Biometric registration failed');
+    } catch (err) {
+      console.error('[Login] Biometric registration error:', err);
+      alert(err.message || 'Biometric registration failed');
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -321,6 +360,33 @@ function Login() {
     <>
       <Header1 role="student" userId={userId} isFrozen={isFrozen} />
       <Header theme={theme} setTheme={setTheme} showBackButton={false} />
+
+      {showBiometricPrompt && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            margin: 12,
+            padding: 12,
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            background: isLight ? '#ecfeff' : '#022c43',
+            border: '1px solid rgba(59,130,246,0.08)'
+          }}
+        >
+          <div>
+            <strong>Enable biometric login?</strong>
+            <div style={{ fontSize: 13, color: textSub }}>Use fingerprint or face unlock for faster login next time.</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => { setShowBiometricPrompt(false); localStorage.setItem('webauthn_prompt_asked','1'); }} style={{ padding: '8px 12px', borderRadius: 8 }}>No</button>
+            <button onClick={enableBiometrics} disabled={biometricLoading} style={{ padding: '8px 12px', borderRadius: 8, background: '#0ea5e9', color: 'white', border: 'none' }}>{biometricLoading ? 'Enabling...' : 'Yes, enable'}</button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Suspension Banner */}
       {suspended && (
@@ -1447,6 +1513,8 @@ function Login() {
           onClose={() => setShowSettingsPopup(false)}
           theme={theme}
           onNavigate={handleSettingsNavigation}
+          userId={userId}
+          webauthnCredentials={webauthnCredentials}
         />
 
 
