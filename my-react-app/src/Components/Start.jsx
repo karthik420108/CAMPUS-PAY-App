@@ -4,26 +4,18 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { isWebAuthnSupported, authenticateWithEmail } from "../utils/webauthn";
 import { GoogleLogin } from "@react-oauth/google";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import bgVideo from "./Campus_Pay_Seamless_Student_Transactions.mp4";
 import Header3 from "./Header3.jsx";
 import { useAlert } from "../context/AlertContext";
 import API_CONFIG from "../config/api";
-import logoq from "./logoq.png";
 
 function Start() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState("light");
-  const [showSplash, setShowSplash] = useState(true);
   const { showAlert } = useAlert();
-
-  // hide splash after 2s
-  useEffect(() => {
-    const t = setTimeout(() => setShowSplash(false), 2000);
-    return () => clearTimeout(t);
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -269,127 +261,8 @@ function Start() {
           "0 12px 30px rgba(15,23,42,0.75), inset 0 0 0 1px rgba(15,23,42,0.9)",
       };
 
-  // inline keyframes via <style> tag
-  const keyframeCss = `
-    @keyframes logoPop {
-      0%   { transform: scale(0.4) translateY(40px); opacity: 0; }
-      25%  { transform: scale(1.1) translateY(0);   opacity: 1; }
-      45%  { transform: scale(1)   translateY(0); }
-      60%  { transform: scale(0.96) translateY(4px); }
-      80%  { transform: scale(1.02) translateY(0); }
-      100% { transform: scale(1)   translateY(0); }
-    }
-    @keyframes glowPop {
-      0%   { opacity: 0;   transform: scale(0.7); }
-      40%  { opacity: 0.9; transform: scale(1); }
-      100% { opacity: 0.2; transform: scale(1.05); }
-    }
-    @keyframes textFade {
-      0%   { opacity: 0; transform: translateY(12px); }
-      35%  { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0.95; }
-    }
-  `;
-
   return (
     <>
-      <style>{keyframeCss}</style>
-
-      {/* Splash overlay */}
-      <AnimatePresence>
-        {showSplash && (
-          <motion.div
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background:
-                "radial-gradient(circle at top, #1e3a8a, #020617 70%)",
-            }}
-          >
-            <div
-              style={{
-                position: "relative",
-                width: 220,
-                height: 220,
-                borderRadius: 32,
-                // lightest blue card background
-                background:
-                  "radial-gradient(circle at 20% 0%, #e0f2fe, #bfdbfe)",
-                boxShadow: "0 20px 45px rgba(15, 23, 42, 0.35)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "visible",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  width: 180,
-                  height: 180,
-                  borderRadius: 999,
-                  background:
-                    "radial-gradient(circle, rgba(96,165,250,0.5), transparent)",
-                  filter: "blur(8px)",
-                  opacity: 0,
-                  animation: "glowPop 2s ease-out forwards",
-                }}
-              />
-              <div
-                style={{
-                  position: "relative",
-                  width: 140,
-                  height: 140,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transformOrigin: "center",
-                  animation: "logoPop 2s ease-out forwards",
-                  animationDelay: "0.25s",
-                }}
-              >
-                <img
-                  src={logoq}
-                  alt="Campus Pay"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain",
-                  }}
-                />
-              </div>
-              <div
-                style={{
-                  marginTop: 10,
-                  width: "100%",
-                  textAlign: "center",
-                  fontFamily:
-                    'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  fontSize: 16,
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  color: "#0f172a",
-                  opacity: 0,
-                  animation: "textFade 1.8s ease-out forwards",
-                  animationDelay: "0.05s",
-                }}
-              >
-                Campus Pay
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Actual app */}
       <div style={pageStyle}>
         <video
