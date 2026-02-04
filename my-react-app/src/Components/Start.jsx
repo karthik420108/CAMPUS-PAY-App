@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { isWebAuthnSupported, authenticateWithEmail } from "../utils/webauthn";
 import { GoogleLogin } from "@react-oauth/google";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import bgVideo from "./Campus_Pay_Seamless_Student_Transactions.mp4";
 import Header3 from "./Header3.jsx";
 import { useAlert } from "../context/AlertContext";
