@@ -39,6 +39,26 @@ const resolvePublicKey = (storedKey) => {
     return storedKey;
   }
 };
+const getOriginFromRequest = (req) => {
+  const originHeader = req.get('origin') || CONFIG.CORS.FRONTEND_URL;
+  if (!originHeader) {
+    const protocol = req.protocol || 'http';
+    const host = req.get('host') || req.hostname;
+    return `${protocol}://${host}`;
+  }
+  try {
+    return new URL(originHeader).origin;
+  } catch (err) {
+    return originHeader;
+  }
+};
+const getRpIdFromOrigin = (origin, req) => {
+  try {
+    return new URL(origin).hostname;
+  } catch (err) {
+    return req.hostname;
+  }
+};
 
 // ✅ SendGrid email configuration (more reliable on Render than direct Gmail SMTP)
 sgMail.setApiKey(process.env.SENDGRID_API_KEY || "");
@@ -851,8 +871,9 @@ app.post('/webauthn/register/options', async (req, res) => {
     }
     console.log('[WebAuthn] User found for registration:', user._id);
 
-    const rpId = req.hostname;
-    console.log('[WebAuthn] Creating Fido2Lib with rpId:', rpId);
+    const origin = getOriginFromRequest(req);
+    const rpId = getRpIdFromOrigin(origin, req);
+    console.log('[WebAuthn] Creating Fido2Lib with rpId:', rpId, 'origin:', origin);
     
     const f2 = new Fido2Lib({
       timeout: 60000,
@@ -868,6 +889,7 @@ app.post('/webauthn/register/options', async (req, res) => {
     console.log('[WebAuthn] Attestation options generated, challenge length:', registrationOptions.challenge?.length);
     
     // Attach user info
+    registrationOptions.rp = { id: rpId, name: 'Campus Pay' };
     registrationOptions.user = {
       id: base64url.toBase64Url(user._id.toString()),
       name: user.collegeEmail || user.firstName || `user-${user._id}`,
@@ -933,14 +955,8 @@ app.post('/webauthn/register/verify', async (req, res) => {
       return res.status(400).json({ error: 'No challenge found for user. Try registering again.' });
     }
 
-    const rpId = req.hostname;
-    // Get origin from request header - this is critical for challenge verification
-    let origin = req.get('origin');
-    if (!origin) {
-      const protocol = req.protocol || 'http';
-      const host = req.get('host') || req.hostname;
-      origin = `${protocol}://${host}`;
-    }
+    const origin = getOriginFromRequest(req);
+    const rpId = getRpIdFromOrigin(origin, req);
     console.log('[WebAuthn] Using origin:', origin, 'rpId:', rpId);
     
     const f2 = new Fido2Lib({
@@ -1035,7 +1051,8 @@ app.post('/webauthn/auth/options', async (req, res) => {
     else if (email) user = await User.findOne({ collegeEmail: email }) || await Vendor.findOne({ Email: email }) || await SubAdmin.findOne({ email }) || await Admin.findOne({ email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const rpId = req.hostname;
+    const origin = getOriginFromRequest(req);
+    const rpId = getRpIdFromOrigin(origin, req);
     const f2 = new Fido2Lib({ rpId, rpName: 'Campus Pay' });
     const assertionOptions = await f2.assertionOptions();
 
@@ -1066,8 +1083,8 @@ app.post('/webauthn/auth/verify', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (!user.webauthnAssertionChallenge) return res.status(400).json({ error: 'No assertion challenge for user' });
 
-    const rpId = req.hostname;
-    const origin = req.get('origin') || CONFIG.CORS.FRONTEND_URL || `http://${req.hostname}`;
+    const origin = getOriginFromRequest(req);
+    const rpId = getRpIdFromOrigin(origin, req);
     const f2 = new Fido2Lib({ rpId, rpName: 'Campus Pay' });
 
     const idBuf = base64url.fromBase64Url(assertion.id);
