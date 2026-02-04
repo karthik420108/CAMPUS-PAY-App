@@ -28,6 +28,17 @@ const base64url = {
     return Buffer.from(base64urlStr, 'base64');
   },
 };
+const toArrayBuffer = (buf) =>
+  buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+const resolvePublicKey = (storedKey) => {
+  if (!storedKey) return null;
+  if (typeof storedKey === 'string' && storedKey.includes('BEGIN')) return storedKey;
+  try {
+    return Buffer.from(storedKey, 'base64');
+  } catch (err) {
+    return storedKey;
+  }
+};
 
 // ✅ SendGrid email configuration (more reliable on Render than direct Gmail SMTP)
 sgMail.setApiKey(process.env.SENDGRID_API_KEY || "");
@@ -943,12 +954,15 @@ app.post('/webauthn/register/verify', async (req, res) => {
 
     // Prepare response in expected format: convert base64url -> Buffer
     // Note: id is a base64url string that needs to be converted to Buffer
+    const rawIdBuf = base64url.fromBase64Url(attestation.rawId);
+    const idBuf = base64url.fromBase64Url(attestation.id);
+
     const clientAttestationResponse = {
-      id: base64url.fromBase64Url(attestation.id),  // Convert string to Buffer
-      rawId: base64url.fromBase64Url(attestation.rawId),  // Convert base64url to Buffer
+      id: toArrayBuffer(idBuf),
+      rawId: toArrayBuffer(rawIdBuf),
       response: {
-        clientDataJSON: base64url.fromBase64Url(attestation.response.clientDataJSON),
-        attestationObject: base64url.fromBase64Url(attestation.response.attestationObject),
+        clientDataJSON: toArrayBuffer(base64url.fromBase64Url(attestation.response.clientDataJSON)),
+        attestationObject: toArrayBuffer(base64url.fromBase64Url(attestation.response.attestationObject)),
       },
       type: attestation.type || 'public-key',
     };
@@ -1056,32 +1070,40 @@ app.post('/webauthn/auth/verify', async (req, res) => {
     const origin = req.get('origin') || CONFIG.CORS.FRONTEND_URL || `http://${req.hostname}`;
     const f2 = new Fido2Lib({ rpId, rpName: 'Campus Pay' });
 
+    const idBuf = base64url.fromBase64Url(assertion.id);
+    const rawIdBuf = base64url.fromBase64Url(assertion.rawId);
+
     const clientAssertionResponse = {
-      id: assertion.id,
-      rawId: base64url.fromBase64Url(assertion.rawId),
+      id: toArrayBuffer(idBuf),
+      rawId: toArrayBuffer(rawIdBuf),
       response: {
-        clientDataJSON: base64url.fromBase64Url(assertion.response.clientDataJSON),
-        authenticatorData: base64url.fromBase64Url(assertion.response.authenticatorData),
-        signature: base64url.fromBase64Url(assertion.response.signature),
-        userHandle: assertion.response.userHandle ? base64url.fromBase64Url(assertion.response.userHandle) : null,
+        clientDataJSON: toArrayBuffer(base64url.fromBase64Url(assertion.response.clientDataJSON)),
+        authenticatorData: toArrayBuffer(base64url.fromBase64Url(assertion.response.authenticatorData)),
+        signature: toArrayBuffer(base64url.fromBase64Url(assertion.response.signature)),
+        userHandle: assertion.response.userHandle
+          ? toArrayBuffer(base64url.fromBase64Url(assertion.response.userHandle))
+          : null,
       },
       type: assertion.type || 'public-key',
     };
 
     const expected = {
-      challenge: user.webauthnAssertionChallenge,
+      challenge: base64url.fromBase64Url(user.webauthnAssertionChallenge),
       origin,
       factor: 'either',
       rpId,
       publicKey: null, // will be provided per-credential below
       prevCounter: 0,
+      userHandle: base64url.toBase64Url(user._id.toString()),
     };
 
     // Find credential record
     const credRecord = (user.webauthnCredentials || []).find((c) => c.credId === assertion.id || c.credId === base64url.toBase64Url(base64url.fromBase64Url(assertion.rawId)));
     if (!credRecord) return res.status(404).json({ error: 'Credential not registered' });
 
-    expected.publicKey = base64url.fromBase64Url(credRecord.publicKey).toString('base64');
+    const resolvedPublicKey = resolvePublicKey(credRecord.publicKey);
+    if (!resolvedPublicKey) return res.status(400).json({ error: 'Stored credential public key invalid' });
+    expected.publicKey = resolvedPublicKey;
     expected.prevCounter = credRecord.signCount || 0;
 
     const authnResult = await f2.assertionResult(clientAssertionResponse, expected);
