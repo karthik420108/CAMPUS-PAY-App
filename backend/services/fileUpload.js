@@ -1,16 +1,30 @@
-// Local File Upload Service for Campus Pay App
-// This service handles file uploads using local storage only
+﻿// File Upload Service for Campus Pay App
+// Supports local disk (dev) and Cloudinary (production) when configured
 
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const CONFIG = require('../config');
+const cloudinary = require('cloudinary').v2;
 
 class FileUploadService {
   constructor() {
-    this.storage = this.configureStorage();
-    this.upload = multer({ 
+    this.useCloudinary = Boolean(
+      process.env.CLOUDINARY_URL ||
+      (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+    );
+
+    if (this.useCloudinary && !process.env.CLOUDINARY_URL) {
+      cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+      });
+    }
+
+    this.storage = this.useCloudinary ? multer.memoryStorage() : this.configureStorage();
+    this.upload = multer({
       storage: this.storage,
       limits: {
         fileSize: CONFIG.UPLOAD.MAX_FILE_SIZE
@@ -23,23 +37,8 @@ class FileUploadService {
   configureStorage() {
     return multer.diskStorage({
       destination: (req, file, cb) => {
-        // Try to get role from body, but have fallbacks
-        let role = req.body?.role || req.query?.role || "uploads";
-        
-        // If no role, try to determine from field name
-        if (!role || role === "uploads") {
-          if (file.fieldname === "kycImage") {
-            role = "kyc";
-          } else if (file.fieldname === "profileImage") {
-            role = "profileImage";
-          } else if (file.fieldname === "photo") {
-            role = "photos";
-          } else if (file.fieldname === "screenshot") {
-            role = "screenshots";
-          }
-        }
-        
-        console.log(`📁 Multer destination - Role: ${role}, Field: ${file.fieldname}`);
+        const role = this.resolveRole(req, file);
+        console.log(`Multer destination - Role: ${role}, Field: ${file.fieldname}`);
 
         const uploadPath = path.join(CONFIG.UPLOAD.DIR, role);
         fs.mkdirSync(uploadPath, { recursive: true });
@@ -56,9 +55,9 @@ class FileUploadService {
   fileFilter(req, file, cb) {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
-    
+
     const fileExtension = path.extname(file.originalname).toLowerCase();
-    
+
     if (allowedTypes.includes(file.mimetype) && allowedExtensions.includes(fileExtension)) {
       cb(null, true);
     } else {
@@ -66,21 +65,47 @@ class FileUploadService {
     }
   }
 
-  // Process file upload using local storage only
+  resolveRole(req, file) {
+    let role = req.body?.role || req.query?.role || "uploads";
+
+    if (!role || role === "uploads") {
+      if (file?.fieldname === "kycImage") {
+        role = "kyc";
+      } else if (file?.fieldname === "profileImage") {
+        role = "profileImage";
+      } else if (file?.fieldname === "photo") {
+        role = "photos";
+      } else if (file?.fieldname === "screenshot") {
+        role = "screenshots";
+      }
+    }
+
+    return role || "uploads";
+  }
+
+  // Process file upload using local storage or Cloudinary
   async processFileUpload(req, res, options = {}) {
     try {
-      const { role } = req.body;
-      
       if (!req.file) {
         throw new Error("File not uploaded");
       }
 
-      // Use local storage only
+      const role = this.resolveRole(req, req.file);
+
+      if (this.useCloudinary) {
+        const fileBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+        const uploadResult = await cloudinary.uploader.upload(fileBase64, {
+          folder: `campus-pay/${role}`,
+          resource_type: 'auto',
+        });
+        return uploadResult.secure_url;
+      }
+
       const localFileUrl = this.getLocalFileUrl(`${role}/${req.file.filename}`);
-      
+
       console.log(`File stored locally: ${localFileUrl}`);
       return localFileUrl;
-      
+
     } catch (error) {
       console.error('Local file upload error:', error);
       throw error;
@@ -89,11 +114,10 @@ class FileUploadService {
 
   // Get local file URL with cache-busting timestamp
   getLocalFileUrl(filePath) {
-    const baseUrl = CONFIG.NODE_ENV === 'production' 
+    const baseUrl = CONFIG.NODE_ENV === 'production'
       ? process.env.DEPLOYED_BASE_URL || 'http://localhost:5000'
       : `http://localhost:${CONFIG.PORT}`;
-    
-    // Add timestamp to cache-bust the browser cache
+
     const timestamp = Date.now();
     return `${baseUrl}/uploads/${filePath}?t=${timestamp}`;
   }
@@ -101,10 +125,13 @@ class FileUploadService {
   // Delete local file
   async deleteFile(fileUrl, options = {}) {
     try {
-      // Delete local file
+      if (this.useCloudinary) {
+        return;
+      }
+
       const filePath = fileUrl.replace(/.*\/uploads\//, '');
       const fullPath = path.join(CONFIG.UPLOAD.DIR, filePath);
-      
+
       if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
         console.log(`Deleted local file: ${fullPath}`);
